@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
             product_data: {
               name: "Primera Sesión — Mente Sana",
               description: `Sesión de 50 min con ${psychologistName || "tu psicóloga"}. Incluye: videollamada HD, informe personalizado, seguimiento WhatsApp 24h, asistente IA, eBook y meditaciones.`,
-              images: ["https://mentesanapsicologia.comhttps://your-project.supabase.co/storage/v1/object/public/mentesana-images/logo.webp"],
+              images: ["https://your-project.supabase.co/storage/v1/object/public/mentesana-images/logo.webp"],
             },
             unit_amount: 999,
           },
