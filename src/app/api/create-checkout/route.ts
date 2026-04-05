@@ -32,7 +32,7 @@ export async function POST(req: NextRequest) {
         psychologist: psychologistName || "",
         source: "test-sobrio",
       },
-      success_url: `${req.nextUrl.origin}/test/confirmacion?name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
+      success_url: `${req.nextUrl.origin}/test/confirmacion?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
       cancel_url: `${req.nextUrl.origin}/test/sobrio`,
     });
 
