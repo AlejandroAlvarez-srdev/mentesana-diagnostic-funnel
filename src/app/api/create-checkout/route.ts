@@ -14,6 +14,7 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email,
       locale: "es",
+      ui_mode: "embedded" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: [
         {
           price_data: {
@@ -34,11 +35,10 @@ export async function POST(req: NextRequest) {
         psychologist: psychologistName || "",
         source: "test-sobrio",
       },
-      success_url: `${req.nextUrl.origin}/test/confirmacion?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
-      cancel_url: `${req.nextUrl.origin}/test/sobrio`,
+      return_url: `${req.nextUrl.origin}/test/confirmacion?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
     });
 
-    return NextResponse.json({ url: session.url });
+    return NextResponse.json({ clientSecret: session.client_secret });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";
     console.error("Stripe error:", message);
