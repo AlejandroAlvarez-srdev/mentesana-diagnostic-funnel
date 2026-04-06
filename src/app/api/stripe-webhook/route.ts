@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { sendEmail, paymentConfirmationEmail } from "@/lib/emails";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -35,6 +36,10 @@ export async function POST(req: NextRequest) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
+    const patientEmail = session.customer_details?.email || session.customer_email;
+    const patientName = session.metadata?.patient_name || session.customer_details?.name || "";
+    const psychologist = session.metadata?.psychologist || "";
+
     await supabase.from("payments").upsert(
       {
         stripe_session_id: session.id,
@@ -43,10 +48,10 @@ export async function POST(req: NextRequest) {
         amount_cents: session.amount_total || 999,
         currency: session.currency || "eur",
         status: "completed",
-        patient_name: session.metadata?.patient_name || null,
-        patient_email: session.customer_details?.email || session.customer_email || null,
+        patient_name: patientName || null,
+        patient_email: patientEmail || null,
         patient_phone: session.metadata?.patient_phone || null,
-        psychologist: session.metadata?.psychologist || null,
+        psychologist: psychologist || null,
         source: session.metadata?.source || "unknown",
         metadata: {
           payment_method_types: session.payment_method_types,
@@ -55,6 +60,13 @@ export async function POST(req: NextRequest) {
       },
       { onConflict: "stripe_session_id" },
     );
+
+    // Send confirmation email
+    if (patientEmail) {
+      const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
+      const { subject, html } = paymentConfirmationEmail({ name: patientName, amount, psychologistName: psychologist });
+      await sendEmail({ to: patientEmail, toName: patientName, subject, html });
+    }
   }
 
   if (event.type === "checkout.session.expired") {
