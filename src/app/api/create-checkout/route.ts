@@ -14,7 +14,7 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email,
       locale: "es",
-      ui_mode: "embedded" as Stripe.Checkout.SessionCreateParams.UiMode,
+      ui_mode: "embedded_page" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: [
         {
           price_data: {
