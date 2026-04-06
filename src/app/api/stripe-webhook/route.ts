@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail, paymentConfirmationEmail } from "@/lib/emails";
+import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -61,8 +61,16 @@ export async function POST(req: NextRequest) {
       { onConflict: "stripe_session_id" },
     );
 
-    // Send confirmation email
-    if (patientEmail) {
+    // Ebook purchase → send delivery email with gated download link
+    if (session.metadata?.product === "ebook-sanando") {
+      if (patientEmail) {
+        const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
+        const downloadUrl = `${origin}/api/download-ebook?session_id=${session.id}`;
+        const { subject, html } = ebookDeliveryEmail({ name: patientName, downloadUrl });
+        await sendEmail({ to: patientEmail, toName: patientName, subject, html });
+      }
+    } else if (patientEmail) {
+      // Default session purchase → confirmation email
       const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
       const { subject, html } = paymentConfirmationEmail({ name: patientName, amount, psychologistName: psychologist });
       await sendEmail({ to: patientEmail, toName: patientName, subject, html });
