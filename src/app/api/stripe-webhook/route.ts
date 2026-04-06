@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { readFile } from "fs/promises";
+import { join } from "path";
 import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -61,13 +63,26 @@ export async function POST(req: NextRequest) {
       { onConflict: "stripe_session_id" },
     );
 
-    // Ebook purchase → send delivery email with gated download link
+    // Ebook purchase → send delivery email with PDF attached
     if (session.metadata?.product === "ebook-sanando") {
       if (patientEmail) {
         const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
-        const downloadUrl = `${origin}/api/download-ebook?session_id=${session.id}`;
+        const downloadUrl = `${origin}/sanando-desde-adentro`;
         const { subject, html } = ebookDeliveryEmail({ name: patientName, downloadUrl });
-        await sendEmail({ to: patientEmail, toName: patientName, subject, html });
+        try {
+          const pdfPath = join(process.cwd(), "public", "ebooks", "SANANDO DESDE ADENTRO.pdf");
+          const pdf = await readFile(pdfPath);
+          await sendEmail({
+            to: patientEmail,
+            toName: patientName,
+            subject,
+            html,
+            attachments: [{ name: "Sanando-Desde-Adentro.pdf", content: pdf.toString("base64") }],
+          });
+        } catch (err) {
+          console.error("[webhook] ebook PDF attach failed:", err);
+          await sendEmail({ to: patientEmail, toName: patientName, subject, html });
+        }
       }
     } else if (patientEmail) {
       // Default session purchase → confirmation email
