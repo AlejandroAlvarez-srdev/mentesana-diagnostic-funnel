@@ -63,16 +63,36 @@ export async function POST(req: NextRequest) {
       { onConflict: "stripe_session_id" },
     );
 
-    // Ebook purchase → send delivery email with PDF attached
-    if (session.metadata?.product === "ebook-sanando") {
-      if (patientEmail) {
+    // Ebook purchase → record + send delivery email with PDF attached
+    if (session.metadata?.product) {
+      await supabase.from("ebook_purchases").upsert(
+        {
+          stripe_session_id: session.id,
+          stripe_payment_intent_id: (session.payment_intent as string) || null,
+          stripe_customer_id: (session.customer as string) || null,
+          product: session.metadata.product,
+          amount_cents: session.amount_total || 0,
+          currency: session.currency || "eur",
+          status: "completed",
+          customer_email: patientEmail || null,
+          customer_name: patientName || null,
+          customer_phone: session.metadata?.patient_phone || null,
+          source: session.metadata?.source || null,
+          metadata: { payment_status: session.payment_status },
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: "stripe_session_id" },
+      );
+
+      if (session.metadata.product === "ebook-sanando" && patientEmail) {
         const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
         const downloadUrl = `${origin}/sanando-desde-adentro`;
         const { subject, html } = ebookDeliveryEmail({ name: patientName, downloadUrl });
+        let emailResult;
         try {
           const pdfPath = join(process.cwd(), "public", "ebooks", "SANANDO DESDE ADENTRO.pdf");
           const pdf = await readFile(pdfPath);
-          await sendEmail({
+          emailResult = await sendEmail({
             to: patientEmail,
             toName: patientName,
             subject,
@@ -81,8 +101,15 @@ export async function POST(req: NextRequest) {
           });
         } catch (err) {
           console.error("[webhook] ebook PDF attach failed:", err);
-          await sendEmail({ to: patientEmail, toName: patientName, subject, html });
+          emailResult = await sendEmail({ to: patientEmail, toName: patientName, subject, html });
         }
+        await supabase
+          .from("ebook_purchases")
+          .update({
+            email_sent_at: emailResult?.success ? new Date().toISOString() : null,
+            email_error: emailResult?.success ? null : emailResult?.error || "unknown",
+          })
+          .eq("stripe_session_id", session.id);
       }
     } else if (patientEmail) {
       // Default session purchase → confirmation email
