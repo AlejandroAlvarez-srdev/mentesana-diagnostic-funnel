@@ -74,10 +74,8 @@ export async function POST(req: NextRequest) {
   }
 
   if (!event) {
-    console.error("[webhook] all secrets failed:", lastError);
-    // Return 200 so Stripe stops retrying events that aren't ours (e.g. v2 thin events on a stale endpoint).
-    // The signature failure is logged for diagnostics.
-    return NextResponse.json({ ignored: true, reason: "signature_mismatch" }, { status: 200 });
+    console.error("[webhook] CRITICAL: all secrets failed signature check:", lastError);
+    return NextResponse.json({ error: "Invalid signature", detail: lastError }, { status: 400 });
   }
 
   const supabase = getSupabase();
