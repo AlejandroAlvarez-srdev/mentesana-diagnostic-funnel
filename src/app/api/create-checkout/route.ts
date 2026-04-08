@@ -6,7 +6,8 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName } = await req.json();
+  const { email, name, phone, psychologistName, utms } = await req.json();
+  const u = utms || {};
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -34,7 +35,15 @@ export async function POST(req: NextRequest) {
         patient_phone: phone || "",
         psychologist: psychologistName || "",
         source: "test-sobrio",
+        utm_source: (u.utm_source || "").slice(0, 120),
+        utm_medium: (u.utm_medium || "").slice(0, 120),
+        utm_campaign: (u.utm_campaign || "").slice(0, 120),
+        utm_content: (u.utm_content || "").slice(0, 120),
+        utm_term: (u.utm_term || "").slice(0, 120),
+        referrer: (u.referrer || "").slice(0, 200),
+        landing_page: (u.landing_page || "").slice(0, 200),
       },
+      client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
       return_url: `${req.nextUrl.origin}/test/confirmacion?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
     });
 
