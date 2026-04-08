@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
 
+export const runtime = "nodejs";
+export const dynamic = "force-dynamic";
+
 async function fetchEbookPdfBase64(origin: string): Promise<string | null> {
   try {
     const url = `${origin}/ebooks/SANANDO%20DESDE%20ADENTRO.pdf`;
