@@ -1,9 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { readFile } from "fs/promises";
-import { join } from "path";
 import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
+
+async function fetchEbookPdfBase64(origin: string): Promise<string | null> {
+  try {
+    const url = `${origin}/ebooks/SANANDO%20DESDE%20ADENTRO.pdf`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      console.error("[webhook] PDF fetch failed", res.status, url);
+      return null;
+    }
+    const buf = Buffer.from(await res.arrayBuffer());
+    return buf.toString("base64");
+  } catch (err) {
+    console.error("[webhook] PDF fetch error:", err);
+    return null;
+  }
+}
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -35,14 +49,17 @@ export async function POST(req: NextRequest) {
 
   const supabase = getSupabase();
 
+  console.log("[webhook] received", event.type, (event.data.object as { id?: string })?.id);
+
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
 
     const patientEmail = session.customer_details?.email || session.customer_email;
     const patientName = session.metadata?.patient_name || session.customer_details?.name || "";
     const psychologist = session.metadata?.psychologist || "";
+    console.log("[webhook] completed", { id: session.id, email: patientEmail, product: session.metadata?.product, amount: session.amount_total });
 
-    await supabase.from("payments").upsert(
+    const paymentsRes = await supabase.from("payments").upsert(
       {
         stripe_session_id: session.id,
         stripe_payment_intent_id: (session.payment_intent as string) || null,
@@ -62,10 +79,11 @@ export async function POST(req: NextRequest) {
       },
       { onConflict: "stripe_session_id" },
     );
+    if (paymentsRes.error) console.error("[webhook] payments upsert error:", paymentsRes.error.message);
 
     // Ebook purchase → record + send delivery email with PDF attached
     if (session.metadata?.product) {
-      await supabase.from("ebook_purchases").upsert(
+      const ebookRes = await supabase.from("ebook_purchases").upsert(
         {
           stripe_session_id: session.id,
           stripe_payment_intent_id: (session.payment_intent as string) || null,
@@ -83,31 +101,26 @@ export async function POST(req: NextRequest) {
         },
         { onConflict: "stripe_session_id" },
       );
+      if (ebookRes.error) console.error("[webhook] ebook_purchases upsert error:", ebookRes.error.message);
 
       if (session.metadata.product === "ebook-sanando" && patientEmail) {
         const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
         const downloadUrl = `${origin}/sanando-desde-adentro`;
         const { subject, html } = ebookDeliveryEmail({ name: patientName, downloadUrl });
-        let emailResult;
-        try {
-          const pdfPath = join(process.cwd(), "public", "ebooks", "SANANDO DESDE ADENTRO.pdf");
-          const pdf = await readFile(pdfPath);
-          emailResult = await sendEmail({
-            to: patientEmail,
-            toName: patientName,
-            subject,
-            html,
-            attachments: [{ name: "Sanando-Desde-Adentro.pdf", content: pdf.toString("base64") }],
-          });
-        } catch (err) {
-          console.error("[webhook] ebook PDF attach failed:", err);
-          emailResult = await sendEmail({ to: patientEmail, toName: patientName, subject, html });
-        }
+        const pdfBase64 = await fetchEbookPdfBase64(origin);
+        const emailResult = await sendEmail({
+          to: patientEmail,
+          toName: patientName,
+          subject,
+          html,
+          attachments: pdfBase64 ? [{ name: "Sanando-Desde-Adentro.pdf", content: pdfBase64 }] : undefined,
+        });
+        console.log("[webhook] ebook email", { to: patientEmail, success: emailResult.success, withPdf: !!pdfBase64, err: emailResult.error });
         await supabase
           .from("ebook_purchases")
           .update({
             email_sent_at: emailResult?.success ? new Date().toISOString() : null,
-            email_error: emailResult?.success ? null : emailResult?.error || "unknown",
+            email_error: emailResult?.success ? null : (emailResult?.error || "unknown"),
           })
           .eq("stripe_session_id", session.id);
       }
