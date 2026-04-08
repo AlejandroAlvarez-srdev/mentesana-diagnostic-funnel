@@ -37,8 +37,8 @@ function getSupabase() {
 
 export async function POST(req: NextRequest) {
   const rawBody = Buffer.from(await req.arrayBuffer());
-  const sig = req.headers.get("stripe-signature");
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+  const sig = req.headers.get("stripe-signature")?.trim();
+  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
 
   console.log("[webhook] incoming", {
     hasSig: !!sig,
