@@ -78,7 +78,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature", detail: lastError }, { status: 400 });
   }
 
-  console.log("[webhook] received", event.type, (event.data.object as { id?: string })?.id);
+  console.log("[webhook] received", { type: event.type, id: (event.data.object as { id?: string })?.id });
+
+  // Handle every relevant event type. Stripe sometimes sends payment_intent.succeeded
+  // before checkout.session.completed for embedded checkouts.
+  const handledTypes = new Set([
+    "checkout.session.completed",
+    "checkout.session.expired",
+  ]);
+  if (!handledTypes.has(event.type)) {
+    console.log("[webhook] ignored event type:", event.type);
+    return NextResponse.json({ received: true, ignored: event.type });
+  }
 
   let supabase;
   try {
