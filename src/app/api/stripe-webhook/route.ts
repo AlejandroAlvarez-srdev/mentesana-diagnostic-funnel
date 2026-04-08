@@ -34,9 +34,16 @@ function getSupabase() {
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.text();
+  const rawBody = Buffer.from(await req.arrayBuffer());
   const sig = req.headers.get("stripe-signature");
   const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  console.log("[webhook] incoming", {
+    hasSig: !!sig,
+    hasSecret: !!endpointSecret,
+    secretPrefix: endpointSecret ? endpointSecret.slice(0, 8) : null,
+    bodyLen: rawBody.length,
+  });
 
   if (!sig || !endpointSecret) {
     return NextResponse.json({ error: "No signature or secret" }, { status: 400 });
@@ -44,10 +51,11 @@ export async function POST(req: NextRequest) {
 
   let event: Stripe.Event;
   try {
-    event = stripe.webhooks.constructEvent(body, sig, endpointSecret);
+    event = await stripe.webhooks.constructEventAsync(rawBody, sig, endpointSecret);
   } catch (err) {
-    console.error("Webhook signature verification failed:", err);
-    return NextResponse.json({ error: "Invalid signature" }, { status: 400 });
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error("[webhook] signature verification failed:", msg);
+    return NextResponse.json({ error: "Invalid signature", detail: msg }, { status: 400 });
   }
 
   const supabase = getSupabase();
