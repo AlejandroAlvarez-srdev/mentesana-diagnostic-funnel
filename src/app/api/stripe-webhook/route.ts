@@ -36,29 +36,48 @@ function getSupabase() {
   return createClient(url.trim(), key.trim(), { auth: { persistSession: false } });
 }
 
+function getSecrets(): string[] {
+  // Support multiple secrets (one per Stripe webhook endpoint) separated by comma.
+  // Also keep backwards compat with the single-secret env var.
+  const multi = process.env.STRIPE_WEBHOOK_SECRETS;
+  const single = process.env.STRIPE_WEBHOOK_SECRET;
+  const raw = (multi || single || "").split(/[,\s]+/).map((s) => s.trim()).filter(Boolean);
+  return raw;
+}
+
 export async function POST(req: NextRequest) {
   const rawBody = Buffer.from(await req.arrayBuffer());
   const sig = req.headers.get("stripe-signature")?.trim();
-  const endpointSecret = process.env.STRIPE_WEBHOOK_SECRET?.trim();
+  const secrets = getSecrets();
 
   console.log("[webhook] incoming", {
     hasSig: !!sig,
-    hasSecret: !!endpointSecret,
-    secretPrefix: endpointSecret ? endpointSecret.slice(0, 8) : null,
+    secretsCount: secrets.length,
+    secretPrefixes: secrets.map((s) => s.slice(0, 10)),
     bodyLen: rawBody.length,
   });
 
-  if (!sig || !endpointSecret) {
+  if (!sig || secrets.length === 0) {
     return NextResponse.json({ error: "No signature or secret" }, { status: 400 });
   }
 
-  let event: Stripe.Event;
-  try {
-    event = await stripe.webhooks.constructEventAsync(rawBody, sig, endpointSecret);
-  } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
-    console.error("[webhook] signature verification failed:", msg);
-    return NextResponse.json({ error: "Invalid signature", detail: msg }, { status: 400 });
+  let event: Stripe.Event | null = null;
+  let lastError = "";
+  for (const secret of secrets) {
+    try {
+      event = await stripe.webhooks.constructEventAsync(rawBody, sig, secret);
+      console.log("[webhook] signature OK with secret prefix", secret.slice(0, 10));
+      break;
+    } catch (err) {
+      lastError = err instanceof Error ? err.message : String(err);
+    }
+  }
+
+  if (!event) {
+    console.error("[webhook] all secrets failed:", lastError);
+    // Return 200 so Stripe stops retrying events that aren't ours (e.g. v2 thin events on a stale endpoint).
+    // The signature failure is logged for diagnostics.
+    return NextResponse.json({ ignored: true, reason: "signature_mismatch" }, { status: 200 });
   }
 
   const supabase = getSupabase();
