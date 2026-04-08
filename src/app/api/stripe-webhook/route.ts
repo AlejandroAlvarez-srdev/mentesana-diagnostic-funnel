@@ -80,7 +80,7 @@ export async function POST(req: NextRequest) {
 
   console.log("[webhook] received", { type: event.type, id: (event.data.object as { id?: string })?.id });
 
-  let supabase;
+  let supabase: ReturnType<typeof getSupabase>;
   try {
     supabase = getSupabase();
     console.log("[webhook] supabase client OK");
