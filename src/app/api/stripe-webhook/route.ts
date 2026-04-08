@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
+import { processCheckoutSessionCompleted } from "./process";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -66,83 +67,18 @@ export async function POST(req: NextRequest) {
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
+    console.log("[webhook] completed", { id: session.id, product: session.metadata?.product, amount: session.amount_total });
 
-    const patientEmail = session.customer_details?.email || session.customer_email;
-    const patientName = session.metadata?.patient_name || session.customer_details?.name || "";
-    const psychologist = session.metadata?.psychologist || "";
-    console.log("[webhook] completed", { id: session.id, email: patientEmail, product: session.metadata?.product, amount: session.amount_total });
-
-    const paymentsRes = await supabase.from("payments").upsert(
-      {
-        stripe_session_id: session.id,
-        stripe_payment_intent_id: (session.payment_intent as string) || null,
-        stripe_customer_id: (session.customer as string) || null,
-        amount_cents: session.amount_total || 999,
-        currency: session.currency || "eur",
-        status: "completed",
-        patient_name: patientName || null,
-        patient_email: patientEmail || null,
-        patient_phone: session.metadata?.patient_phone || null,
-        psychologist: psychologist || null,
-        source: session.metadata?.source || "unknown",
-        metadata: {
-          payment_method_types: session.payment_method_types,
-          payment_status: session.payment_status,
-        },
-      },
-      { onConflict: "stripe_session_id" },
-    );
-    if (paymentsRes.error) console.error("[webhook] payments upsert error:", paymentsRes.error.message);
-
-    // Ebook purchase → record + send delivery email with PDF attached
-    if (session.metadata?.product) {
-      const ebookRes = await supabase.from("ebook_purchases").upsert(
-        {
-          stripe_session_id: session.id,
-          stripe_payment_intent_id: (session.payment_intent as string) || null,
-          stripe_customer_id: (session.customer as string) || null,
-          product: session.metadata.product,
-          amount_cents: session.amount_total || 0,
-          currency: session.currency || "eur",
-          status: "completed",
-          customer_email: patientEmail || null,
-          customer_name: patientName || null,
-          customer_phone: session.metadata?.patient_phone || null,
-          source: session.metadata?.source || null,
-          metadata: { payment_status: session.payment_status },
-          updated_at: new Date().toISOString(),
-        },
-        { onConflict: "stripe_session_id" },
-      );
-      if (ebookRes.error) console.error("[webhook] ebook_purchases upsert error:", ebookRes.error.message);
-
-      if (session.metadata.product === "ebook-sanando" && patientEmail) {
-        const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
-        const downloadUrl = `${origin}/sanando-desde-adentro`;
-        const { subject, html } = ebookDeliveryEmail({ name: patientName, downloadUrl });
-        const pdfBase64 = await fetchEbookPdfBase64(origin);
-        const emailResult = await sendEmail({
-          to: patientEmail,
-          toName: patientName,
-          subject,
-          html,
-          attachments: pdfBase64 ? [{ name: "Sanando-Desde-Adentro.pdf", content: pdfBase64 }] : undefined,
-        });
-        console.log("[webhook] ebook email", { to: patientEmail, success: emailResult.success, withPdf: !!pdfBase64, err: emailResult.error });
-        await supabase
-          .from("ebook_purchases")
-          .update({
-            email_sent_at: emailResult?.success ? new Date().toISOString() : null,
-            email_error: emailResult?.success ? null : (emailResult?.error || "unknown"),
-          })
-          .eq("stripe_session_id", session.id);
-      }
-    } else if (patientEmail) {
-      // Default session purchase → confirmation email
-      const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
-      const { subject, html } = paymentConfirmationEmail({ name: patientName, amount, psychologistName: psychologist });
-      await sendEmail({ to: patientEmail, toName: patientName, subject, html });
-    }
+    const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
+    const result = await processCheckoutSessionCompleted(session, {
+      supabase: supabase as unknown as Parameters<typeof processCheckoutSessionCompleted>[1]["supabase"],
+      sendEmail,
+      fetchPdf: fetchEbookPdfBase64,
+      buildEbookEmail: ebookDeliveryEmail,
+      buildSessionEmail: paymentConfirmationEmail,
+      origin,
+    });
+    console.log("[webhook] result", result);
   }
 
   if (event.type === "checkout.session.expired") {
