@@ -78,24 +78,36 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Invalid signature", detail: lastError }, { status: 400 });
   }
 
-  const supabase = getSupabase();
-
   console.log("[webhook] received", event.type, (event.data.object as { id?: string })?.id);
+
+  let supabase;
+  try {
+    supabase = getSupabase();
+    console.log("[webhook] supabase client OK");
+  } catch (err) {
+    console.error("[webhook] FAIL building supabase client:", err);
+    return NextResponse.json({ error: "Supabase init failed", detail: String(err) }, { status: 500 });
+  }
 
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     console.log("[webhook] completed", { id: session.id, product: session.metadata?.product, amount: session.amount_total });
 
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
-    const result = await processCheckoutSessionCompleted(session, {
-      supabase: supabase as unknown as Parameters<typeof processCheckoutSessionCompleted>[1]["supabase"],
-      sendEmail,
-      fetchPdf: fetchEbookPdfBase64,
-      buildEbookEmail: ebookDeliveryEmail,
-      buildSessionEmail: paymentConfirmationEmail,
-      origin,
-    });
-    console.log("[webhook] result", result);
+    try {
+      const result = await processCheckoutSessionCompleted(session, {
+        supabase: supabase as unknown as Parameters<typeof processCheckoutSessionCompleted>[1]["supabase"],
+        sendEmail,
+        fetchPdf: fetchEbookPdfBase64,
+        buildEbookEmail: ebookDeliveryEmail,
+        buildSessionEmail: paymentConfirmationEmail,
+        origin,
+      });
+      console.log("[webhook] result", JSON.stringify(result));
+    } catch (err) {
+      console.error("[webhook] FAIL inside processCheckoutSessionCompleted:", err instanceof Error ? err.stack : String(err));
+      return NextResponse.json({ error: "Process failed", detail: String(err) }, { status: 500 });
+    }
   }
 
   if (event.type === "checkout.session.expired") {
