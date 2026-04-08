@@ -102,6 +102,16 @@ export async function POST(req: NextRequest) {
   }
 
   async function runProcessing(session: Stripe.Checkout.Session) {
+    // Idempotency: skip if we already processed this session (sent email)
+    const existing = await supabase
+      .from("payments")
+      .select("status, metadata")
+      .eq("stripe_session_id", session.id)
+      .maybeSingle();
+    if (existing.data?.status === "completed") {
+      console.log("[webhook] session already processed, skipping:", session.id);
+      return;
+    }
     const origin = process.env.NEXT_PUBLIC_SITE_URL || "https://mentesanapsicologia.com";
     try {
       const result = await processCheckoutSessionCompleted(session, {
