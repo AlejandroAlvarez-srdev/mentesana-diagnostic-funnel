@@ -27,10 +27,12 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 function getSupabase() {
-  return createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-  );
+  // payments / ebook_purchases / feedback_responses live in the BLOG project (your-project).
+  const url = process.env.NEXT_PUBLIC_BLOG_SUPABASE_URL!;
+  const key =
+    process.env.BLOG_SUPABASE_SERVICE_KEY ||
+    process.env.NEXT_PUBLIC_BLOG_SUPABASE_ANON_KEY!;
+  return createClient(url.trim(), key.trim(), { auth: { persistSession: false } });
 }
 
 export async function POST(req: NextRequest) {
