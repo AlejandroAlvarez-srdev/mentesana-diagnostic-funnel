@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         landing_page: (u.landing_page || "").slice(0, 200),
       },
       client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
-      return_url: `https://graciasportupago.mentesana.vercel.app?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
+      return_url: `https://confrimacionregistro.vercel.app/?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
     });
 
     return NextResponse.json({ clientSecret: session.client_secret });
