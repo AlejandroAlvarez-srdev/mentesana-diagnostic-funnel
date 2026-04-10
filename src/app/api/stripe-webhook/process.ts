@@ -73,7 +73,33 @@ export async function processCheckoutSessionCompleted(
   const psychologist = session.metadata?.psychologist || "";
   const product = session.metadata?.product;
 
-  // 1. payments upsert
+  // Extract UTMs from metadata (embedded checkout) or client_reference_id (Payment Links)
+  let utms: Record<string, string> = {};
+  const meta = session.metadata || {};
+  if (meta.utm_source || meta.utm_medium || meta.utm_campaign) {
+    // Embedded checkout: UTMs stored directly in metadata
+    if (meta.utm_source) utms.utm_source = meta.utm_source;
+    if (meta.utm_medium) utms.utm_medium = meta.utm_medium;
+    if (meta.utm_campaign) utms.utm_campaign = meta.utm_campaign;
+    if (meta.utm_content) utms.utm_content = meta.utm_content;
+    if (meta.utm_term) utms.utm_term = meta.utm_term;
+    if (meta.referrer) utms.referrer = meta.referrer;
+    if (meta.landing_page) utms.landing_page = meta.landing_page;
+  } else if (session.client_reference_id) {
+    // Payment Links: UTMs encoded as base64 JSON in client_reference_id
+    try {
+      const decoded = JSON.parse(decodeURIComponent(escape(atob(session.client_reference_id))));
+      if (typeof decoded === "object" && decoded !== null) utms = decoded;
+    } catch {
+      // client_reference_id might be plain "source|medium|campaign" format
+      const parts = session.client_reference_id.split("|");
+      if (parts[0]) utms.utm_source = parts[0];
+      if (parts[1]) utms.utm_medium = parts[1];
+      if (parts[2]) utms.utm_campaign = parts[2];
+    }
+  }
+
+  // 1. payments upsert — includes UTMs in metadata
   const paymentsRes = await deps.supabase.from("payments").upsert(
     {
       stripe_session_id: session.id,
@@ -90,6 +116,7 @@ export async function processCheckoutSessionCompleted(
       metadata: {
         payment_method_types: session.payment_method_types,
         payment_status: session.payment_status,
+        ...utms,
       },
     },
     { onConflict: "stripe_session_id" },
