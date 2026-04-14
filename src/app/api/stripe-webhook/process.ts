@@ -170,7 +170,8 @@ export async function processCheckoutSessionCompleted(
     } else {
       result.branch = "no-email";
     }
-  } else if (patientEmail) {
+  } else if (patientEmail && session.amount_total === 999) {
+    // Only send the "primera sesión 9,99€" confirmation email for 9.99€ purchases
     result.branch = "session";
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
     const { subject, html } = deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
