@@ -109,10 +109,11 @@ export async function processCheckoutSessionCompleted(
     }
   }
 
-  // If no UTMs at all, at least tag the source
+  // If no UTMs at all, tag based on amount
   if (Object.keys(utms).length === 0) {
-    utms.utm_source = "direct-seo";
-    utms.utm_medium = "organic";
+    const is999 = (session.amount_total || 0) <= 1050;
+    utms.utm_source = is999 ? "direct-seo" : "link-stripe-directo";
+    utms.utm_medium = is999 ? "organic" : "payment-link";
   }
 
   // 1. payments upsert — includes UTMs in metadata
