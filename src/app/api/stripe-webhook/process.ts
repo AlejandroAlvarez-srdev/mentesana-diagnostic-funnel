@@ -87,16 +87,32 @@ export async function processCheckoutSessionCompleted(
     if (meta.landing_page) utms.landing_page = meta.landing_page;
   } else if (session.client_reference_id) {
     // Payment Links: UTMs encoded as base64 JSON in client_reference_id
+    const ref = session.client_reference_id;
     try {
-      const decoded = JSON.parse(decodeURIComponent(escape(atob(session.client_reference_id))));
+      // Re-add padding that was stripped by the enhancer
+      const padded = ref + "=".repeat((4 - (ref.length % 4)) % 4);
+      const jsonStr = Buffer.from(padded, "base64").toString("utf-8");
+      const decoded = JSON.parse(jsonStr);
       if (typeof decoded === "object" && decoded !== null) utms = decoded;
     } catch {
       // client_reference_id might be plain "source|medium|campaign" format
-      const parts = session.client_reference_id.split("|");
-      if (parts[0]) utms.utm_source = parts[0];
-      if (parts[1]) utms.utm_medium = parts[1];
-      if (parts[2]) utms.utm_campaign = parts[2];
+      const parts = ref.split("|");
+      if (parts.length >= 2) {
+        if (parts[0]) utms.utm_source = parts[0];
+        if (parts[1]) utms.utm_medium = parts[1];
+        if (parts[2]) utms.utm_campaign = parts[2];
+      }
+      // If still nothing, store the raw ref for debugging
+      if (Object.keys(utms).length === 0) {
+        utms.client_reference_id_raw = ref.slice(0, 100);
+      }
     }
+  }
+
+  // If no UTMs at all, at least tag the source
+  if (Object.keys(utms).length === 0) {
+    utms.utm_source = "direct-stripe";
+    utms.utm_medium = "payment-link";
   }
 
   // 1. payments upsert — includes UTMs in metadata
