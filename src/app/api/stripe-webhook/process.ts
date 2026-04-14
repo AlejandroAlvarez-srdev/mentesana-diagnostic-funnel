@@ -111,8 +111,8 @@ export async function processCheckoutSessionCompleted(
 
   // If no UTMs at all, at least tag the source
   if (Object.keys(utms).length === 0) {
-    utms.utm_source = "direct-stripe";
-    utms.utm_medium = "payment-link";
+    utms.utm_source = "direct-seo";
+    utms.utm_medium = "organic";
   }
 
   // 1. payments upsert — includes UTMs in metadata
