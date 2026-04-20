@@ -110,16 +110,7 @@ export default function DiagnosticoMatching() {
         setAnswers(parsed);
         const answered = Object.keys(parsed).length;
         if (answered >= QUESTIONS.length) {
-          // Check if we already have contact info
-          const email = localStorage.getItem("ms_diagnostico_email");
-          if (email) {
-            setUserEmail(email);
-            setUserName(localStorage.getItem("ms_diagnostico_name") || "");
-            setContextText(localStorage.getItem("ms_diagnostico_context") || "");
-            setPhase("match");
-          } else {
-            setPhase("context");
-          }
+          setPhase("match");
         } else if (answered > 0) {
           setPhase("questions");
           setCurrentQ(answered);
@@ -138,8 +129,11 @@ export default function DiagnosticoMatching() {
     if (currentQ < QUESTIONS.length - 1) {
       setTimeout(() => setCurrentQ(currentQ + 1), 300);
     } else {
-      // After all 5 questions → context question
-      setTimeout(() => setPhase("context"), 400);
+      // After all 5 questions → match directly (skip context + contact)
+      setTimeout(() => {
+        track("view_match_result", { profile: newAnswers.feeling || "" });
+        setPhase("match");
+      }, 400);
     }
   }, [answers, currentQ]);
 
@@ -323,23 +317,8 @@ export default function DiagnosticoMatching() {
       setSaving(true);
       track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name });
 
-      // Save session date in Supabase
-      try {
-        await fetch("/api/diagnostico-test", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            answers,
-            context: contextText,
-            name: userName,
-            email: userEmail,
-            phone: userPhone,
-            matchedPsychologist: matchedPsych.name,
-            scheduledDate: selectedDay,
-            scheduledTime: selectedSlot,
-          }),
-        });
-      } catch {}
+      // Save answers + schedule in localStorage (Stripe webhook will save to DB with email)
+      localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name }));
 
       track("initiate_checkout", { amount: "9.99" });
       setSaving(false);
@@ -455,9 +434,9 @@ export default function DiagnosticoMatching() {
   // ═══ PAYMENT PHASE — Stripe Embedded Checkout ═══
   if (phase === "payment") {
     return <PaymentPhase
-      email={userEmail}
-      name={userName}
-      phone={userPhone}
+      email=""
+      name=""
+      phone=""
       psychologistName={matchedPsych.name}
       selectedDay={selectedDay}
       selectedSlot={selectedSlot}

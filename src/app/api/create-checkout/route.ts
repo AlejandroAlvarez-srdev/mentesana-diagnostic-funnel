@@ -13,7 +13,7 @@ export async function POST(req: NextRequest) {
     const session = await stripe.checkout.sessions.create({
       payment_method_types: ["card"],
       mode: "payment",
-      customer_email: email,
+      customer_email: email || undefined,
       locale: "es",
       ui_mode: "embedded_page" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: [
