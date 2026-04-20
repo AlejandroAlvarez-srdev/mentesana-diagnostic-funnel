@@ -91,7 +91,7 @@ const PSYCHOLOGISTS = [
 export default function DiagnosticoMatching() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [phase, setPhase] = useState<"questions" | "match">("questions");
+  const [phase, setPhase] = useState<"intro" | "questions" | "match">("intro");
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
@@ -103,12 +103,12 @@ export default function DiagnosticoMatching() {
         const answered = Object.keys(parsed).length;
         if (answered >= QUESTIONS.length) {
           setPhase("match");
-        } else {
+        } else if (answered > 0) {
+          setPhase("questions");
           setCurrentQ(answered);
         }
       } catch {}
     }
-    track("start_matching", {});
   }, []);
 
   const selectOption = useCallback((questionId: string, optionId: string) => {
@@ -229,6 +229,70 @@ export default function DiagnosticoMatching() {
                 Agendar mi sesión de lectura →
               </Link>
               <p className="mt-3 text-xs text-foreground/40">Tu psicóloga preparará tu diagnóstico antes de la sesión.</p>
+            </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══ INTRO PHASE — paso a paso creativo ═══
+  if (phase === "intro") {
+    return (
+      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
+        <header className="bg-white border-b border-purple/10 px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center justify-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="max-w-lg w-full">
+            <div className="text-center mb-8">
+              <p className="font-handwriting text-xl text-purple mb-2">Así funciona tu diagnóstico</p>
+              <h1 className="font-serif text-2xl md:text-3xl leading-tight">
+                6 pasos para entender qué te pasa<br />
+                <em className="text-purple italic font-normal">y tener un plan real.</em>
+              </h1>
+            </div>
+
+            {/* Timeline creativa */}
+            <div className="space-y-0 relative">
+              {/* Línea vertical */}
+              <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
+
+              {[
+                { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
+                { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
+                { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita de diagnóstico." },
+                { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Sin suscripción. Devolución garantizada si no te ayuda." },
+                { n: "5", icon: "📄", title: "Recibes el formulario completo", desc: "Por email. Tu psicóloga lo usa para preparar tu informe antes de la cita." },
+                { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Te explica tu informe, cada hallazgo, y construís un plan juntos." },
+              ].map((step) => (
+                <div key={step.n} className={`flex items-start gap-4 py-3 ${step.active ? "" : "opacity-70"}`}>
+                  <div className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/20"}`}>
+                    {step.icon}
+                  </div>
+                  <div className="pt-1.5">
+                    <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground/80"}`}>
+                      <span className="text-foreground/30 mr-1.5">{step.n}.</span>{step.title}
+                    </p>
+                    <p className="text-xs text-foreground/50 mt-0.5 leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* CTA */}
+            <div className="mt-8 text-center">
+              <button
+                onClick={() => { setPhase("questions"); track("start_matching", {}); }}
+                className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
+              >
+                Empezar las 5 preguntas →
+              </button>
+              <p className="mt-3 text-[11px] text-foreground/40">🔒 Tus respuestas son confidenciales · 2 minutos</p>
             </div>
           </div>
         </main>
