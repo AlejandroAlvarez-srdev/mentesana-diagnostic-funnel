@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail, paymentConfirmationEmail, ebookDeliveryEmail } from "@/lib/emails";
+import { sendEmail, diagnosticoPaidEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 
 export const runtime = "nodejs";
@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         sendEmail,
         fetchPdf: fetchEbookPdfBase64,
         buildEbookEmail: ebookDeliveryEmail,
-        buildSessionEmail: paymentConfirmationEmail,
+        buildSessionEmail: ({ name, psychologistName }: { name: string; amount: string; psychologistName: string }) => diagnosticoPaidEmail({ name, psychologistName }),
         origin,
       });
       console.log("[webhook] result", JSON.stringify(result));
