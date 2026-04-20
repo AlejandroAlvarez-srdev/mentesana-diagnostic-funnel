@@ -225,7 +225,7 @@ export default function DiagnosticoMatching() {
 
             {/* Psychologist card with video */}
             <div className="bg-white rounded-3xl overflow-hidden border border-purple/10 shadow-xl">
-              <div className="aspect-square max-h-[320px] overflow-hidden bg-purple/5 relative">
+              <div className="aspect-[4/5] overflow-hidden bg-purple/5 relative">
                 <video
                   src={matchedPsych.video}
                   muted
@@ -233,7 +233,7 @@ export default function DiagnosticoMatching() {
                   loop
                   playsInline
                   preload="metadata"
-                  className="w-full h-full object-cover"
+                  className="absolute inset-0 w-full h-full object-cover"
                 />
                 <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-4">
                   <p className="text-white text-xs font-medium opacity-80">Vídeo de bienvenida</p>
