@@ -119,7 +119,7 @@ export async function POST(req: NextRequest) {
         sendEmail,
         fetchPdf: fetchEbookPdfBase64,
         buildEbookEmail: ebookDeliveryEmail,
-        buildSessionEmail: ({ name, psychologistName }: { name: string; amount: string; psychologistName: string }) => diagnosticoPaidEmail({ name, psychologistName }),
+        buildSessionEmail: ({ name, psychologistName }: { name: string; amount: string; psychologistName: string }) => diagnosticoPaidEmail({ name, psychologistName, email: session.customer_details?.email || session.customer_email || "" }),
         origin,
       });
       console.log("[webhook] result", JSON.stringify(result));
