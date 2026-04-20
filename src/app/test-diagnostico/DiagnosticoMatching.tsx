@@ -91,7 +91,12 @@ const PSYCHOLOGISTS = [
 export default function DiagnosticoMatching() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [phase, setPhase] = useState<"intro" | "questions" | "match">("intro");
+  const [contextText, setContextText] = useState("");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [userPhone, setUserPhone] = useState("");
+  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match">("intro");
+  const [saving, setSaving] = useState(false);
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
@@ -102,7 +107,16 @@ export default function DiagnosticoMatching() {
         setAnswers(parsed);
         const answered = Object.keys(parsed).length;
         if (answered >= QUESTIONS.length) {
-          setPhase("match");
+          // Check if we already have contact info
+          const email = localStorage.getItem("ms_diagnostico_email");
+          if (email) {
+            setUserEmail(email);
+            setUserName(localStorage.getItem("ms_diagnostico_name") || "");
+            setContextText(localStorage.getItem("ms_diagnostico_context") || "");
+            setPhase("match");
+          } else {
+            setPhase("context");
+          }
         } else if (answered > 0) {
           setPhase("questions");
           setCurrentQ(answered);
@@ -121,12 +135,41 @@ export default function DiagnosticoMatching() {
     if (currentQ < QUESTIONS.length - 1) {
       setTimeout(() => setCurrentQ(currentQ + 1), 300);
     } else {
-      setTimeout(() => {
-        setPhase("match");
-        track("view_match_result", { profile: newAnswers.feeling || "" });
-      }, 500);
+      // After all 5 questions → context question
+      setTimeout(() => setPhase("context"), 400);
     }
   }, [answers, currentQ]);
+
+  // Save to API (always, whether they pay or not)
+  const saveAndProceed = async () => {
+    if (!userEmail) return;
+    setSaving(true);
+    localStorage.setItem("ms_diagnostico_email", userEmail);
+    localStorage.setItem("ms_diagnostico_name", userName);
+    localStorage.setItem("ms_diagnostico_context", contextText);
+    localStorage.setItem("ms_user_email", userEmail);
+    if (userName) localStorage.setItem("ms_user_name", userName);
+    if (userPhone) localStorage.setItem("ms_user_phone", userPhone);
+
+    try {
+      await fetch("/api/diagnostico-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          answers,
+          context: contextText,
+          name: userName,
+          email: userEmail,
+          phone: userPhone,
+          matchedPsychologist: matchedPsych.name,
+        }),
+      });
+    } catch {}
+
+    track("view_match_result", { profile: answers.feeling || "", email: userEmail });
+    setSaving(false);
+    setPhase("match");
+  };
 
   // Match logic: find best psychologist based on feeling profile
   const matchedPsych = (() => {
@@ -294,6 +337,110 @@ export default function DiagnosticoMatching() {
               </button>
               <p className="mt-3 text-[11px] text-foreground/40">🔒 Tus respuestas son confidenciales · 2 minutos</p>
             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══ CONTEXT PHASE — pregunta abierta ═══
+  if (phase === "context") {
+    return (
+      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
+        <header className="bg-white border-b border-purple/10 px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <span className="text-[11px] text-foreground/40 font-medium">Casi listo</span>
+          </div>
+        </header>
+        <div className="bg-purple/10 h-1.5"><div className="h-full bg-purple rounded-r-full" style={{ width: "85%" }} /></div>
+
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="max-w-lg w-full">
+            <div className="text-center mb-6">
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Una última cosa</p>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">Cuéntanos un poco más con tus palabras</h1>
+              <p className="mt-2 text-sm text-foreground/50">Esto ayuda a tu psicóloga a preparar mejor tu diagnóstico. Puedes escribir lo que quieras o dejarlo en blanco.</p>
+            </div>
+
+            <textarea
+              value={contextText}
+              onChange={(e) => setContextText(e.target.value)}
+              placeholder="Ej: Llevo meses sin dormir bien. Trabajo demasiado y siento que estoy al límite. Mi pareja me dice que he cambiado pero no sé cómo explicar qué me pasa..."
+              className="w-full h-32 bg-white rounded-2xl border border-purple/15 p-4 text-sm text-foreground/80 placeholder:text-foreground/30 resize-none focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+            />
+
+            <button
+              onClick={() => setPhase("contact")}
+              className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
+            >
+              {contextText.trim() ? "Continuar →" : "Saltar y continuar →"}
+            </button>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══ CONTACT PHASE — email + nombre (obligatorio) ═══
+  if (phase === "contact") {
+    return (
+      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
+        <header className="bg-white border-b border-purple/10 px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <span className="text-[11px] text-foreground/40 font-medium">Último paso</span>
+          </div>
+        </header>
+        <div className="bg-purple/10 h-1.5"><div className="h-full bg-purple rounded-r-full" style={{ width: "95%" }} /></div>
+
+        <main className="flex-1 flex items-center justify-center px-4 py-10">
+          <div className="max-w-lg w-full">
+            <div className="text-center mb-6">
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">¿Dónde te enviamos tu diagnóstico?</p>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">Necesitamos tu email para enviarte el resultado</h1>
+              <p className="mt-2 text-sm text-foreground/50">También lo usará tu psicóloga para contactarte con tu cita.</p>
+            </div>
+
+            <div className="space-y-3">
+              <input
+                type="text"
+                value={userName}
+                onChange={(e) => setUserName(e.target.value)}
+                placeholder="Tu nombre"
+                autoComplete="name"
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+              />
+              <input
+                type="email"
+                value={userEmail}
+                onChange={(e) => setUserEmail(e.target.value)}
+                placeholder="Tu email *"
+                autoComplete="email"
+                required
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+              />
+              <input
+                type="tel"
+                value={userPhone}
+                onChange={(e) => setUserPhone(e.target.value)}
+                placeholder="WhatsApp (opcional, para recordatorios)"
+                autoComplete="tel"
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+              />
+            </div>
+
+            <button
+              onClick={saveAndProceed}
+              disabled={!userEmail || saving}
+              className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              {saving ? "Guardando..." : "Ver mi psicóloga asignada →"}
+            </button>
+
+            <p className="mt-3 text-center text-[10px] text-foreground/30">🔒 No spam. Solo te escribiremos para tu diagnóstico.</p>
           </div>
         </main>
       </div>
