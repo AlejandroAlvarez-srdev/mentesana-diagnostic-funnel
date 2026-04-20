@@ -749,7 +749,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
         const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
         if (!stripe || !mounted.current) return;
 
-        const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: data.clientSecret });
+        const checkout = await (stripe as any).createEmbeddedCheckoutPage({ clientSecret: data.clientSecret });
         if (!mounted.current) { checkout.destroy(); return; }
 
         if (checkoutRef.current) {
