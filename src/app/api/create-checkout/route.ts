@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: "Primera Sesión — Mente Sana",
-              description: `Sesión de 50 min con ${psychologistName || "tu psicóloga"}. Incluye: videollamada HD, informe personalizado, seguimiento WhatsApp 24h, asistente IA, eBook y meditaciones.`,
+              name: "Diagnóstico Psicológico — Mente Sana",
+              description: `Diagnóstico clínico con ${psychologistName || "tu psicóloga"}. Incluye: informe personalizado, matching, sesión de lectura 50 min, plan de acción.`,
               images: ["https://mentesanapsicologia.com/images/logo.webp"],
             },
             unit_amount: 999,
@@ -44,7 +44,7 @@ export async function POST(req: NextRequest) {
         landing_page: (u.landing_page || "").slice(0, 200),
       },
       client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
-      return_url: `${req.nextUrl.origin}/graciasportupago?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
+      return_url: `${req.nextUrl.origin}/test/confirmacion?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
     });
 
     return NextResponse.json({ clientSecret: session.client_secret });

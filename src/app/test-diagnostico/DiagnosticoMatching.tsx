@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { track } from "@/lib/tracking";
 
 // ═══ Questions config ═══
@@ -94,10 +94,12 @@ export default function DiagnosticoMatching() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
-  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match" | "schedule">("intro");
+  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match" | "schedule" | "payment">("intro");
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
+  const [checkoutLoading, setCheckoutLoading] = useState(false);
+  const checkoutRef = useRef<HTMLDivElement>(null);
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
@@ -321,7 +323,7 @@ export default function DiagnosticoMatching() {
       setSaving(true);
       track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name });
 
-      // Update the record in Supabase with session date
+      // Save session date in Supabase
       try {
         await fetch("/api/diagnostico-test", {
           method: "POST",
@@ -339,11 +341,9 @@ export default function DiagnosticoMatching() {
         });
       } catch {}
 
-      // Redirect to payment
       track("initiate_checkout", { amount: "9.99" });
       setSaving(false);
-      // Go to Stripe checkout or internal payment page
-      window.location.href = `/test/confirmacion?psych=${encodeURIComponent(matchedPsych.name)}&date=${encodeURIComponent(selectedDay)}&time=${encodeURIComponent(selectedSlot)}&email=${encodeURIComponent(userEmail)}`;
+      setPhase("payment");
     };
 
     return (
@@ -450,6 +450,19 @@ export default function DiagnosticoMatching() {
         </main>
       </div>
     );
+  }
+
+  // ═══ PAYMENT PHASE — Stripe Embedded Checkout ═══
+  if (phase === "payment") {
+    return <PaymentPhase
+      email={userEmail}
+      name={userName}
+      phone={userPhone}
+      psychologistName={matchedPsych.name}
+      selectedDay={selectedDay}
+      selectedSlot={selectedSlot}
+      checkoutRef={checkoutRef}
+    />;
   }
 
   // ═══ INTRO PHASE — paso a paso creativo ═══
@@ -677,6 +690,137 @@ export default function DiagnosticoMatching() {
       <footer className="bg-white border-t border-purple/10 px-4 py-3 text-center">
         <p className="text-[11px] text-foreground/30">🔒 Tus respuestas son confidenciales · No compartimos datos con terceros</p>
       </footer>
+    </div>
+  );
+}
+
+// ═══ PAYMENT COMPONENT — Stripe Embedded Checkout ═══
+function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef }: {
+  email: string; name: string; phone: string; psychologistName: string;
+  selectedDay: string; selectedSlot: string; checkoutRef: React.RefObject<HTMLDivElement | null>;
+}) {
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const mounted = useRef(true);
+
+  useEffect(() => {
+    mounted.current = true;
+    return () => { mounted.current = false; };
+  }, []);
+
+  useEffect(() => {
+    async function initCheckout() {
+      try {
+        const utms: Record<string, string> = {};
+        try {
+          const p = new URLSearchParams(window.location.search);
+          ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => {
+            const v = p.get(k) || localStorage.getItem(`ms_first_${k}`) || "";
+            if (v) utms[k] = v;
+          });
+          utms.referrer = document.referrer || "";
+          utms.landing_page = "/test-diagnostico";
+        } catch {}
+
+        const res = await fetch("/api/create-checkout", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            email,
+            name,
+            phone,
+            psychologistName,
+            utms: { ...utms, scheduled_date: selectedDay, scheduled_time: selectedSlot },
+          }),
+        });
+
+        const data = await res.json();
+        if (!mounted.current) return;
+
+        if (data.error) {
+          setError(data.detail || data.error);
+          setLoading(false);
+          return;
+        }
+
+        // Load Stripe.js and mount embedded checkout
+        const { loadStripe } = await import("@stripe/stripe-js");
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+        if (!stripe || !mounted.current) return;
+
+        const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: data.clientSecret });
+        if (!mounted.current) { checkout.destroy(); return; }
+
+        if (checkoutRef.current) {
+          checkoutRef.current.innerHTML = "";
+          checkout.mount(checkoutRef.current);
+        }
+        setLoading(false);
+      } catch (e) {
+        if (mounted.current) {
+          setError(e instanceof Error ? e.message : "Error al cargar el pago");
+          setLoading(false);
+        }
+      }
+    }
+    initCheckout();
+  }, [email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef]);
+
+  return (
+    <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
+      <header className="bg-white border-b border-purple/10 px-4 py-4">
+        <div className="max-w-2xl mx-auto flex items-center justify-between">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+          <span className="text-[11px] text-foreground/40 font-medium">Pago seguro</span>
+        </div>
+      </header>
+
+      <main className="flex-1 px-4 py-8">
+        <div className="max-w-lg mx-auto">
+          {/* Resumen de cita */}
+          <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-6">
+            <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">Tu cita de diagnóstico</p>
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm font-semibold">
+                  {new Date(selectedDay).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })} · {selectedSlot}h
+                </p>
+                <p className="text-xs text-purple font-medium mt-0.5">Con {psychologistName}</p>
+                <p className="text-xs text-foreground/50 mt-0.5">{email}</p>
+              </div>
+              <div className="text-right">
+                <p className="font-serif text-2xl font-bold text-purple">9,99€</p>
+              </div>
+            </div>
+            <div className="mt-3 pt-3 border-t border-black/5 grid grid-cols-3 gap-2 text-center">
+              <div><p className="text-[10px] text-foreground/40">📄 Informe</p></div>
+              <div><p className="text-[10px] text-foreground/40">🎯 Matching</p></div>
+              <div><p className="text-[10px] text-foreground/40">💬 50 min</p></div>
+            </div>
+          </div>
+
+          {/* Stripe Checkout */}
+          {loading && (
+            <div className="flex flex-col items-center justify-center py-16">
+              <div className="w-10 h-10 border-4 border-purple/20 border-t-purple rounded-full animate-spin mb-4" />
+              <p className="text-sm text-foreground/50">Cargando pago seguro...</p>
+            </div>
+          )}
+          {error && (
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4 text-center">
+              <p className="text-sm text-red-600">{error}</p>
+              <button onClick={() => window.location.reload()} className="mt-3 text-xs text-purple font-bold underline">Reintentar</button>
+            </div>
+          )}
+          <div ref={checkoutRef} className={loading ? "hidden" : ""} />
+
+          <div className="mt-6 text-center space-y-2">
+            <p className="text-[10px] text-foreground/30">🔒 Pago cifrado · Stripe · Devolución garantizada</p>
+            <p className="text-[10px] text-foreground/30">En tu extracto aparece como &ldquo;MS Servicios&rdquo;</p>
+          </div>
+        </div>
+      </main>
     </div>
   );
 }
