@@ -67,7 +67,7 @@ const QUESTIONS: Question[] = [
   },
   {
     id: "schedule",
-    title: "¿Cuándo prefieres tener tu sesión de lectura?",
+    title: "¿Cuándo prefieres tener tu sesión con tu psicóloga?",
     subtitle: "Para buscar disponibilidad con tu psicóloga asignada.",
     options: [
       { id: "manana", label: "Por la mañana (9:00 – 13:00)", icon: "☀️" },

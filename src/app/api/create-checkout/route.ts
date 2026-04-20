@@ -22,7 +22,7 @@ export async function POST(req: NextRequest) {
             currency: "eur",
             product_data: {
               name: "Diagnóstico Psicológico — Mente Sana",
-              description: `Diagnóstico clínico con ${psychologistName || "tu psicóloga"}. Incluye: informe personalizado, matching, sesión de lectura 50 min, plan de acción.`,
+              description: `Diagnóstico clínico con ${psychologistName || "tu psicóloga"}. Incluye: informe personalizado, matching, sesión con tu psicóloga 50 min, plan de acción.`,
               images: ["https://mentesanapsicologia.com/images/logo.webp"],
             },
             unit_amount: 999,
