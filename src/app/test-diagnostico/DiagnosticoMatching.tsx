@@ -287,7 +287,7 @@ export default function DiagnosticoMatching() {
     let d = new Date(now);
     d.setDate(d.getDate() + 1); // start tomorrow
     while (days.length < 4) {
-      if (d.getDay() !== 0) { // skip Sunday
+      if (d.getDay() !== 0 && d.getDay() !== 6) { // skip Saturday & Sunday
         days.push({
           date: new Date(d),
           label: d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" }),
