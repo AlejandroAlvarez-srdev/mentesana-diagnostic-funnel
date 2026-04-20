@@ -746,7 +746,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
 
         // Load Stripe.js and mount embedded checkout
         const { loadStripe } = await import("@stripe/stripe-js");
-        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+        const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
         if (!stripe || !mounted.current) return;
 
         const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: data.clientSecret });
