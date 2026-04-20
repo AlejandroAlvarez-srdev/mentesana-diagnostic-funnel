@@ -188,8 +188,27 @@ export async function processCheckoutSessionCompleted(
       result.branch = "no-email";
     }
   } else if (patientEmail && session.amount_total === 999) {
-    // Only send the "primera sesión 9,99€" confirmation email for 9.99€ purchases
+    // Diagnóstico 9,99€ — create/update diagnostico_tests record + send email
     result.branch = "session";
+
+    // Upsert diagnostico_tests with real email from Stripe
+    await deps.supabase.from("diagnostico_tests").upsert({
+      user_email: patientEmail,
+      user_name: patientName || null,
+      user_phone: session.metadata?.patient_phone || null,
+      matched_psychologist: psychologist || null,
+      scheduled_date: utms.scheduled_date || null,
+      scheduled_time: utms.scheduled_time || null,
+      paid: true,
+      paid_at: new Date().toISOString(),
+      stripe_session_id: session.id,
+      source: session.metadata?.source || "test-diagnostico",
+      utm_source: utms.utm_source || null,
+      utm_medium: utms.utm_medium || null,
+      utm_campaign: utms.utm_campaign || null,
+      updated_at: new Date().toISOString(),
+    }, { onConflict: "user_email" });
+
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
     const { subject, html } = deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
     const emailResult = await deps.sendEmail({ to: patientEmail, toName: patientName, subject, html });
