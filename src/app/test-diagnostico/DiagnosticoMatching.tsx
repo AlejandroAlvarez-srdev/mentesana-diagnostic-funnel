@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import Link from "next/link";
 import { track } from "@/lib/tracking";
 
 // ═══ Questions config ═══
@@ -95,8 +94,10 @@ export default function DiagnosticoMatching() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
-  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match">("intro");
+  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match" | "schedule">("intro");
   const [saving, setSaving] = useState(false);
+  const [selectedDay, setSelectedDay] = useState<string>("");
+  const [selectedSlot, setSelectedSlot] = useState<string>("");
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
@@ -264,15 +265,187 @@ export default function DiagnosticoMatching() {
 
             {/* CTA */}
             <div className="mt-8 text-center">
-              <Link
-                href="/test/confirmacion"
-                onClick={() => track("select_slot", { psychologist: matchedPsych.name })}
+              <button
+                onClick={() => setPhase("schedule")}
                 className="block w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
               >
-                Agendar mi sesión de lectura →
-              </Link>
+                Elegir día y hora de mi cita →
+              </button>
               <p className="mt-3 text-xs text-foreground/40">Tu psicóloga preparará tu diagnóstico antes de la sesión.</p>
             </div>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══ SCHEDULE PHASE — calendario 4 días ═══
+  if (phase === "schedule") {
+    // Generate next 4 available days (skip Sundays)
+    const days: { date: Date; label: string; short: string }[] = [];
+    const now = new Date();
+    let d = new Date(now);
+    d.setDate(d.getDate() + 1); // start tomorrow
+    while (days.length < 4) {
+      if (d.getDay() !== 0) { // skip Sunday
+        days.push({
+          date: new Date(d),
+          label: d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" }),
+          short: d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric" }),
+        });
+      }
+      d.setDate(d.getDate() + 1);
+    }
+
+    // Time slots based on user preference
+    const pref = answers.schedule || "flexible";
+    const allSlots = [
+      { id: "09:00", label: "9:00", period: "manana" },
+      { id: "10:00", label: "10:00", period: "manana" },
+      { id: "11:00", label: "11:00", period: "manana" },
+      { id: "12:00", label: "12:00", period: "manana" },
+      { id: "16:00", label: "16:00", period: "tarde" },
+      { id: "17:00", label: "17:00", period: "tarde" },
+      { id: "18:00", label: "18:00", period: "tarde" },
+      { id: "19:00", label: "19:00", period: "tarde" },
+      { id: "20:00", label: "20:00", period: "noche" },
+      { id: "21:00", label: "21:00", period: "noche" },
+    ];
+    // Show preferred slots first, then others
+    const slots = pref === "flexible" || pref === "finde"
+      ? allSlots
+      : [...allSlots.filter(s => s.period === pref), ...allSlots.filter(s => s.period !== pref)];
+
+    const handleConfirmSlot = async () => {
+      if (!selectedDay || !selectedSlot) return;
+      setSaving(true);
+      track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name });
+
+      // Update the record in Supabase with session date
+      try {
+        await fetch("/api/diagnostico-test", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            answers,
+            context: contextText,
+            name: userName,
+            email: userEmail,
+            phone: userPhone,
+            matchedPsychologist: matchedPsych.name,
+            scheduledDate: selectedDay,
+            scheduledTime: selectedSlot,
+          }),
+        });
+      } catch {}
+
+      // Redirect to payment
+      track("initiate_checkout", { amount: "9.99" });
+      setSaving(false);
+      // Go to Stripe checkout or internal payment page
+      window.location.href = `/test/confirmacion?psych=${encodeURIComponent(matchedPsych.name)}&date=${encodeURIComponent(selectedDay)}&time=${encodeURIComponent(selectedSlot)}&email=${encodeURIComponent(userEmail)}`;
+    };
+
+    return (
+      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
+        <header className="bg-white border-b border-purple/10 px-4 py-4">
+          <div className="max-w-2xl mx-auto flex items-center justify-between">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <span className="text-[11px] text-foreground/40 font-medium">Elige tu cita</span>
+          </div>
+        </header>
+
+        <main className="flex-1 flex items-center justify-center px-4 py-8">
+          <div className="max-w-lg w-full">
+            <div className="text-center mb-6">
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Paso 3 de 6</p>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">Elige el día y hora de tu cita de diagnóstico</h1>
+              <p className="mt-2 text-sm text-foreground/50">Con {matchedPsych.name}. Videollamada de 50 min.</p>
+            </div>
+
+            {/* Day selector */}
+            <div className="grid grid-cols-4 gap-2 mb-6">
+              {days.map((day) => {
+                const key = day.date.toISOString().split("T")[0];
+                const isSelected = selectedDay === key;
+                return (
+                  <button
+                    key={key}
+                    onClick={() => { setSelectedDay(key); setSelectedSlot(""); }}
+                    className={`p-3 rounded-xl border text-center transition-all ${
+                      isSelected
+                        ? "bg-purple text-white border-purple shadow-lg"
+                        : "bg-white border-purple/10 hover:border-purple/30"
+                    }`}
+                  >
+                    <p className={`text-[10px] uppercase font-bold ${isSelected ? "text-white/70" : "text-foreground/40"}`}>
+                      {day.date.toLocaleDateString("es-ES", { weekday: "short" })}
+                    </p>
+                    <p className={`font-serif text-xl font-bold mt-0.5 ${isSelected ? "text-white" : "text-foreground"}`}>
+                      {day.date.getDate()}
+                    </p>
+                    <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-foreground/40"}`}>
+                      {day.date.toLocaleDateString("es-ES", { month: "short" })}
+                    </p>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Time slots */}
+            {selectedDay && (
+              <>
+                <p className="text-xs font-bold text-foreground/50 uppercase tracking-wider mb-3">Hora disponible</p>
+                <div className="grid grid-cols-5 gap-2 mb-6">
+                  {slots.map((slot) => {
+                    const isSelected = selectedSlot === slot.id;
+                    return (
+                      <button
+                        key={slot.id}
+                        onClick={() => setSelectedSlot(slot.id)}
+                        className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
+                          isSelected
+                            ? "bg-purple text-white border-purple shadow-md"
+                            : "bg-white border-purple/10 hover:border-purple/30 text-foreground/70"
+                        }`}
+                      >
+                        {slot.label}
+                      </button>
+                    );
+                  })}
+                </div>
+              </>
+            )}
+
+            {/* Confirm + pay */}
+            {selectedDay && selectedSlot && (
+              <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm font-semibold text-foreground">Tu cita de diagnóstico</p>
+                    <p className="text-xs text-foreground/50 mt-0.5">
+                      {new Date(selectedDay).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })} a las {selectedSlot}h
+                    </p>
+                    <p className="text-xs text-purple font-medium mt-0.5">Con {matchedPsych.name}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="font-serif text-2xl font-bold text-purple">9,99€</p>
+                    <p className="text-[10px] text-foreground/40">pago único</p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <button
+              onClick={handleConfirmSlot}
+              disabled={!selectedDay || !selectedSlot || saving}
+              className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+            >
+              {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
+            </button>
+
+            <p className="mt-3 text-center text-[10px] text-foreground/30">🔒 Pago seguro · Devolución garantizada · Sin suscripción</p>
           </div>
         </main>
       </div>
