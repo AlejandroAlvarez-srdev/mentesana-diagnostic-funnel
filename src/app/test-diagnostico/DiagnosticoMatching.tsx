@@ -559,9 +559,10 @@ export default function DiagnosticoMatching() {
 
             <button
               onClick={() => setPhase("contact")}
-              className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
+              disabled={!contextText.trim()}
+              className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
             >
-              {contextText.trim() ? "Continuar →" : "Saltar y continuar →"}
+              Continuar →
             </button>
           </div>
         </main>
