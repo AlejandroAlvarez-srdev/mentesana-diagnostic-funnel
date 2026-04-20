@@ -473,10 +473,9 @@ export default function DiagnosticoMatching() {
               {[
                 { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
                 { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
-                { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita de diagnóstico." },
+                { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita." },
                 { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Sin suscripción. Devolución garantizada si no te ayuda." },
-                { n: "5", icon: "📄", title: "Recibes el formulario completo", desc: "Por email. Tu psicóloga lo usa para preparar tu informe antes de la cita." },
-                { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Te explica tu informe, cada hallazgo, y construís un plan juntos." },
+                { n: "5", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga te entrega el informe, te explica cada hallazgo, y construís un plan juntos." },
               ].map((step) => (
                 <div key={step.n} className={`flex items-start gap-4 py-3 ${step.active ? "" : "opacity-70"}`}>
                   <div className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/20"}`}>
