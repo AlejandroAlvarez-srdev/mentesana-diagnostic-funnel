@@ -94,7 +94,7 @@ export default function DiagnosticoMatching() {
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
-  const [phase, setPhase] = useState<"intro" | "questions" | "context" | "contact" | "match" | "schedule" | "payment">("intro");
+  const [phase, setPhase] = useState<"intro" | "questions" | "analyzing" | "context" | "contact" | "match" | "schedule" | "payment">("intro");
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -129,10 +129,10 @@ export default function DiagnosticoMatching() {
     if (currentQ < QUESTIONS.length - 1) {
       setTimeout(() => setCurrentQ(currentQ + 1), 300);
     } else {
-      // After all 5 questions → match directly (skip context + contact)
+      // After all 5 questions → pantalla de análisis antes del match
       setTimeout(() => {
-        track("view_match_result", { profile: newAnswers.feeling || "" });
-        setPhase("match");
+        track("start_matching_analysis", { profile: newAnswers.feeling || "" });
+        setPhase("analyzing");
       }, 400);
     }
   }, [answers, currentQ]);
@@ -192,6 +192,18 @@ export default function DiagnosticoMatching() {
 
     return `Hemos elegido a ${matchedPsych.name} por su ${parts.join(" y ")}.`;
   })();
+
+  if (phase === "analyzing") {
+    return (
+      <AnalyzingPhase
+        onComplete={() => {
+          track("view_match_result", { profile: answers.feeling || "" });
+          setPhase("match");
+        }}
+        matchedPsychName={matchedPsych.name}
+      />
+    );
+  }
 
   if (phase === "match") {
     return (
@@ -415,6 +427,9 @@ export default function DiagnosticoMatching() {
                 </div>
               </div>
             )}
+
+            {/* Qué recibes justo después del pago */}
+            <NextStepsCard />
 
             <button
               onClick={handleConfirmSlot}
@@ -780,6 +795,11 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             </div>
           </div>
 
+          {/* Qué recibes justo después del pago */}
+          <div className="mb-6">
+            <NextStepsCard />
+          </div>
+
           {/* Stripe Checkout */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-16">
@@ -801,6 +821,141 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
           </div>
         </div>
       </main>
+    </div>
+  );
+}
+
+// ═══ ANALYZING PHASE — pantalla de carga antes del match ═══
+function AnalyzingPhase({ onComplete, matchedPsychName }: { onComplete: () => void; matchedPsychName: string }) {
+  const STEPS = [
+    { icon: "🔍", label: "Analizando tus respuestas…" },
+    { icon: "🧠", label: "Identificando tu perfil clínico…" },
+    { icon: "💜", label: "Cruzando con nuestro equipo de psicólogas…" },
+    { icon: "✨", label: `Preparando tu match con ${matchedPsychName.split(" ")[0]}…` },
+  ];
+  const [current, setCurrent] = useState(0);
+
+  useEffect(() => {
+    if (current >= STEPS.length) {
+      const t = setTimeout(onComplete, 700);
+      return () => clearTimeout(t);
+    }
+    const t = setTimeout(() => setCurrent((c) => c + 1), 950);
+    return () => clearTimeout(t);
+  }, [current, onComplete, STEPS.length]);
+
+  return (
+    <div className="min-h-screen bg-gradient-to-b from-[#FFFAF2] via-[#FAF4FC] to-[#F0E3F7] flex flex-col">
+      <header className="bg-white/60 backdrop-blur-md border-b border-purple/10 px-4 py-4">
+        <div className="max-w-2xl mx-auto flex items-center justify-center">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+        </div>
+      </header>
+
+      <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <div className="max-w-md w-full">
+          {/* Orbe pulsante */}
+          <div className="flex justify-center mb-10">
+            <div className="relative w-28 h-28">
+              <div className="absolute inset-0 rounded-full bg-purple/20 animate-ping" />
+              <div className="absolute inset-2 rounded-full bg-purple/30 animate-pulse" />
+              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-purple to-[#8B2FB5] shadow-2xl shadow-purple/40 flex items-center justify-center">
+                <svg className="w-10 h-10 text-white animate-spin" viewBox="0 0 24 24" fill="none" style={{ animationDuration: "2s" }}>
+                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="35 20" strokeLinecap="round" opacity="0.9" />
+                </svg>
+              </div>
+            </div>
+          </div>
+
+          <h1 className="font-serif text-2xl md:text-3xl text-center leading-tight mb-2">
+            Preparando tu <em className="text-purple italic font-normal">match perfecto</em>
+          </h1>
+          <p className="text-center text-sm text-foreground/60 mb-8">Tardamos unos segundos en cruzar tu perfil con nuestra red clínica.</p>
+
+          <div className="space-y-3">
+            {STEPS.map((s, i) => {
+              const done = i < current;
+              const active = i === current;
+              return (
+                <div
+                  key={i}
+                  className={`flex items-center gap-3 bg-white rounded-2xl border px-4 py-3.5 transition-all duration-500 ${
+                    done
+                      ? "border-green-200 bg-green-50/70"
+                      : active
+                      ? "border-purple/30 shadow-lg shadow-purple/10 scale-[1.02]"
+                      : "border-black/5 opacity-40"
+                  }`}
+                  style={{ transitionProperty: "transform, opacity, border-color, background-color, box-shadow" }}
+                >
+                  <div className="shrink-0 w-8 h-8 flex items-center justify-center">
+                    {done ? (
+                      <span className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shadow-md">✓</span>
+                    ) : active ? (
+                      <div className="w-5 h-5 border-2 border-purple/20 border-t-purple rounded-full animate-spin" />
+                    ) : (
+                      <span className="text-lg opacity-60">{s.icon}</span>
+                    )}
+                  </div>
+                  <p
+                    className={`text-sm leading-snug ${
+                      done
+                        ? "text-green-800 font-medium"
+                        : active
+                        ? "text-foreground font-semibold"
+                        : "text-foreground/40"
+                    }`}
+                  >
+                    {s.label}
+                  </p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </main>
+    </div>
+  );
+}
+
+// ═══ NEXT STEPS CARD — "justo después del pago recibes…" ═══
+function NextStepsCard() {
+  const items = [
+    {
+      icon: "📧",
+      title: "Tu test clínico en el correo",
+      desc: "30 preguntas (PHQ-9, GAD-7, DSM-5) — 10-15 min. Tu psicóloga las lee antes de la sesión.",
+    },
+    {
+      icon: "📅",
+      title: "Confirmación de tu cita",
+      desc: "Recordatorios por email y WhatsApp. Enlace a la videollamada.",
+    },
+    {
+      icon: "🩺",
+      title: "Tu diagnóstico en la sesión",
+      desc: "50 min con tu psicóloga. Te explica cada hallazgo y construís el plan juntas.",
+    },
+  ];
+  return (
+    <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4 shadow-sm">
+      <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">
+        Justo después del pago recibes
+      </p>
+      <div className="space-y-3">
+        {items.map((it, i) => (
+          <div key={i} className="flex items-start gap-3">
+            <div className="shrink-0 w-9 h-9 rounded-full bg-purple/10 flex items-center justify-center text-base">
+              {it.icon}
+            </div>
+            <div className="flex-1">
+              <p className="text-sm font-semibold text-foreground leading-tight">{it.title}</p>
+              <p className="text-[12px] text-foreground/60 leading-relaxed mt-0.5">{it.desc}</p>
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
