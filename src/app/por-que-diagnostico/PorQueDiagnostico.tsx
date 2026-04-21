@@ -171,7 +171,7 @@ export default function PorQueDiagnostico() {
 
   return (
     <>
-      <main className="bg-[#FFFAF2] min-h-screen pb-28 md:pb-0">
+      <main className="bg-[#FFFAF2] min-h-screen">
 
         {/* ═══════════ HERO ═══════════ */}
         <section className="relative overflow-hidden bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white pt-16 pb-14 md:pt-24 md:pb-20">
