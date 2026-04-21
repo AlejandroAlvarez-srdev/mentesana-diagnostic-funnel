@@ -259,38 +259,23 @@ export default function PorQueDiagnostico() {
               ))}
             </div>
 
-            {/* Mobile cards */}
-            <div className="md:hidden">
-              <div className="grid grid-cols-2 gap-2 mb-4">
-                <div className="bg-black/[0.04] rounded-2xl p-3 text-center border border-black/5">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-black/55">Primera sesión gratis</p>
-                  <p className="text-[11px] text-black/45 mt-0.5">la mayoría</p>
+            {/* Mobile: 2 columnas sticky + filas compactas */}
+            <div className="md:hidden bg-white rounded-2xl border border-black/5 shadow-[0_10px_30px_rgba(106,23,140,.06)] overflow-hidden">
+              <div className="grid grid-cols-[1fr_1fr] bg-[#FAF7F2] sticky top-0 z-10 border-b border-black/5">
+                <div className="p-3 text-center">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-black/55 leading-tight">Sesión<br />gratis</p>
                 </div>
-                <div className="bg-[#6A178C]/[0.06] rounded-2xl p-3 text-center border border-[#6A178C]/15">
-                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#6A178C]">Diagnóstico Mente Sana</p>
-                  <p className="text-[11px] text-[#6A178C]/80 mt-0.5 font-semibold">9,99€</p>
+                <div className="p-3 text-center bg-[#6A178C]/[0.08] border-l border-[#6A178C]/15">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#6A178C] leading-tight">Mente Sana</p>
+                  <p className="text-[10px] text-[#6A178C]/70 font-semibold">9,99€</p>
                 </div>
               </div>
-            </div>
-            <div className="md:hidden space-y-4">
               {COMPARATIVA.map((row, i) => (
-                <div key={i} className="bg-white rounded-2xl p-5 border border-black/5 shadow-sm">
-                  <p className="text-xs font-bold uppercase tracking-wider text-black/50 mb-3">{row.label}</p>
-                  <div className="space-y-3">
-                    <div className="flex items-start gap-2">
-                      <span className="text-black/30 text-sm mt-0.5">✕</span>
-                      <div>
-                        <p className="text-[11px] text-black/40 font-semibold uppercase tracking-wide">Gratis</p>
-                        <p className="text-sm text-black/60">{row.gratis}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2 bg-[#6A178C]/[0.04] rounded-xl p-3 -mx-1">
-                      <span className="text-[#6A178C] text-sm mt-0.5">✓</span>
-                      <div>
-                        <p className="text-[11px] text-[#6A178C] font-semibold uppercase tracking-wide">Mente Sana</p>
-                        <p className="text-sm text-black font-medium">{row.diag}</p>
-                      </div>
-                    </div>
+                <div key={i} className={`${i % 2 === 0 ? "bg-white" : "bg-[#FAF9F6]"} border-b border-black/5 last:border-b-0`}>
+                  <p className="text-[11px] font-bold uppercase tracking-wider text-black/55 px-3 pt-3">{row.label}</p>
+                  <div className="grid grid-cols-2">
+                    <div className="p-3 text-[13px] text-black/55 leading-snug">{row.gratis}</div>
+                    <div className="p-3 text-[13px] text-black font-medium leading-snug bg-[#6A178C]/[0.04] border-l border-black/5">{row.diag}</div>
                   </div>
                 </div>
               ))}
