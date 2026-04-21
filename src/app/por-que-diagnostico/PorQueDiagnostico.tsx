@@ -113,7 +113,7 @@ export default function PorQueDiagnostico() {
             <div className="mt-10 flex flex-col items-center gap-3">
               <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("hero")}
                 className="bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-                Quiero mi diagnóstico →
+                Comenzar →
               </Link>
               <p className="text-xs text-white/55">Pago único · Sin suscripción · Con garantía</p>
             </div>
@@ -394,7 +394,7 @@ export default function PorQueDiagnostico() {
             </p>
             <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-              Recibir mi diagnóstico (9,99€) →
+              Comenzar (9,99€) →
             </Link>
             <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción · Devolución garantizada</p>
           </div>
@@ -407,7 +407,7 @@ export default function PorQueDiagnostico() {
       <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-lg border-t border-black/5 shadow-[0_-8px_24px_rgba(106,23,140,.08)] px-4 py-3">
         <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("sticky_mobile")}
           className="flex items-center justify-center bg-[#6A178C] text-white font-bold rounded-full px-6 py-3.5 text-sm shadow-[0_8px_24px_rgba(106,23,140,.3)]">
-          Recibir mi diagnóstico · 9,99€
+          Comenzar · 9,99€
         </Link>
       </div>
     </>
