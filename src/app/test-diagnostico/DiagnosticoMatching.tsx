@@ -478,15 +478,15 @@ export default function DiagnosticoMatching() {
                 { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
                 { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
               ].map((step) => (
-                <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-70"}`}>
-                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/20"}`}>
+                <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
+                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
                     {step.icon}
                   </div>
                   <div className="pt-1">
-                    <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground/80"}`}>
-                      <span className="text-foreground/30 mr-1.5">{step.n}.</span>{step.title}
+                    <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground"}`}>
+                      <span className="text-foreground/60 mr-1.5">{step.n}.</span>{step.title}
                     </p>
-                    <p className="text-[11px] text-foreground/50 mt-0.5 leading-relaxed">{step.desc}</p>
+                    <p className="text-[11px] text-foreground/80 mt-0.5 leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               ))}
@@ -500,7 +500,7 @@ export default function DiagnosticoMatching() {
               >
                 Empezar las 5 preguntas →
               </button>
-              <p className="mt-2 text-[11px] text-foreground/40">🔒 Tus respuestas son confidenciales · 2 minutos</p>
+              <p className="mt-2 text-[11px] text-foreground/70">🔒 Tus respuestas son confidenciales · 2 minutos</p>
             </div>
           </div>
         </main>
