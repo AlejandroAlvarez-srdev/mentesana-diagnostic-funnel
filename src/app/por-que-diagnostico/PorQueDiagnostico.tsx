@@ -11,7 +11,15 @@ const PSICOLOGAS = [
   { name: "Laura Acosta", spec: "Depresión · TCC", col: "M-29745", years: 12, video: "/videos/welcome/laura-acosta-acosta.mp4" },
   { name: "Diana Salazar", spec: "Autoestima · TCA", col: "M-31204", years: 11, video: "/videos/welcome/diana-salazar-alzate.mp4" },
   { name: "Alexandra Elías", spec: "Trauma · EMDR", col: "B-19872", years: 9, video: "/videos/welcome/alexandra-elias.mp4" },
-  { name: "Gabriela Delgado", spec: "Pareja · Relaciones", col: "V-24589", years: 8, video: "/videos/welcome/gabriela-delgado.mp4" },
+];
+
+const PASOS = [
+  { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas." },
+  { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para tu caso." },
+  { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad y reservas tu cita." },
+  { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Devolución garantizada." },
+  { n: "5", icon: "📧", title: "Test en tu correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5). 10-15 min." },
+  { n: "6", icon: "💬", title: "Asistes y recibes tu diagnóstico", desc: "50 min. Tu psicóloga llega con tu informe leído." },
 ];
 
 function PsychVideo({ src }: { src: string }) {
@@ -195,7 +203,7 @@ export default function PorQueDiagnostico() {
             {/* Avatar stack — social proof */}
             <div className="mt-8 flex items-center justify-center gap-3">
               <div className="flex -space-x-3">
-                {PSICOLOGAS.slice(0, 4).map((p) => (
+                {PSICOLOGAS.map((p) => (
                   <div key={p.name} className="ring-2 ring-[#2d0d3f] rounded-full">
                     <AvatarVideo src={p.video} size="sm" />
                   </div>
@@ -204,10 +212,7 @@ export default function PorQueDiagnostico() {
                   +28
                 </div>
               </div>
-              <div className="text-left">
-                <p className="text-sm text-white font-semibold leading-tight">32 psicólogas colegiadas</p>
-                <p className="text-xs text-white/60 leading-tight">validadas por nuestra clínica</p>
-              </div>
+              <p className="text-sm text-white/80 text-left leading-tight">32 psicólogas<br /><span className="text-xs text-white/55">colegiadas</span></p>
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-3xl mx-auto">
@@ -323,13 +328,13 @@ export default function PorQueDiagnostico() {
         {/* ═══════════ PSICÓLOGAS REALES ═══════════ */}
         <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-6xl mx-auto">
-            <div className="text-center mb-12">
+            <div className="text-center mb-10">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">no son stock · son reales</p>
-              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Las psicólogas que te atenderán</h2>
-              <p className="mt-4 text-base text-black/60 max-w-2xl mx-auto">Te matcheamos con una de ellas según tu caso. Todas colegiadas, con media de <strong>10 años de experiencia clínica</strong>.</p>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Psicólogas que te atenderán</h2>
+              <p className="mt-3 text-base text-black/60 max-w-xl mx-auto">Todas colegiadas. Media de <strong>10 años de experiencia</strong>.</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 max-w-5xl mx-auto">
               {PSICOLOGAS.map((p) => (
                 <div key={p.name} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04] hover:shadow-[0_12px_40px_rgba(106,23,140,.10)] hover:-translate-y-0.5 transition-all">
                   <div className="relative aspect-square overflow-hidden bg-[#6A178C]/5">
@@ -352,17 +357,9 @@ export default function PorQueDiagnostico() {
               ))}
             </div>
 
-            {/* +27 card */}
-            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-5 bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-black/5 max-w-2xl mx-auto">
-              <div className="text-center sm:text-left">
-                <span className="font-serif text-4xl md:text-5xl font-bold text-[#6A178C]">+27</span>
-                <p className="text-black/55 font-semibold text-sm mt-0.5">psicólogas más en el equipo</p>
-              </div>
-              <div className="h-px sm:h-12 sm:w-px w-full bg-black/5" />
-              <p className="text-black/55 text-xs md:text-sm text-center sm:text-left max-w-xs">
-                Especialistas en ansiedad, depresión, pareja, duelo, TCA, trauma y adicciones.
-              </p>
-            </div>
+            <p className="text-center mt-8 text-sm text-black/55">
+              <span className="font-serif text-2xl text-[#6A178C] font-bold align-middle">+28</span> <span className="align-middle">psicólogas más en el equipo</span>
+            </p>
           </div>
         </section>
 
@@ -371,45 +368,37 @@ export default function PorQueDiagnostico() {
           <div className="max-w-3xl mx-auto text-center">
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">una pregunta razonable</p>
             <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-6">¿Por qué solo 9,99€?</h2>
-            <p className="text-base md:text-lg text-black/75 leading-relaxed mb-5">
-              Un informe clínico firmado y una sesión de 50 minutos con una psicóloga colegiada, en una consulta privada, cuestan entre 60 y 120€. Nosotros te lo damos por 9,99€.
-            </p>
-            <p className="text-base md:text-lg text-black/75 leading-relaxed mb-5">
-              No es precio premium. Es precio de entrada. Queremos que cualquier persona pueda empezar con claridad, no con dudas.
+            <p className="text-base md:text-lg text-black/75 leading-relaxed mb-4">
+              En consulta privada, un informe firmado + sesión de 50 min cuesta <strong>60-120€</strong>. Nosotros lo damos por 9,99€ como precio de entrada.
             </p>
             <p className="text-base md:text-lg text-black/75 leading-relaxed">
-              Si luego decides seguir, las sesiones vienen a <strong>23€-45€</strong>. Si no decides seguir, no pasa nada: el informe ya es tuyo.
+              Si decides seguir, bonos desde <strong>23€/sesión</strong>. Si no, el informe ya es tuyo.
             </p>
           </div>
         </section>
 
-        {/* ═══════════ TIMELINE ═══════════ */}
+        {/* ═══════════ PASOS (mismo flujo del test) ═══════════ */}
         <section className="py-16 md:py-20 px-4 bg-[#1a0a1f] text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-15 pointer-events-none"
             style={{ background: "radial-gradient(circle at 20% 50%, rgba(139,47,181,.4), transparent 40%), radial-gradient(circle at 80% 50%, rgba(201,169,209,.3), transparent 40%)" }} />
-          <div className="max-w-4xl mx-auto relative">
-            <div className="text-center mb-14">
-              <p className="font-handwriting text-xl text-[#E8D4F0] mb-2">qué pasa exactamente</p>
-              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15]">Desde hoy hasta tu sesión</h2>
+          <div className="max-w-3xl mx-auto relative">
+            <div className="text-center mb-10">
+              <p className="font-handwriting text-xl text-[#E8D4F0] mb-2">así funciona</p>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15]">6 pasos hasta tu diagnóstico</h2>
             </div>
 
-            <div className="space-y-6 md:space-y-8">
-              {[
-                { when: "HOY", title: "Respondes 5 preguntas", desc: "5 minutos. No hay test ni ranking. Solo cuéntanos qué estás sintiendo y desde cuándo." },
-                { when: "+48h", title: "Recibes tu matching", desc: "Te asignamos la psicóloga cuyo perfil clínico encaja con tu caso. No la primera disponible." },
-                { when: "TU HORA", title: "Sesión de 50 minutos", desc: "Tu psicóloga llega con tu informe leído. Te lo explica, te da el plan propuesto y empezáis a trabajar." },
-                { when: "DESPUÉS", title: "Tú decides", desc: "Si quieres seguir, bonos desde 23€/sesión. Si no, el informe es tuyo y no se cobra nada más." },
-              ].map((step, i) => (
-                <div key={i} className="flex gap-4 md:gap-6 items-start">
-                  <div className="shrink-0 w-16 md:w-24 text-right">
-                    <span className="font-handwriting text-lg md:text-2xl text-[#E8D4F0]">{step.when}</span>
+            <div className="relative">
+              <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#8B2FB5]/60 via-[#8B2FB5]/30 to-[#8B2FB5]/10" />
+              {PASOS.map((step) => (
+                <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
+                  <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] border-2 border-[#E8D4F0]/30 flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/30">
+                    {step.icon}
                   </div>
-                  <div className="shrink-0 w-px bg-gradient-to-b from-[#8B2FB5] to-transparent self-stretch mt-2 relative">
-                    <div className="absolute -left-1.5 top-0 w-3 h-3 rounded-full bg-[#E8D4F0]" />
-                  </div>
-                  <div className="flex-1 pb-2">
-                    <h3 className="font-serif text-xl md:text-2xl mb-2">{step.title}</h3>
-                    <p className="text-sm md:text-base text-white/65 leading-relaxed">{step.desc}</p>
+                  <div className="pt-1.5">
+                    <p className="font-serif text-base md:text-lg text-white leading-tight">
+                      <span className="text-white/50 mr-1.5 font-sans text-sm">{step.n}.</span>{step.title}
+                    </p>
+                    <p className="text-[13px] text-white/60 mt-1 leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               ))}
@@ -424,10 +413,9 @@ export default function PorQueDiagnostico() {
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">cómo funciona el informe</p>
               <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">No te etiquetamos.<br />Te entendemos.</h2>
             </div>
-            <div className="bg-white rounded-3xl p-7 md:p-10 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] space-y-5 text-base md:text-lg text-black/75 leading-relaxed">
-              <p>Hay informes que abres esperando saber qué te pasa y sales con una etiqueta que te deja peor. El nuestro no va por ahí.</p>
-              <p>Describimos <strong>patrones</strong>, no diagnósticos asustadores. Tus patrones de pensamiento, de relación, de cómo regulas lo que sientes. Y, a partir de ahí, una propuesta de trabajo concreta.</p>
-              <p>Si tu caso requiere un profesional sanitario de mayor complejidad (psiquiatra, terapia especializada), te lo decimos con honestidad en el informe. Sin drama.</p>
+            <div className="bg-white rounded-3xl p-7 md:p-10 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] space-y-4 text-base md:text-lg text-black/75 leading-relaxed">
+              <p>Describimos <strong>patrones</strong>, no etiquetas asustadoras. Y a partir de ahí, una propuesta de trabajo concreta.</p>
+              <p>Si tu caso requiere un sanitario de mayor complejidad, te lo decimos con honestidad en el informe.</p>
               <p className="pt-2 border-t border-black/5 italic text-black/60">Escrito para que lo entiendas. Firmado por quien sí te puede ayudar.</p>
             </div>
           </div>
@@ -442,9 +430,9 @@ export default function PorQueDiagnostico() {
         <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-4xl mx-auto text-center">
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">el rigor detrás</p>
-            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-8">Respaldo metodológico</h2>
-            <p className="text-base md:text-lg text-black/75 leading-relaxed max-w-2xl mx-auto mb-10">
-              Nuestro informe se apoya en herramientas clínicas validadas internacionalmente. No es un quiz de internet.
+            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-4">Respaldo metodológico</h2>
+            <p className="text-base text-black/65 max-w-xl mx-auto mb-8">
+              Herramientas clínicas validadas. No un quiz de internet.
             </p>
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
               {[
@@ -566,8 +554,8 @@ export default function PorQueDiagnostico() {
               9,99€ para empezar con<br />
               <em className="italic text-[#E8D4F0]">claridad</em>.
             </h2>
-            <p className="text-base md:text-lg text-white/75 leading-relaxed max-w-xl mx-auto mb-10">
-              Informe clínico firmado + matching real + sesión de 50 minutos con tu psicóloga. Todo por menos que una cena.
+            <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-10">
+              Informe + matching + 50 min con tu psicóloga. Menos que una cena.
             </p>
             <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
