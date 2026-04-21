@@ -14,6 +14,29 @@ const PSICOLOGAS = [
   { name: "Gabriela Delgado", spec: "Pareja · Relaciones", col: "V-24589", years: 8, video: "/videos/welcome/gabriela-delgado.mp4" },
 ];
 
+function PsychVideo({ src }: { src: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          if (!el.src) el.src = src;
+          el.play().catch(() => {});
+        } else {
+          el.pause();
+        }
+      });
+    }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src]);
+  return (
+    <video ref={ref} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+  );
+}
+
 function AvatarVideo({ src, size = "md", className = "" }: { src: string; size?: "xs" | "sm" | "md" | "lg"; className?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
@@ -298,7 +321,7 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ PSICÓLOGAS REALES ═══════════ */}
-        <section className="py-16 md:py-20 px-4">
+        <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">no son stock · son reales</p>
@@ -306,20 +329,40 @@ export default function PorQueDiagnostico() {
               <p className="mt-4 text-base text-black/60 max-w-2xl mx-auto">Te matcheamos con una de ellas según tu caso. Todas colegiadas, con media de <strong>10 años de experiencia clínica</strong>.</p>
             </div>
 
-            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 md:gap-6">
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 md:gap-5">
               {PSICOLOGAS.map((p) => (
-                <div key={p.name} className="text-center">
-                  <div className="mx-auto mb-3 ring-4 ring-[#6A178C]/10 rounded-full">
-                    <AvatarVideo src={p.video} size="lg" className="mx-auto" />
+                <div key={p.name} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04] hover:shadow-[0_12px_40px_rgba(106,23,140,.10)] hover:-translate-y-0.5 transition-all">
+                  <div className="relative aspect-square overflow-hidden bg-[#6A178C]/5">
+                    <PsychVideo src={p.video} />
+                    <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent" />
+                    <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm text-[9px] font-bold text-[#6A178C] px-2 py-1 rounded-full tracking-wide">
+                      COL. {p.col}
+                    </div>
+                    <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-[9px] font-bold text-white px-2 py-0.5 rounded-full">
+                      <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                      EN VIVO
+                    </div>
                   </div>
-                  <p className="font-serif text-base md:text-lg text-black leading-tight">{p.name}</p>
-                  <p className="text-[11px] text-black/55 mt-0.5">{p.spec}</p>
-                  <p className="text-[10px] text-[#6A178C]/70 font-semibold mt-1">Col. {p.col} · {p.years} años</p>
+                  <div className="p-3 md:p-4 text-center">
+                    <p className="font-serif text-sm md:text-base text-black leading-tight">{p.name}</p>
+                    <p className="text-[11px] text-[#6A178C] font-semibold mt-1">{p.spec}</p>
+                    <p className="text-[10px] text-black/45 mt-0.5">{p.years} años exp.</p>
+                  </div>
                 </div>
               ))}
             </div>
 
-            <p className="text-center mt-10 text-xs text-black/45">+ 27 psicólogas más en el equipo · especialistas en ansiedad, depresión, pareja, duelo, TCA, autoestima, trauma y adicciones</p>
+            {/* +27 card */}
+            <div className="mt-8 flex flex-col sm:flex-row items-center justify-center gap-5 bg-white rounded-2xl p-5 md:p-6 shadow-sm border border-black/5 max-w-2xl mx-auto">
+              <div className="text-center sm:text-left">
+                <span className="font-serif text-4xl md:text-5xl font-bold text-[#6A178C]">+27</span>
+                <p className="text-black/55 font-semibold text-sm mt-0.5">psicólogas más en el equipo</p>
+              </div>
+              <div className="h-px sm:h-12 sm:w-px w-full bg-black/5" />
+              <p className="text-black/55 text-xs md:text-sm text-center sm:text-left max-w-xs">
+                Especialistas en ansiedad, depresión, pareja, duelo, TCA, trauma y adicciones.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -438,7 +481,7 @@ export default function PorQueDiagnostico() {
               <div className="flex items-center gap-4 justify-center py-3">
                 <div className="text-center">
                   {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src="/images/Reviews/review-3.webp" alt="Laura" className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6A178C]/15 mx-auto" />
+                  <img src="/images/por-que-diagnostico/laura.webp" alt="Laura" className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6A178C]/15 mx-auto" />
                   <p className="text-[11px] text-black/60 mt-1.5 font-semibold">Laura M.</p>
                   <p className="text-[10px] text-black/40">paciente</p>
                 </div>
