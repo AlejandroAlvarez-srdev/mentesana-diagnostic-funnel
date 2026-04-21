@@ -4,7 +4,7 @@ import { processCheckoutSessionCompleted, type ProcessDeps, type SupabaseLike } 
 
 // ---------- helpers ----------
 
-function makeSupabaseMock(opts: { upsertError?: string } = {}): {
+function makeSupabaseMock(opts: { upsertError?: string; claimEmpty?: boolean } = {}): {
   client: SupabaseLike;
   upsertCalls: Array<{ table: string; payload: Record<string, unknown> }>;
   updateCalls: Array<{ table: string; payload: Record<string, unknown>; where: [string, string] }>;
@@ -19,9 +19,22 @@ function makeSupabaseMock(opts: { upsertError?: string } = {}): {
           return { error: opts.upsertError ? { message: opts.upsertError } : null };
         },
         update: (payload) => ({
-          eq: async (col, val) => {
+          eq: (col, val) => {
             updateCalls.push({ table, payload, where: [col, val] });
-            return { error: null };
+            const awaited = { error: null as null };
+            return {
+              then: (resolve: (v: typeof awaited) => void) => resolve(awaited),
+              is: (_isCol: string, _isVal: null) => ({
+                select: async (_columns?: string) => ({
+                  data: opts.claimEmpty ? [] : [{ id: "1" }],
+                  error: null,
+                }),
+              }),
+            } as unknown as PromiseLike<{ error: null }> & {
+              is(column: string, value: null): {
+                select(columns?: string): Promise<{ data: { id: string }[]; error: null }>;
+              };
+            };
           },
         }),
       };

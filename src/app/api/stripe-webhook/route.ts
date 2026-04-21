@@ -89,23 +89,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Supabase init failed", detail: String(err) }, { status: 500 });
   }
 
-  // Resolves a checkout session from a payment_intent id when Stripe sends
-  // payment_intent.succeeded or charge.succeeded instead of checkout.session.completed.
-  async function findSessionByPaymentIntent(paymentIntentId: string): Promise<Stripe.Checkout.Session | null> {
-    try {
-      const list = await stripe.checkout.sessions.list({ payment_intent: paymentIntentId, limit: 1 });
-      return list.data[0] || null;
-    } catch (err) {
-      console.error("[webhook] could not look up session for PI:", paymentIntentId, err);
-      return null;
-    }
-  }
-
   async function runProcessing(session: Stripe.Checkout.Session) {
-    // Idempotency: skip if we already processed this session (sent email)
+    // Idempotency coarse-check: skip if already processed.
+    // Real atomic claim happens inside processCheckoutSessionCompleted before
+    // each sendEmail call via an UPDATE ... WHERE email_sent_at IS NULL.
     const existing = await supabase
       .from("payments")
-      .select("status, metadata")
+      .select("status")
       .eq("stripe_session_id", session.id)
       .maybeSingle();
     if (existing.data?.status === "completed") {
@@ -129,36 +119,13 @@ export async function POST(req: NextRequest) {
   }
 
   // ============ MAIN EVENT ROUTING ============
+  // Solo escuchamos checkout.session.completed. Stripe también dispara
+  // payment_intent.succeeded y charge.succeeded por el mismo pago, lo que
+  // causaba 3x emails. La idempotencia atómica vive dentro de process.ts.
   if (event.type === "checkout.session.completed") {
     const session = event.data.object as Stripe.Checkout.Session;
     console.log("[webhook] completed", { id: session.id, product: session.metadata?.product, amount: session.amount_total });
     await runProcessing(session);
-  }
-
-  else if (event.type === "payment_intent.succeeded") {
-    const pi = event.data.object as Stripe.PaymentIntent;
-    console.log("[webhook] payment_intent.succeeded", { id: pi.id, amount: pi.amount });
-    const session = await findSessionByPaymentIntent(pi.id);
-    if (session) {
-      console.log("[webhook] resolved session for PI:", session.id);
-      await runProcessing(session);
-    } else {
-      console.log("[webhook] no checkout session found for PI:", pi.id);
-    }
-  }
-
-  else if (event.type === "charge.succeeded") {
-    const charge = event.data.object as Stripe.Charge;
-    console.log("[webhook] charge.succeeded", { id: charge.id, amount: charge.amount, pi: charge.payment_intent });
-    if (charge.payment_intent) {
-      const session = await findSessionByPaymentIntent(charge.payment_intent as string);
-      if (session) {
-        console.log("[webhook] resolved session for charge:", session.id);
-        await runProcessing(session);
-      } else {
-        console.log("[webhook] no checkout session found for charge:", charge.id);
-      }
-    }
   }
 
   else if (event.type === "checkout.session.expired") {

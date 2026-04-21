@@ -6,11 +6,20 @@ import type Stripe from "stripe";
 
 export interface UpsertResult { error?: { message: string } | null }
 
+export interface ClaimResult {
+  data?: { id: string | number }[] | null;
+  error?: { message: string } | null;
+}
+
 export interface SupabaseLike {
   from(table: string): {
     upsert(payload: Record<string, unknown>, options?: { onConflict?: string }): PromiseLike<UpsertResult>;
     update(payload: Record<string, unknown>): {
-      eq(column: string, value: string): PromiseLike<UpsertResult>;
+      eq(column: string, value: string): PromiseLike<UpsertResult> & {
+        is(column: string, value: null): {
+          select(columns?: string): PromiseLike<ClaimResult>;
+        };
+      };
     };
   };
 }
@@ -166,6 +175,21 @@ export async function processCheckoutSessionCompleted(
 
     if (product === "ebook-sanando" && patientEmail) {
       result.branch = "ebook";
+
+      // Atomic claim — solo un handler concurrente gana el derecho a enviar.
+      // Si email_sent_at ya no es NULL, otro evento/retry ya lo envió.
+      const claim = await deps.supabase
+        .from("ebook_purchases")
+        .update({ email_sent_at: new Date().toISOString(), email_error: null })
+        .eq("stripe_session_id", session.id)
+        .is("email_sent_at", null)
+        .select("id");
+      if (!claim.data || claim.data.length === 0) {
+        console.log("[webhook] ebook email already claimed, skipping send:", session.id);
+        result.branch = "skipped";
+        return result;
+      }
+
       const downloadUrl = `${deps.origin}/sanando-desde-adentro`;
       const { subject, html } = deps.buildEbookEmail({ name: patientName, downloadUrl });
       const pdfBase64 = await deps.fetchPdf(deps.origin);
@@ -178,12 +202,15 @@ export async function processCheckoutSessionCompleted(
       });
       result.emailSent = emailResult.success;
       result.emailWithPdf = !!pdfBase64 && emailResult.success;
-      if (!emailResult.success) result.errors.push(`email: ${emailResult.error || "unknown"}`);
 
-      await deps.supabase.from("ebook_purchases").update({
-        email_sent_at: emailResult.success ? new Date().toISOString() : null,
-        email_error: emailResult.success ? null : (emailResult.error || "unknown"),
-      }).eq("stripe_session_id", session.id);
+      if (!emailResult.success) {
+        // Liberamos el claim para que un retry posterior pueda reintentar.
+        await deps.supabase.from("ebook_purchases").update({
+          email_sent_at: null,
+          email_error: emailResult.error || "unknown",
+        }).eq("stripe_session_id", session.id);
+        result.errors.push(`email: ${emailResult.error || "unknown"}`);
+      }
     } else {
       result.branch = "no-email";
     }
@@ -209,11 +236,31 @@ export async function processCheckoutSessionCompleted(
       updated_at: new Date().toISOString(),
     }, { onConflict: "user_email" });
 
+    // Atomic claim — solo un handler concurrente envía el email
+    const claim = await deps.supabase
+      .from("diagnostico_tests")
+      .update({ email_sent_at: new Date().toISOString() })
+      .eq("stripe_session_id", session.id)
+      .is("email_sent_at", null)
+      .select("id");
+    if (!claim.data || claim.data.length === 0) {
+      console.log("[webhook] diagnóstico email already claimed, skipping send:", session.id);
+      result.branch = "skipped";
+      return result;
+    }
+
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
     const { subject, html } = deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
     const emailResult = await deps.sendEmail({ to: patientEmail, toName: patientName, subject, html });
     result.emailSent = emailResult.success;
-    if (!emailResult.success) result.errors.push(`email: ${emailResult.error || "unknown"}`);
+
+    if (!emailResult.success) {
+      // Liberamos el claim para permitir reintento
+      await deps.supabase.from("diagnostico_tests")
+        .update({ email_sent_at: null })
+        .eq("stripe_session_id", session.id);
+      result.errors.push(`email: ${emailResult.error || "unknown"}`);
+    }
   } else {
     result.branch = "no-email";
   }
