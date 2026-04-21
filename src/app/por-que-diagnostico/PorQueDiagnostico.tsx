@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import PressLogos from "@/components/PressLogos";
 import { track } from "@/lib/tracking";
 
 const FAQ = [
@@ -53,17 +54,29 @@ const COMPARATIVA = [
 
 export default function PorQueDiagnostico() {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
+  const [showStickyCTA, setShowStickyCTA] = useState(false);
 
   useEffect(() => {
     track("view_intermediate_landing", {
       source: new URLSearchParams(window.location.search).get("utm_source") || "direct",
     });
 
-    let fired50 = false, fired100 = false;
+    const fired = { 25: false, 50: false, 75: false, 100: false };
     function onScroll() {
-      const pct = window.scrollY / (document.body.scrollHeight - window.innerHeight);
-      if (pct >= 0.5 && !fired50) { fired50 = true; track("scroll_depth_50", { page: "por-que-diagnostico" }); }
-      if (pct >= 0.95 && !fired100) { fired100 = true; track("scroll_depth_100", { page: "por-que-diagnostico" }); }
+      const h = document.body.scrollHeight - window.innerHeight;
+      if (h <= 0) return;
+      const pct = window.scrollY / h;
+      ([25, 50, 75, 100] as const).forEach((mark) => {
+        const threshold = mark === 100 ? 0.95 : mark / 100;
+        if (pct >= threshold && !fired[mark]) {
+          fired[mark] = true;
+          track(`scroll_depth_${mark}`, { page: "por-que-diagnostico" });
+        }
+      });
+      const pastHero = window.scrollY > window.innerHeight * 0.8;
+      const finalCTA = document.getElementById("cta-final");
+      const inFinal = finalCTA ? finalCTA.getBoundingClientRect().top < window.innerHeight : false;
+      setShowStickyCTA(pastHero && !inFinal);
     }
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => window.removeEventListener("scroll", onScroll);
@@ -92,7 +105,7 @@ export default function PorQueDiagnostico() {
       <main className="bg-[#FFFAF2] min-h-screen pb-28 md:pb-0">
 
         {/* ═══════════ HERO ═══════════ */}
-        <section className="relative overflow-hidden bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white pt-20 pb-16 md:pt-28 md:pb-24">
+        <section className="relative overflow-hidden bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white pt-16 pb-14 md:pt-24 md:pb-20">
           <div className="absolute inset-0 opacity-20 pointer-events-none"
             style={{ background: "radial-gradient(circle at 25% 30%, rgba(201,169,209,.35), transparent 45%), radial-gradient(circle at 75% 70%, rgba(139,47,181,.45), transparent 55%)" }} />
           <div className="absolute -top-20 -left-20 w-80 h-80 rounded-full bg-[#6A178C] opacity-20 blur-3xl pointer-events-none" />
@@ -102,7 +115,7 @@ export default function PorQueDiagnostico() {
             <div className="inline-flex items-center gap-2 bg-white/10 border border-white/20 px-4 py-1.5 rounded-full text-xs md:text-sm mb-6">
               <span className="font-handwriting text-base text-[#E8D4F0]">un momento antes de empezar</span>
             </div>
-            <h1 className="font-serif text-[2.25rem] md:text-6xl lg:text-7xl leading-[1.05] max-w-4xl mx-auto">
+            <h1 className="font-serif text-[2rem] md:text-5xl lg:text-6xl leading-[1.12] max-w-4xl mx-auto">
               Por 9,99€ empiezas con<br />
               <em className="italic text-[#E8D4F0]">claridad</em>. No con <em className="italic text-[#C9A9D1]">ruleta</em>.
             </h1>
@@ -136,22 +149,22 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ COMPARATIVA ═══════════ */}
-        <section className="section-padding px-4">
+        <section className="py-16 md:py-20 px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-10">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">la diferencia real</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black">
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">
                 Primera sesión gratis <span className="text-black/40">vs</span><br />
                 Diagnóstico Mente Sana
               </h2>
             </div>
 
             {/* Desktop table */}
-            <div className="hidden md:block bg-white rounded-3xl overflow-hidden border border-black/5 shadow-[0_20px_60px_rgba(106,23,140,.08)]">
-              <div className="grid grid-cols-3 bg-[#FAF7F2] border-b border-black/5">
-                <div className="p-5 text-sm font-semibold text-black/50"></div>
-                <div className="p-5 text-sm font-semibold text-black/50 border-l border-black/5">Primera sesión gratis<br /><span className="text-xs font-normal">(la mayoría de plataformas)</span></div>
-                <div className="p-5 text-sm font-bold text-[#6A178C] border-l border-black/5 bg-[#6A178C]/[0.04]">Diagnóstico Mente Sana<br /><span className="text-xs font-semibold">9,99€</span></div>
+            <div className="hidden md:block bg-white rounded-3xl border border-black/5 shadow-[0_20px_60px_rgba(106,23,140,.08)]">
+              <div className="grid grid-cols-3 bg-[#FAF7F2] border-b border-black/5 sticky top-0 z-10 rounded-t-3xl overflow-hidden">
+                <div className="p-5 text-xs font-bold uppercase tracking-wider text-black/50">Qué recibes</div>
+                <div className="p-5 text-sm font-semibold text-black/60 border-l border-black/5">Primera sesión gratis<br /><span className="text-xs font-normal text-black/45">(la mayoría de plataformas)</span></div>
+                <div className="p-5 text-sm font-bold text-[#6A178C] border-l border-black/5 bg-[#6A178C]/[0.06]">Diagnóstico Mente Sana<br /><span className="text-xs font-semibold">9,99€</span></div>
               </div>
               {COMPARATIVA.map((row, i) => (
                 <div key={i} className={`grid grid-cols-3 ${i % 2 === 0 ? "bg-white" : "bg-[#FAF9F6]"} border-b border-black/5 last:border-b-0`}>
@@ -163,6 +176,18 @@ export default function PorQueDiagnostico() {
             </div>
 
             {/* Mobile cards */}
+            <div className="md:hidden">
+              <div className="grid grid-cols-2 gap-2 mb-4">
+                <div className="bg-black/[0.04] rounded-2xl p-3 text-center border border-black/5">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-black/55">Primera sesión gratis</p>
+                  <p className="text-[11px] text-black/45 mt-0.5">la mayoría</p>
+                </div>
+                <div className="bg-[#6A178C]/[0.06] rounded-2xl p-3 text-center border border-[#6A178C]/15">
+                  <p className="text-[10px] font-bold uppercase tracking-wider text-[#6A178C]">Diagnóstico Mente Sana</p>
+                  <p className="text-[11px] text-[#6A178C]/80 mt-0.5 font-semibold">9,99€</p>
+                </div>
+              </div>
+            </div>
             <div className="md:hidden space-y-4">
               {COMPARATIVA.map((row, i) => (
                 <div key={i} className="bg-white rounded-2xl p-5 border border-black/5 shadow-sm">
@@ -190,11 +215,11 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ TRES RAZONES ═══════════ */}
-        <section className="section-padding px-4 bg-[#FAF7F2]">
+        <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">por qué 9,99€ y no gratis</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black">Tres razones honestas</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Tres razones honestas</h2>
             </div>
             <div className="grid md:grid-cols-3 gap-5 md:gap-6">
               <div className="bg-white rounded-3xl p-7 md:p-8 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)]">
@@ -217,10 +242,10 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ POR QUÉ TAN BARATO ═══════════ */}
-        <section className="section-padding px-4">
+        <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto text-center">
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">una pregunta razonable</p>
-            <h2 className="font-serif text-3xl md:text-5xl text-black mb-6">¿Por qué solo 9,99€?</h2>
+            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-6">¿Por qué solo 9,99€?</h2>
             <p className="text-base md:text-lg text-black/75 leading-relaxed mb-5">
               Un informe clínico firmado y una sesión de 50 minutos con una psicóloga colegiada, en una consulta privada, cuestan entre 60 y 120€. Nosotros te lo damos por 9,99€.
             </p>
@@ -234,13 +259,13 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ TIMELINE ═══════════ */}
-        <section className="section-padding px-4 bg-[#1a0a1f] text-white relative overflow-hidden">
+        <section className="py-16 md:py-20 px-4 bg-[#1a0a1f] text-white relative overflow-hidden">
           <div className="absolute inset-0 opacity-15 pointer-events-none"
             style={{ background: "radial-gradient(circle at 20% 50%, rgba(139,47,181,.4), transparent 40%), radial-gradient(circle at 80% 50%, rgba(201,169,209,.3), transparent 40%)" }} />
           <div className="max-w-4xl mx-auto relative">
             <div className="text-center mb-14">
               <p className="font-handwriting text-xl text-[#E8D4F0] mb-2">qué pasa exactamente</p>
-              <h2 className="font-serif text-3xl md:text-5xl">Desde hoy hasta tu sesión</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15]">Desde hoy hasta tu sesión</h2>
             </div>
 
             <div className="space-y-6 md:space-y-8">
@@ -268,11 +293,11 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ NO TE ETIQUETAMOS ═══════════ */}
-        <section className="section-padding px-4">
+        <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">cómo funciona el informe</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black">No te etiquetamos.<br />Te entendemos.</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">No te etiquetamos.<br />Te entendemos.</h2>
             </div>
             <div className="bg-white rounded-3xl p-7 md:p-10 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] space-y-5 text-base md:text-lg text-black/75 leading-relaxed">
               <p>Hay informes que abres esperando saber qué te pasa y sales con una etiqueta que te deja peor. El nuestro no va por ahí.</p>
@@ -283,11 +308,16 @@ export default function PorQueDiagnostico() {
           </div>
         </section>
 
+        {/* ═══════════ MEDIOS ═══════════ */}
+        <div className="bg-white border-t border-black/5">
+          <PressLogos />
+        </div>
+
         {/* ═══════════ METODOLOGÍA ═══════════ */}
-        <section className="section-padding px-4 bg-[#FAF7F2]">
+        <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-4xl mx-auto text-center">
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">el rigor detrás</p>
-            <h2 className="font-serif text-3xl md:text-5xl text-black mb-8">Respaldo metodológico</h2>
+            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-8">Respaldo metodológico</h2>
             <p className="text-base md:text-lg text-black/75 leading-relaxed max-w-2xl mx-auto mb-10">
               Nuestro informe se apoya en herramientas clínicas validadas internacionalmente. No es un quiz de internet.
             </p>
@@ -308,11 +338,11 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ CASO LAURA ═══════════ */}
-        <section className="section-padding px-4">
+        <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">una historia real</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black">El caso de Laura</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">El caso de Laura</h2>
             </div>
             <div className="bg-gradient-to-br from-[#6A178C]/[0.04] to-[#8B2FB5]/[0.06] rounded-3xl p-7 md:p-10 border border-[#6A178C]/10 space-y-5 text-base md:text-lg text-black/80 leading-relaxed">
               <p>
@@ -330,14 +360,14 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ GARANTÍA ═══════════ */}
-        <section className="section-padding px-4 bg-[#FAF7F2]">
+        <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-3xl mx-auto">
             <div className="bg-white rounded-3xl p-8 md:p-12 border-2 border-[#6A178C]/20 shadow-[0_20px_60px_rgba(106,23,140,.12)] text-center">
               <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#6A178C]/10 mb-6">
                 <span className="text-3xl">🛡️</span>
               </div>
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">nuestra promesa</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black mb-5">Garantía audaz</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-5">Garantía audaz</h2>
               <p className="text-base md:text-lg text-black/75 leading-relaxed mb-4">
                 Si después del diagnóstico y la sesión de 50 minutos no te aportamos valor, te devolvemos los 9,99€. Sin preguntas. Sin formularios. Un email y se procesa.
               </p>
@@ -347,11 +377,11 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ FAQ ═══════════ */}
-        <section className="section-padding px-4">
+        <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-10">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">preguntas que todo el mundo se hace</p>
-              <h2 className="font-serif text-3xl md:text-5xl text-black">Las dudas reales</h2>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Las dudas reales</h2>
             </div>
             <div className="space-y-3">
               {FAQ.map((f, i) => {
@@ -381,11 +411,11 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ CTA FINAL ═══════════ */}
-        <section className="section-padding px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
+        <section id="cta-final" className="py-16 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#6A178C] opacity-15 blur-3xl pointer-events-none" />
           <div className="max-w-3xl mx-auto text-center relative">
             <p className="font-handwriting text-xl text-[#E8D4F0] mb-3">ya lo entiendes</p>
-            <h2 className="font-serif text-3xl md:text-5xl lg:text-6xl leading-[1.05] mb-6">
+            <h2 className="font-serif text-[2rem] md:text-[3rem] lg:text-[3.25rem] leading-[1.15] mb-6">
               9,99€ para empezar con<br />
               <em className="italic text-[#E8D4F0]">claridad</em>.
             </h2>
@@ -404,7 +434,10 @@ export default function PorQueDiagnostico() {
       </main>
 
       {/* ═══════════ STICKY MOBILE CTA ═══════════ */}
-      <div className="fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-lg border-t border-black/5 shadow-[0_-8px_24px_rgba(106,23,140,.08)] px-4 py-3">
+      <div
+        aria-hidden={!showStickyCTA}
+        className={`fixed bottom-0 left-0 right-0 z-40 md:hidden bg-white/95 backdrop-blur-lg border-t border-black/5 shadow-[0_-8px_24px_rgba(106,23,140,.08)] px-4 py-3 transition-all duration-300 ${showStickyCTA ? "translate-y-0 opacity-100 pointer-events-auto" : "translate-y-full opacity-0 pointer-events-none"}`}
+      >
         <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("sticky_mobile")}
           className="flex items-center justify-center bg-[#6A178C] text-white font-bold rounded-full px-6 py-3.5 text-sm shadow-[0_8px_24px_rgba(106,23,140,.3)]">
           Comenzar · 9,99€
