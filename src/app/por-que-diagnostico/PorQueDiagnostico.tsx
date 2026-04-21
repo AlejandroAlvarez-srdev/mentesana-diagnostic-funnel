@@ -232,6 +232,33 @@ export default function PorQueDiagnostico() {
           </div>
         </section>
 
+        {/* ═══════════ PASOS (mismo flujo del test) ═══════════ */}
+        <section className="py-14 md:py-20 px-4 bg-[#FFFAF2]">
+          <div className="max-w-3xl mx-auto">
+            <div className="text-center mb-10">
+              <p className="font-handwriting text-xl text-[#6A178C] mb-2">así funciona</p>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">6 pasos hasta tu diagnóstico</h2>
+            </div>
+
+            <div className="relative">
+              <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#6A178C]/30 via-[#6A178C]/20 to-[#6A178C]/10" />
+              {PASOS.map((step) => (
+                <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
+                  <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] text-white flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/25">
+                    {step.icon}
+                  </div>
+                  <div className="pt-1.5">
+                    <p className="font-serif text-base md:text-lg text-black leading-tight">
+                      <span className="text-black/40 mr-1.5 font-sans text-sm">{step.n}.</span>{step.title}
+                    </p>
+                    <p className="text-[13px] text-black/65 mt-1 leading-relaxed">{step.desc}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </section>
+
         {/* ═══════════ COMPARATIVA ═══════════ */}
         <section className="py-16 md:py-20 px-4">
           <div className="max-w-5xl mx-auto">
@@ -359,35 +386,6 @@ export default function PorQueDiagnostico() {
             <p className="text-base md:text-lg text-black/75 leading-relaxed">
               Si decides seguir, bonos desde <strong>23€/sesión</strong>. Si no, el informe ya es tuyo.
             </p>
-          </div>
-        </section>
-
-        {/* ═══════════ PASOS (mismo flujo del test) ═══════════ */}
-        <section className="py-16 md:py-20 px-4 bg-[#1a0a1f] text-white relative overflow-hidden">
-          <div className="absolute inset-0 opacity-15 pointer-events-none"
-            style={{ background: "radial-gradient(circle at 20% 50%, rgba(139,47,181,.4), transparent 40%), radial-gradient(circle at 80% 50%, rgba(201,169,209,.3), transparent 40%)" }} />
-          <div className="max-w-3xl mx-auto relative">
-            <div className="text-center mb-10">
-              <p className="font-handwriting text-xl text-[#E8D4F0] mb-2">así funciona</p>
-              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15]">6 pasos hasta tu diagnóstico</h2>
-            </div>
-
-            <div className="relative">
-              <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#8B2FB5]/60 via-[#8B2FB5]/30 to-[#8B2FB5]/10" />
-              {PASOS.map((step) => (
-                <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
-                  <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] border-2 border-[#E8D4F0]/30 flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/30">
-                    {step.icon}
-                  </div>
-                  <div className="pt-1.5">
-                    <p className="font-serif text-base md:text-lg text-white leading-tight">
-                      <span className="text-white/50 mr-1.5 font-sans text-sm">{step.n}.</span>{step.title}
-                    </p>
-                    <p className="text-[13px] text-white/60 mt-1 leading-relaxed">{step.desc}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
           </div>
         </section>
 
