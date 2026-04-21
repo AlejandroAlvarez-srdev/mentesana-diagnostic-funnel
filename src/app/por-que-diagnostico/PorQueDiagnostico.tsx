@@ -111,14 +111,14 @@ const FAQ = [
 ];
 
 const COMPARATIVA = [
-  { label: "Coste inicial", gratis: "0€", diag: "9,99€" },
-  { label: "Matching", gratis: "Al azar o por disponibilidad", diag: "Algorítmico + validado por clínica" },
-  { label: "Informe clínico", gratis: "No", diag: "5-7 páginas firmado por colegiada" },
-  { label: "Duración de la sesión", gratis: "15-25 min (comercial)", diag: "50 min (clínica)" },
-  { label: "Objetivo real", gratis: "Vender sesiones", diag: "Entender tu caso" },
-  { label: "¿Llega con tu info leída?", gratis: "No", diag: "Sí, lee tu informe antes" },
-  { label: "¿Hay plan concreto?", gratis: "Raramente", diag: "Sí, propuesta desde la primera sesión" },
-  { label: "Cambio de psicóloga", gratis: "Vuelves a empezar", diag: "Gratis, sin dar explicaciones" },
+  { label: "Coste inicial", diag: "9,99€", gratis: "0€" },
+  { label: "Matching", diag: "Algorítmico clínico", gratis: "Al azar" },
+  { label: "Informe clínico", diag: "✓ 5-7 páginas", gratis: "✗" },
+  { label: "Duración de la sesión", diag: "50 min", gratis: "15-25 min" },
+  { label: "Objetivo real", diag: "Entenderte", gratis: "Vender sesiones" },
+  { label: "Llega con tu info leída", diag: "✓", gratis: "✗" },
+  { label: "Plan concreto", diag: "✓ Desde sesión 1", gratis: "Raramente" },
+  { label: "Cambio de psicóloga", diag: "✓ Gratis", gratis: "Vuelves a empezar" },
 ];
 
 export default function PorQueDiagnostico() {
@@ -260,74 +260,40 @@ export default function PorQueDiagnostico() {
         </section>
 
         {/* ═══════════ COMPARATIVA ═══════════ */}
-        <section className="py-16 md:py-20 px-4">
-          <div className="max-w-5xl mx-auto">
-            <div className="text-center mb-10">
-              <p className="font-handwriting text-xl text-[#6A178C] mb-2">la diferencia real</p>
-              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">
-                Primera sesión gratis <span className="text-black/40">vs</span><br />
-                Diagnóstico Mente Sana
-              </h2>
-            </div>
+        <section className="py-20 md:py-24 bg-gradient-to-br from-[#2A0F47] via-[#4A2368] to-[#6E3F88] text-white">
+          <div className="max-w-5xl mx-auto px-4">
+            <p className="inline-flex items-center gap-1.5 bg-white/[0.08] border border-white/[0.18] text-[#F5F0F7] px-3 py-1.5 rounded-full text-xs w-fit mx-auto">
+              La diferencia real
+            </p>
+            <h2 className="font-serif text-3xl md:text-4xl text-center mt-4 max-w-3xl mx-auto leading-tight">
+              Diagnóstico Mente Sana vs primera sesión gratis.
+            </h2>
 
-            {/* Desktop table */}
-            <div className="hidden md:block bg-white rounded-3xl border border-black/5 shadow-[0_20px_60px_rgba(106,23,140,.08)]">
-              <div className="grid grid-cols-3 bg-[#FAF7F2] border-b border-black/5 sticky top-0 z-10 rounded-t-3xl overflow-hidden">
-                <div className="p-5 text-xs font-bold uppercase tracking-wider text-black/50">Qué recibes</div>
-                <div className="p-5 text-sm font-semibold text-black/60 border-l border-black/5">Primera sesión gratis<br /><span className="text-xs font-normal text-black/45">(la mayoría de plataformas)</span></div>
-                <div className="p-5 text-sm font-bold text-[#6A178C] border-l border-black/5 bg-[#6A178C]/[0.06]">Diagnóstico Mente Sana<br /><span className="text-xs font-semibold">9,99€</span></div>
-              </div>
-              {COMPARATIVA.map((row, i) => (
-                <div key={i} className={`grid grid-cols-3 ${i % 2 === 0 ? "bg-white" : "bg-[#FAF9F6]"} border-b border-black/5 last:border-b-0`}>
-                  <div className="p-5 text-sm font-semibold text-black/80">{row.label}</div>
-                  <div className="p-5 text-sm text-black/60 border-l border-black/5">{row.gratis}</div>
-                  <div className="p-5 text-sm text-black font-medium border-l border-black/5 bg-[#6A178C]/[0.04]">{row.diag}</div>
-                </div>
-              ))}
-            </div>
-
-            {/* Mobile: cards apiladas, cada valor a ancho completo */}
-            <div className="md:hidden space-y-3">
-              {COMPARATIVA.map((row, i) => (
-                <div
-                  key={i}
-                  className="bg-white rounded-2xl border border-black/5 shadow-[0_6px_20px_rgba(106,23,140,.05)] overflow-hidden"
-                >
-                  <div className="px-4 py-2.5 bg-[#FAF7F2] border-b border-black/5">
-                    <p className="text-[12px] font-bold uppercase tracking-wider text-black/70">
-                      {row.label}
-                    </p>
-                  </div>
-
-                  <div className="px-4 py-3 border-b border-black/5">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="inline-flex w-5 h-5 shrink-0 rounded-full bg-black/5 items-center justify-center text-black/45 text-[11px] font-bold">
-                        ✕
-                      </span>
-                      <span className="text-[11px] font-semibold uppercase tracking-wider text-black/50">
-                        Sesión gratis
-                      </span>
-                    </div>
-                    <p className="text-[14px] text-black/65 leading-snug pl-7">
-                      {row.gratis}
-                    </p>
-                  </div>
-
-                  <div className="px-4 py-3 bg-[#6A178C]/[0.05]">
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="inline-flex w-5 h-5 shrink-0 rounded-full bg-[#6A178C] items-center justify-center text-white text-[11px] font-bold">
-                        ✓
-                      </span>
-                      <span className="text-[11px] font-bold uppercase tracking-wider text-[#6A178C]">
-                        Mente Sana · 9,99€
-                      </span>
-                    </div>
-                    <p className="text-[14px] text-black leading-snug font-medium pl-7">
-                      {row.diag}
-                    </p>
-                  </div>
-                </div>
-              ))}
+            <div className="mt-14 max-w-3xl mx-auto bg-white/[0.06] border border-white/[0.12] rounded-2xl overflow-hidden">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-white/10">
+                    <th className="text-left py-3 px-3 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-white/50"></th>
+                    <th className="text-center py-3 px-2 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-[#D7B8E3] font-bold">
+                      Mente Sana<br />
+                      <span className="text-white/60 font-normal normal-case tracking-normal text-[10px]">9,99€</span>
+                    </th>
+                    <th className="text-center py-3 px-2 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-white/40">
+                      Sesión gratis<br />
+                      <span className="text-white/30 font-normal normal-case tracking-normal text-[10px]">otras plataformas</span>
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {COMPARATIVA.map((r) => (
+                    <tr key={r.label} className="border-b border-white/5 last:border-b-0">
+                      <td className="py-3 px-3 md:px-4 text-white/70 font-medium text-[12px] md:text-[13px]">{r.label}</td>
+                      <td className="py-3 px-2 md:px-4 text-center text-[#D7B8E3] font-bold text-[12px] md:text-[13px]">{r.diag}</td>
+                      <td className="py-3 px-2 md:px-4 text-center text-white/30 text-[12px] md:text-[13px]">{r.gratis}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
             </div>
           </div>
         </section>
