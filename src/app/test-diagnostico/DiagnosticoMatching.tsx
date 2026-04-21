@@ -940,21 +940,29 @@ function NextStepsCard() {
   ];
   return (
     <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4 shadow-sm">
-      <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">
+      <p className="text-xs font-bold text-purple uppercase tracking-wider mb-4">
         Justo después del pago recibes
       </p>
-      <div className="space-y-3">
-        {items.map((it, i) => (
-          <div key={i} className="flex items-start gap-3">
-            <div className="shrink-0 w-9 h-9 rounded-full bg-purple/10 flex items-center justify-center text-base">
-              {it.icon}
+      <div className="relative">
+        {/* Línea vertical que conecta los pasos */}
+        <div className="absolute left-5 top-6 bottom-6 w-0.5 bg-gradient-to-b from-purple via-purple/40 to-purple/15" />
+
+        <div className="space-y-4">
+          {items.map((it, i) => (
+            <div key={i} className="flex items-start gap-3 relative">
+              <div className="shrink-0 w-10 h-10 rounded-full bg-gradient-to-br from-purple to-[#8B2FB5] text-white flex items-center justify-center shadow-md shadow-purple/25 relative z-10">
+                <span className="text-[15px]">{it.icon}</span>
+                <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full bg-white border-2 border-purple text-purple text-[9px] font-bold flex items-center justify-center">
+                  {i + 1}
+                </span>
+              </div>
+              <div className="flex-1 pt-1">
+                <p className="text-sm font-semibold text-foreground leading-tight">{it.title}</p>
+                <p className="text-[12px] text-foreground/60 leading-relaxed mt-0.5">{it.desc}</p>
+              </div>
             </div>
-            <div className="flex-1">
-              <p className="text-sm font-semibold text-foreground leading-tight">{it.title}</p>
-              <p className="text-[12px] text-foreground/60 leading-relaxed mt-0.5">{it.desc}</p>
-            </div>
-          </div>
-        ))}
+          ))}
+        </div>
       </div>
     </div>
   );
