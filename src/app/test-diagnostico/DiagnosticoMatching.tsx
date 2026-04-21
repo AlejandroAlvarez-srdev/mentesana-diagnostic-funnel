@@ -79,13 +79,40 @@ const QUESTIONS: Question[] = [
   },
 ];
 
-// ═══ Psychologists pool (round robin match) ═══
+// ═══ Psychologists pool — rotación determinista por email (ver matchedPsych abajo) ═══
 const PSYCHOLOGISTS = [
+  // Ansiedad
   { name: "Adriana Salas", col: "M-28456", city: "Madrid", exp: "10 años", specialty: "Ansiedad, pánico, TCC", video: "/videos/welcome/adriana-salas.mp4", profiles: ["ansiedad", "estres"] },
-  { name: "Alexandra Elías", col: "B-19872", city: "Barcelona", exp: "9 años", specialty: "Burnout, EMDR, estrés laboral", video: "/videos/welcome/alexandra-elias.mp4", profiles: ["estres", "crecimiento"] },
+  { name: "Carolina Prudencio", col: "M-30118", city: "Madrid", exp: "9 años", specialty: "Ansiedad generalizada, mindfulness", video: "/videos/welcome/carolina-prudencio.mp4", profiles: ["ansiedad", "otro"] },
+  { name: "María Infante", col: "V-26541", city: "Valencia", exp: "8 años", specialty: "Ansiedad social, fobias, TCC", video: "/videos/welcome/maria-infante.mp4", profiles: ["ansiedad", "relaciones"] },
+  { name: "Talia Aguilar", col: "B-27890", city: "Barcelona", exp: "7 años", specialty: "Ansiedad, ataques de pánico", video: "/videos/welcome/talia-aguilar.mp4", profiles: ["ansiedad", "crecimiento"] },
+  // Depresión
   { name: "Diana Salazar", col: "M-31204", city: "Madrid", exp: "11 años", specialty: "Depresión, insomnio, duelo", video: "/videos/welcome/diana-salazar-alzate.mp4", profiles: ["depresion", "otro"] },
+  { name: "Brenda Castillo", col: "B-29076", city: "Barcelona", exp: "10 años", specialty: "Depresión, terapia sistémica", video: "/videos/welcome/brenda-castillo.mp4", profiles: ["depresion", "relaciones"] },
+  { name: "Melanie Camejo", col: "SE-18233", city: "Sevilla", exp: "8 años", specialty: "Depresión, duelo, autoestima", video: "/videos/welcome/melanie-camejo.mp4", profiles: ["depresion", "crecimiento"] },
+  { name: "Rosana Juárez", col: "M-25668", city: "Madrid", exp: "12 años", specialty: "Depresión, terapia integrativa", video: "/videos/welcome/rosana-juarez.mp4", profiles: ["depresion", "otro"] },
+  // Relaciones
   { name: "Gabriela Delgado", col: "V-24589", city: "Valencia", exp: "8 años", specialty: "Relaciones, autoestima, fobias", video: "/videos/welcome/gabriela-delgado.mp4", profiles: ["relaciones", "crecimiento"] },
+  { name: "Tatiana Castro", col: "B-28113", city: "Barcelona", exp: "9 años", specialty: "Terapia de pareja, vínculos", video: "/videos/welcome/tatiana-castro.mp4", profiles: ["relaciones", "otro"] },
+  { name: "Mónica Guiza", col: "M-29845", city: "Madrid", exp: "10 años", specialty: "Relaciones, apego, familia", video: "/videos/welcome/monica-guiza.mp4", profiles: ["relaciones", "crecimiento"] },
+  { name: "Laura Acosta", col: "MA-15277", city: "Málaga", exp: "7 años", specialty: "Relaciones, dependencia emocional", video: "/videos/welcome/laura-acosta-acosta.mp4", profiles: ["relaciones", "otro"] },
+  // Estrés / burnout
+  { name: "Alexandra Elías", col: "B-19872", city: "Barcelona", exp: "9 años", specialty: "Burnout, EMDR, estrés laboral", video: "/videos/welcome/alexandra-elias.mp4", profiles: ["estres", "crecimiento"] },
+  { name: "Greslimar Padilla", col: "M-32011", city: "Madrid", exp: "8 años", specialty: "Estrés laboral, mindfulness", video: "/videos/welcome/greslimar-padilla.mp4", profiles: ["estres", "ansiedad"] },
+  { name: "Antonella Matinella", col: "BI-11456", city: "Bilbao", exp: "10 años", specialty: "Burnout, sueño, regulación emocional", video: "/videos/welcome/antonella-matinella.mp4", profiles: ["estres", "otro"] },
+  // Crecimiento / otros
+  { name: "Selene Oropeza", col: "M-27119", city: "Madrid", exp: "9 años", specialty: "Crecimiento personal, autoconocimiento", video: "/videos/welcome/selene-oropeza.mp4", profiles: ["crecimiento", "otro"] },
+  { name: "Juliana Urioste", col: "V-25804", city: "Valencia", exp: "7 años", specialty: "Crecimiento, decisiones vitales", video: "/videos/welcome/juliana-urioste.mp4", profiles: ["crecimiento", "relaciones"] },
+  { name: "Yohaira Espinoza", col: "Z-13987", city: "Zaragoza", exp: "11 años", specialty: "Terapia integrativa, psicoanálisis", video: "/videos/welcome/yohaira-espinoza.mp4", profiles: ["otro", "crecimiento"] },
+  { name: "Mallerly Mesa", col: "B-30401", city: "Barcelona", exp: "8 años", specialty: "Autoestima, identidad, duelo", video: "/videos/welcome/mallerly-mesa.mp4", profiles: ["crecimiento", "depresion"] },
 ];
+
+// Hash simple determinista para rotar dentro de candidatos sin bias
+function hashString(s: string): number {
+  let h = 0;
+  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
+  return Math.abs(h);
+}
 
 export default function DiagnosticoMatching() {
   const [currentQ, setCurrentQ] = useState(0);
@@ -168,11 +195,33 @@ export default function DiagnosticoMatching() {
     setPhase("match");
   };
 
-  // Match logic: find best psychologist based on feeling profile
+  // Match logic: filter by feeling profile and rotate deterministically by email
+  // to spread load across the pool instead of always picking the first match.
   const matchedPsych = (() => {
     const feeling = answers.feeling || "ansiedad";
-    const match = PSYCHOLOGISTS.find((p) => p.profiles.includes(feeling));
-    return match || PSYCHOLOGISTS[0];
+    const candidates = PSYCHOLOGISTS.filter((p) => p.profiles.includes(feeling));
+    const pool = candidates.length > 0 ? candidates : PSYCHOLOGISTS;
+    // Seed: prefer email (stable per user). Fallback: combo of answers + persistent local id.
+    let seedSource = userEmail;
+    if (!seedSource && typeof window !== "undefined") {
+      const saved = localStorage.getItem("ms_user_email") || "";
+      if (saved) seedSource = saved;
+    }
+    if (!seedSource) {
+      // derive from the answer combo + a persistent per-session nonce
+      if (typeof window !== "undefined") {
+        let nonce = localStorage.getItem("ms_match_seed");
+        if (!nonce) {
+          nonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
+          localStorage.setItem("ms_match_seed", nonce);
+        }
+        seedSource = `${Object.values(answers).join("|")}|${nonce}`;
+      } else {
+        seedSource = Object.values(answers).join("|") || "fallback";
+      }
+    }
+    const idx = hashString(seedSource) % pool.length;
+    return pool[idx];
   })();
 
   // Match justification
