@@ -455,11 +455,11 @@ export default function DiagnosticoMatching() {
           </div>
         </header>
 
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
-          <div className="max-w-lg w-full">
-            <div className="text-center mb-8">
-              <p className="font-handwriting text-xl text-purple mb-2">Así funciona tu diagnóstico</p>
-              <h1 className="font-serif text-2xl md:text-3xl leading-tight">
+        <main className="flex-1 px-4 py-8 md:py-10">
+          <div className="max-w-lg w-full mx-auto">
+            <div className="text-center mb-6">
+              <p className="font-handwriting text-lg text-purple mb-1">Así funciona tu diagnóstico</p>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">
                 6 pasos para entender qué te pasa<br />
                 <em className="text-purple italic font-normal">y tener un plan real.</em>
               </h1>
@@ -478,29 +478,29 @@ export default function DiagnosticoMatching() {
                 { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
                 { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
               ].map((step) => (
-                <div key={step.n} className={`flex items-start gap-4 py-3 ${step.active ? "" : "opacity-70"}`}>
-                  <div className={`relative z-10 w-11 h-11 rounded-full flex items-center justify-center text-lg shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/20"}`}>
+                <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-70"}`}>
+                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/20"}`}>
                     {step.icon}
                   </div>
-                  <div className="pt-1.5">
+                  <div className="pt-1">
                     <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground/80"}`}>
                       <span className="text-foreground/30 mr-1.5">{step.n}.</span>{step.title}
                     </p>
-                    <p className="text-xs text-foreground/50 mt-0.5 leading-relaxed">{step.desc}</p>
+                    <p className="text-[11px] text-foreground/50 mt-0.5 leading-relaxed">{step.desc}</p>
                   </div>
                 </div>
               ))}
             </div>
 
             {/* CTA */}
-            <div className="mt-8 text-center">
+            <div className="mt-6 text-center">
               <button
                 onClick={() => { setPhase("questions"); track("start_matching", {}); }}
-                className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
+                className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-3.5 text-base shadow-lg transition-colors"
               >
                 Empezar las 5 preguntas →
               </button>
-              <p className="mt-3 text-[11px] text-foreground/40">🔒 Tus respuestas son confidenciales · 2 minutos</p>
+              <p className="mt-2 text-[11px] text-foreground/40">🔒 Tus respuestas son confidenciales · 2 minutos</p>
             </div>
           </div>
         </main>
