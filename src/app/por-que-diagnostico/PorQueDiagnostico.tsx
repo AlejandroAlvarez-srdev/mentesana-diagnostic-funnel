@@ -1,10 +1,48 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import PressLogos from "@/components/PressLogos";
 import { track } from "@/lib/tracking";
+
+const PSICOLOGAS = [
+  { name: "Adriana Salas", spec: "Ansiedad", col: "M-28456", years: 10, video: "/videos/welcome/adriana-salas.mp4" },
+  { name: "Laura Acosta", spec: "Depresión · TCC", col: "M-29745", years: 12, video: "/videos/welcome/laura-acosta-acosta.mp4" },
+  { name: "Diana Salazar", spec: "Autoestima · TCA", col: "M-31204", years: 11, video: "/videos/welcome/diana-salazar-alzate.mp4" },
+  { name: "Alexandra Elías", spec: "Trauma · EMDR", col: "B-19872", years: 9, video: "/videos/welcome/alexandra-elias.mp4" },
+  { name: "Gabriela Delgado", spec: "Pareja · Relaciones", col: "V-24589", years: 8, video: "/videos/welcome/gabriela-delgado.mp4" },
+];
+
+function AvatarVideo({ src, size = "md", className = "" }: { src: string; size?: "xs" | "sm" | "md" | "lg"; className?: string }) {
+  const ref = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => {
+        if (e.isIntersecting) {
+          if (!el.src) el.src = src;
+          el.play().catch(() => {});
+        } else {
+          el.pause();
+        }
+      });
+    }, { threshold: 0.2 });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [src]);
+  const sizeCls =
+    size === "xs" ? "w-16 h-16"
+    : size === "sm" ? "w-11 h-11"
+    : size === "lg" ? "w-28 h-28 md:w-32 md:h-32"
+    : "w-20 h-20 md:w-24 md:h-24";
+  return (
+    <div className={`relative ${sizeCls} rounded-full overflow-hidden ${className}`}>
+      <video ref={ref} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+    </div>
+  );
+}
 
 const FAQ = [
   {
@@ -131,6 +169,24 @@ export default function PorQueDiagnostico() {
               <p className="text-xs text-white/55">Pago único · Sin suscripción · Con garantía</p>
             </div>
 
+            {/* Avatar stack — social proof */}
+            <div className="mt-8 flex items-center justify-center gap-3">
+              <div className="flex -space-x-3">
+                {PSICOLOGAS.slice(0, 4).map((p) => (
+                  <div key={p.name} className="ring-2 ring-[#2d0d3f] rounded-full">
+                    <AvatarVideo src={p.video} size="sm" />
+                  </div>
+                ))}
+                <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur border-2 border-[#2d0d3f] flex items-center justify-center text-[11px] font-bold text-white">
+                  +28
+                </div>
+              </div>
+              <div className="text-left">
+                <p className="text-sm text-white font-semibold leading-tight">32 psicólogas colegiadas</p>
+                <p className="text-xs text-white/60 leading-tight">validadas por nuestra clínica</p>
+              </div>
+            </div>
+
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-3xl mx-auto">
               <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
                 <span className="font-serif text-3xl text-[#E8D4F0]">73%</span>
@@ -238,6 +294,32 @@ export default function PorQueDiagnostico() {
                 <p className="text-sm text-black/70 leading-relaxed">El matching algorítmico te conecta con la psicóloga adecuada. No la primera disponible. Por eso el 73% de quien hace el diagnóstico sigue en terapia después.</p>
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* ═══════════ PSICÓLOGAS REALES ═══════════ */}
+        <section className="py-16 md:py-20 px-4">
+          <div className="max-w-6xl mx-auto">
+            <div className="text-center mb-12">
+              <p className="font-handwriting text-xl text-[#6A178C] mb-2">no son stock · son reales</p>
+              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Las psicólogas que te atenderán</h2>
+              <p className="mt-4 text-base text-black/60 max-w-2xl mx-auto">Te matcheamos con una de ellas según tu caso. Todas colegiadas, con media de <strong>10 años de experiencia clínica</strong>.</p>
+            </div>
+
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-5 md:gap-6">
+              {PSICOLOGAS.map((p) => (
+                <div key={p.name} className="text-center">
+                  <div className="mx-auto mb-3 ring-4 ring-[#6A178C]/10 rounded-full">
+                    <AvatarVideo src={p.video} size="lg" className="mx-auto" />
+                  </div>
+                  <p className="font-serif text-base md:text-lg text-black leading-tight">{p.name}</p>
+                  <p className="text-[11px] text-black/55 mt-0.5">{p.spec}</p>
+                  <p className="text-[10px] text-[#6A178C]/70 font-semibold mt-1">Col. {p.col} · {p.years} años</p>
+                </div>
+              ))}
+            </div>
+
+            <p className="text-center mt-10 text-xs text-black/45">+ 27 psicólogas más en el equipo · especialistas en ansiedad, depresión, pareja, duelo, TCA, autoestima, trauma y adicciones</p>
           </div>
         </section>
 
@@ -351,6 +433,28 @@ export default function PorQueDiagnostico() {
               <p>
                 Cuando hizo el Diagnóstico Mente Sana, recibió un informe de 6 páginas que le puso palabras a algo que llevaba años sin saber nombrar. En la sesión, su psicóloga ya había leído el informe y llegó con un plan concreto de 8 sesiones.
               </p>
+
+              {/* Emparejamiento visual Laura ↔ psicóloga */}
+              <div className="flex items-center gap-4 justify-center py-3">
+                <div className="text-center">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/Reviews/review-3.webp" alt="Laura" className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6A178C]/15 mx-auto" />
+                  <p className="text-[11px] text-black/60 mt-1.5 font-semibold">Laura M.</p>
+                  <p className="text-[10px] text-black/40">paciente</p>
+                </div>
+                <div className="flex flex-col items-center text-[#6A178C]/40">
+                  <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M5 12h14M13 6l6 6-6 6" /></svg>
+                  <span className="text-[9px] uppercase tracking-wider mt-0.5 text-[#6A178C]/60 font-bold">matching</span>
+                </div>
+                <div className="text-center">
+                  <div className="ring-2 ring-[#6A178C]/20 rounded-full inline-block">
+                    <AvatarVideo src="/videos/welcome/laura-acosta-acosta.mp4" size="xs" />
+                  </div>
+                  <p className="text-[11px] text-[#6A178C] mt-1.5 font-semibold">Laura Acosta</p>
+                  <p className="text-[10px] text-black/40">Col. M-29745</p>
+                </div>
+              </div>
+
               <p className="font-serif text-xl text-[#6A178C] italic pt-3 border-t border-[#6A178C]/10">
                 "Por primera vez sentí que estaba empezando desde algún sitio, no desde cero otra vez."
               </p>
