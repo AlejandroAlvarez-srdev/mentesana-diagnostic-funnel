@@ -272,12 +272,6 @@ export default function PorQueDiagnostico() {
           </div>
 
           <div className="max-w-5xl mx-auto px-4 relative text-center">
-            {/* Manifiesto badge */}
-            <div className="inline-flex items-center gap-2 bg-[#E8D4F0]/15 border border-[#E8D4F0]/30 px-3 py-1 rounded-full text-[11px] md:text-xs mb-5 tracking-[0.15em] uppercase text-[#E8D4F0]">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#E8D4F0] animate-pulse" />
-              Manifiesto · No es una landing
-            </div>
-
             <h1 className="font-serif text-[2rem] md:text-5xl lg:text-6xl leading-[1.12] max-w-4xl mx-auto">
               No estás perdida:<br />
               <em className="italic text-[#E8D4F0] font-normal">lo que sientes tiene nombre y solución.</em>
