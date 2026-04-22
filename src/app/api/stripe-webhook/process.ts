@@ -94,6 +94,8 @@ export async function processCheckoutSessionCompleted(
     if (meta.utm_term) utms.utm_term = meta.utm_term;
     if (meta.referrer) utms.referrer = meta.referrer;
     if (meta.landing_page) utms.landing_page = meta.landing_page;
+    if (meta.scheduled_date) utms.scheduled_date = meta.scheduled_date;
+    if (meta.scheduled_time) utms.scheduled_time = meta.scheduled_time;
   } else if (session.client_reference_id) {
     // Payment Links: UTMs encoded as base64 JSON in client_reference_id
     const ref = session.client_reference_id;
@@ -218,23 +220,27 @@ export async function processCheckoutSessionCompleted(
     // Diagnóstico 9,99€ — create/update diagnostico_tests record + send email
     result.branch = "session";
 
-    // Upsert diagnostico_tests with real email from Stripe
-    await deps.supabase.from("diagnostico_tests").upsert({
+    // Upsert diagnostico_tests with real email from Stripe.
+    // Only include optional fields when present — so we never overwrite a pre-payment
+    // save (answers, schedule) with nulls.
+    const diagUpsert: Record<string, unknown> = {
       user_email: patientEmail,
-      user_name: patientName || null,
-      user_phone: session.metadata?.patient_phone || null,
-      matched_psychologist: psychologist || null,
-      scheduled_date: utms.scheduled_date || null,
-      scheduled_time: utms.scheduled_time || null,
       paid: true,
       paid_at: new Date().toISOString(),
       stripe_session_id: session.id,
       source: session.metadata?.source || "test-diagnostico",
-      utm_source: utms.utm_source || null,
-      utm_medium: utms.utm_medium || null,
-      utm_campaign: utms.utm_campaign || null,
       updated_at: new Date().toISOString(),
-    }, { onConflict: "user_email" });
+    };
+    if (patientName) diagUpsert.user_name = patientName;
+    if (session.metadata?.patient_phone) diagUpsert.user_phone = session.metadata.patient_phone;
+    if (psychologist) diagUpsert.matched_psychologist = psychologist;
+    if (utms.scheduled_date) diagUpsert.scheduled_date = utms.scheduled_date;
+    if (utms.scheduled_time) diagUpsert.scheduled_time = utms.scheduled_time;
+    if (utms.utm_source) diagUpsert.utm_source = utms.utm_source;
+    if (utms.utm_medium) diagUpsert.utm_medium = utms.utm_medium;
+    if (utms.utm_campaign) diagUpsert.utm_campaign = utms.utm_campaign;
+
+    await deps.supabase.from("diagnostico_tests").upsert(diagUpsert, { onConflict: "user_email" });
 
     // Atomic claim — solo un handler concurrente envía el email
     const claim = await deps.supabase

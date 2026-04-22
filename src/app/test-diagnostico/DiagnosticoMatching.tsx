@@ -180,6 +180,7 @@ export default function DiagnosticoMatching() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
+          source: "test-diagnostico",
           answers,
           context: contextText,
           name: userName,
@@ -378,8 +379,29 @@ export default function DiagnosticoMatching() {
       setSaving(true);
       track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name });
 
-      // Save answers + schedule in localStorage (Stripe webhook will save to DB with email)
       localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name }));
+
+      // Persist schedule in DB now — so we don't lose it if the user abandons payment.
+      const emailForSave = userEmail || localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email") || "";
+      if (emailForSave) {
+        try {
+          await fetch("/api/diagnostico-test", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              source: "test-diagnostico",
+              answers,
+              context: contextText,
+              name: userName || localStorage.getItem("ms_diagnostico_name") || "",
+              email: emailForSave,
+              phone: userPhone || localStorage.getItem("ms_user_phone") || "",
+              matchedPsychologist: matchedPsych.name,
+              scheduledDate: selectedDay,
+              scheduledTime: selectedSlot,
+            }),
+          });
+        } catch {}
+      }
 
       track("initiate_checkout", { amount: "9.99" });
       setSaving(false);

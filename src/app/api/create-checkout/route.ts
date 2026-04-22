@@ -35,6 +35,8 @@ export async function POST(req: NextRequest) {
         patient_phone: phone || "",
         psychologist: psychologistName || "",
         source: "test-sobrio",
+        scheduled_date: (u.scheduled_date || "").slice(0, 20),
+        scheduled_time: (u.scheduled_time || "").slice(0, 10),
         utm_source: (u.utm_source || "").slice(0, 120),
         utm_medium: (u.utm_medium || "").slice(0, 120),
         utm_campaign: (u.utm_campaign || "").slice(0, 120),
