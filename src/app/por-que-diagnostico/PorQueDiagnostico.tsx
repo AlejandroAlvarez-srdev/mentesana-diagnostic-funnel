@@ -371,8 +371,8 @@ export default function PorQueDiagnostico() {
             </div>
             <div className="hidden md:block h-12 w-px bg-black/10" />
             <div className="text-left">
-              <p className="text-2xl font-bold leading-tight">48h</p>
-              <p className="text-[11px] text-black/50 leading-tight">para recibir tu diagnóstico</p>
+              <p className="text-2xl font-bold leading-tight">50 min</p>
+              <p className="text-[11px] text-black/50 leading-tight">sesión con informe incluida</p>
             </div>
           </div>
         </section>
@@ -909,7 +909,7 @@ export default function PorQueDiagnostico() {
                 { n: "+750", l: "reseñas verificadas" },
                 { n: "94%", l: "mejora en 1er mes" },
                 { n: "73%", l: "adherencia post-diagnóstico" },
-                { n: "48h", l: "hasta tu diagnóstico" },
+                { n: "50 min", l: "sesión con informe incluida" },
                 { n: "+130K", l: "seguidores redes" },
               ].map((s) => (
                 <div key={s.l} className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-4 py-6">
