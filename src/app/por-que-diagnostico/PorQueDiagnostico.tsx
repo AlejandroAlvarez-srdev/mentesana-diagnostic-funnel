@@ -279,12 +279,11 @@ export default function PorQueDiagnostico() {
             </div>
 
             <h1 className="font-serif text-[2rem] md:text-5xl lg:text-6xl leading-[1.12] max-w-4xl mx-auto">
-              La &ldquo;primera sesión gratis&rdquo;<br className="hidden md:block" />
-              <em className="italic text-[#E8D4F0]">es una trampa</em>.<br />
-              9,99€ es la alternativa honesta.
+              No estás perdida:<br />
+              <em className="italic text-[#E8D4F0] font-normal">lo que sientes tiene nombre y solución.</em>
             </h1>
             <p className="mt-6 md:mt-8 text-base md:text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
-              No hacemos captación. Hacemos <strong className="text-white">diagnóstico</strong>. Informe clínico firmado + matching real + sesión de 50 min — y si no te ayudamos, te devolvemos los 9,99€ <em>y te recomendamos otra plataforma donde sí encajes</em>.
+              Una experiencia guiada para entender tu situación y saber exactamente qué necesitas. Esta es la mejor forma de empezar terapia: recibe tu evaluación en una sesión completa de 50 minutos con tu psicóloga match.
             </p>
 
             {/* Trustpilot pill (debajo, como prueba no como gancho) */}
