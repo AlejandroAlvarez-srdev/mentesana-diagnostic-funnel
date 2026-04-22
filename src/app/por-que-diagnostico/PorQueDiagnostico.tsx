@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import Image from "next/image";
 import Footer from "@/components/Footer";
 import PressLogos from "@/components/PressLogos";
 import CelebrityPhoto from "@/components/CelebrityPhoto";
@@ -239,7 +238,8 @@ export default function PorQueDiagnostico() {
             <div className="relative bg-white rounded-xl shadow-[0_20px_60px_-15px_rgba(0,0,0,0.4)] p-3 w-[180px]">
               <div className="absolute -top-2 -left-2 bg-[#6A178C] text-white text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full shadow-md">Tu informe</div>
               <div className="border-b border-black/5 pb-2 mb-2 flex items-center justify-between">
-                <Image src="/images/logo.webp" alt="" width={50} height={10} className="h-2.5 w-auto opacity-50" />
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/images/logo.webp" alt="" className="h-2.5 opacity-50" />
                 <span className="text-[7px] text-black/30 uppercase tracking-wider font-bold">Clínico</span>
               </div>
               <div className="mb-2">
@@ -877,7 +877,8 @@ export default function PorQueDiagnostico() {
 
               <div className="flex items-center gap-4 justify-center py-3">
                 <div className="text-center">
-                  <Image src="/images/por-que-diagnostico/laura.webp" alt="Laura" width={64} height={64} className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6A178C]/15 mx-auto" />
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src="/images/por-que-diagnostico/laura.webp" alt="Laura" className="w-16 h-16 rounded-full object-cover ring-2 ring-[#6A178C]/15 mx-auto" />
                   <p className="text-[11px] text-black/60 mt-1.5 font-semibold">Laura M.</p>
                   <p className="text-[10px] text-black/40">paciente</p>
                 </div>
