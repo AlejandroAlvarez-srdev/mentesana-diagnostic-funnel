@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Image from "next/image";
 import { track } from "@/lib/tracking";
 
 // ═══ Questions config ═══
@@ -261,8 +262,7 @@ export default function DiagnosticoMatching() {
         {/* Header */}
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
             <span className="text-[11px] text-foreground/40 font-medium">Diagnóstico clínico</span>
           </div>
         </header>
@@ -412,8 +412,7 @@ export default function DiagnosticoMatching() {
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
             <span className="text-[11px] text-foreground/40 font-medium">Elige tu cita</span>
           </div>
         </header>
@@ -536,8 +535,7 @@ export default function DiagnosticoMatching() {
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-center">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
           </div>
         </header>
 
@@ -600,8 +598,7 @@ export default function DiagnosticoMatching() {
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
             <span className="text-[11px] text-foreground/40 font-medium">Casi listo</span>
           </div>
         </header>
@@ -641,8 +638,7 @@ export default function DiagnosticoMatching() {
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
             <span className="text-[11px] text-foreground/40 font-medium">Último paso</span>
           </div>
         </header>
@@ -708,8 +704,7 @@ export default function DiagnosticoMatching() {
       {/* Header */}
       <header className="bg-white border-b border-purple/10 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+          <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
           <span className="text-[11px] text-foreground/40 font-medium">{currentQ + 1} de {QUESTIONS.length}</span>
         </div>
       </header>
@@ -836,8 +831,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
     <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
       <header className="bg-white border-b border-purple/10 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+          <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
           <span className="text-[11px] text-foreground/40 font-medium">Pago seguro</span>
         </div>
       </header>
@@ -919,8 +913,7 @@ function AnalyzingPhase({ onComplete, matchedPsychName }: { onComplete: () => vo
     <div className="min-h-screen bg-gradient-to-b from-[#FFFAF2] via-[#FAF4FC] to-[#F0E3F7] flex flex-col">
       <header className="bg-white/60 backdrop-blur-md border-b border-purple/10 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-center">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/images/logo.webp" alt="Mente Sana" className="h-6" />
+          <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
         </div>
       </header>
 
