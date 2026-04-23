@@ -6,8 +6,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms } = await req.json();
+  const { email, name, phone, psychologistName, utms, source } = await req.json();
   const u = utms || {};
+  // source viene del componente cliente (test-sobrio / test-diagnostico / diagnostico / eva / vuelve…).
+  // Si no viene, fallback al valor histórico por backwards-compat.
+  const src = (typeof source === "string" && source.trim()) ? source.trim().slice(0, 60) : "test-sobrio";
 
   try {
     const session = await stripe.checkout.sessions.create({
@@ -34,7 +37,7 @@ export async function POST(req: NextRequest) {
         patient_name: name,
         patient_phone: phone || "",
         psychologist: psychologistName || "",
-        source: "test-sobrio",
+        source: src,
         scheduled_date: (u.scheduled_date || "").slice(0, 20),
         scheduled_time: (u.scheduled_time || "").slice(0, 10),
         utm_source: (u.utm_source || "").slice(0, 120),
@@ -44,6 +47,11 @@ export async function POST(req: NextRequest) {
         utm_term: (u.utm_term || "").slice(0, 120),
         referrer: (u.referrer || "").slice(0, 200),
         landing_page: (u.landing_page || "").slice(0, 200),
+        first_utm_source: (u.first_utm_source || "").slice(0, 120),
+        first_utm_medium: (u.first_utm_medium || "").slice(0, 120),
+        first_utm_campaign: (u.first_utm_campaign || "").slice(0, 120),
+        first_utm_content: (u.first_utm_content || "").slice(0, 120),
+        first_touch_at: (u.first_touch_at || "").slice(0, 30),
       },
       client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
       return_url: `https://confrimacionregistro.vercel.app/?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,

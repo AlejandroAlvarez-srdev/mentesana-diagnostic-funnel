@@ -791,6 +791,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             name,
             phone,
             psychologistName,
+            source: "test-diagnostico",
             utms: { ...utms, scheduled_date: selectedDay, scheduled_time: selectedSlot },
           }),
         });

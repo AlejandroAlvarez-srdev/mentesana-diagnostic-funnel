@@ -85,7 +85,7 @@ export async function processCheckoutSessionCompleted(
   // Extract UTMs from metadata (embedded checkout) or client_reference_id (Payment Links)
   let utms: Record<string, string> = {};
   const meta = session.metadata || {};
-  if (meta.utm_source || meta.utm_medium || meta.utm_campaign) {
+  if (meta.utm_source || meta.utm_medium || meta.utm_campaign || meta.first_utm_source) {
     // Embedded checkout: UTMs stored directly in metadata
     if (meta.utm_source) utms.utm_source = meta.utm_source;
     if (meta.utm_medium) utms.utm_medium = meta.utm_medium;
@@ -96,6 +96,12 @@ export async function processCheckoutSessionCompleted(
     if (meta.landing_page) utms.landing_page = meta.landing_page;
     if (meta.scheduled_date) utms.scheduled_date = meta.scheduled_date;
     if (meta.scheduled_time) utms.scheduled_time = meta.scheduled_time;
+    // First-touch attribution (persiste en localStorage del cliente)
+    if (meta.first_utm_source) utms.first_utm_source = meta.first_utm_source;
+    if (meta.first_utm_medium) utms.first_utm_medium = meta.first_utm_medium;
+    if (meta.first_utm_campaign) utms.first_utm_campaign = meta.first_utm_campaign;
+    if (meta.first_utm_content) utms.first_utm_content = meta.first_utm_content;
+    if (meta.first_touch_at) utms.first_touch_at = meta.first_touch_at;
   } else if (session.client_reference_id) {
     // Payment Links: UTMs encoded as base64 JSON in client_reference_id
     const ref = session.client_reference_id;
