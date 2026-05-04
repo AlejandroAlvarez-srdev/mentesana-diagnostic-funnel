@@ -299,7 +299,7 @@ export default function DiagnosticoMatching() {
                 <div className="flex items-start justify-between">
                   <div>
                     <h2 className="font-serif text-xl font-semibold">{matchedPsych.name}</h2>
-                    <p className="text-xs text-purple font-medium mt-0.5">Col. {matchedPsych.col} · {matchedPsych.city} · {matchedPsych.exp}</p>
+                    <p className="text-xs text-purple font-medium mt-0.5">Colegiada · {matchedPsych.exp}</p>
                   </div>
                   <div className="bg-purple/10 text-purple text-[10px] font-bold px-2 py-1 rounded-full">TU MATCH</div>
                 </div>

@@ -453,7 +453,7 @@ export default function PorQueDiagnostico() {
                     <AvatarVideo src="/videos/welcome/laura-acosta-acosta.mp4" size="xs" />
                   </div>
                   <p className="text-[11px] text-[#6A178C] mt-1.5 font-semibold">Laura Acosta</p>
-                  <p className="text-[10px] text-black/40">Col. M-29745</p>
+                  <p className="text-[10px] text-black/40">Colegiada</p>
                 </div>
               </div>
 
