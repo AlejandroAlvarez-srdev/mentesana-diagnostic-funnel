@@ -3,6 +3,11 @@
 // pulling in Next.js, Supabase clients, or Stripe HTTP.
 
 import type Stripe from "stripe";
+import { generateCouponCode } from "@/lib/partners/codes";
+import { generateCommissions } from "@/lib/partners/commissions";
+import { attributePatient } from "@/lib/partners/attribution";
+import { detectProductType } from "@/lib/partners/config";
+import { getPartnersDb } from "@/lib/partners/supabase";
 
 export interface UpsertResult { error?: { message: string } | null }
 
@@ -157,6 +162,113 @@ export async function processCheckoutSessionCompleted(
   );
   if (paymentsRes.error) result.errors.push(`payments: ${paymentsRes.error.message}`);
   else result.paymentSaved = true;
+
+  // 1b. PARTNERS: compra de pack de cupones por un partner
+  if (meta.partner_pack_tier && meta.partner_id && meta.partner_pack_row_id) {
+    try {
+      const pdb = getPartnersDb();
+      const packId = parseInt(meta.partner_pack_row_id);
+      const { data: pack } = await pdb.from("partner_coupon_packs").select("*").eq("id", packId).maybeSingle();
+      if (pack && pack.status === "pending") {
+        // Genera N cupones canjeables
+        const codes: string[] = [];
+        for (let i = 0; i < (pack.quantity || 0); i++) {
+          codes.push(await generateCouponCode());
+        }
+        const expiresAt = new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(); // 1 año
+        await pdb.from("partner_coupon_codes").insert(
+          codes.map((code) => ({ code, pack_id: pack.id, partner_id: meta.partner_id, expires_at: expiresAt })),
+        );
+        await pdb.from("partner_coupon_packs").update({
+          status: "paid", paid_at: new Date().toISOString(),
+        }).eq("id", pack.id);
+        await pdb.from("partner_audit_log").insert({
+          partner_id: meta.partner_id,
+          event_type: "coupon_pack_paid",
+          metadata: { pack_id: pack.id, tier: pack.tier, quantity: pack.quantity, codes_generated: codes.length },
+        });
+        console.log("[webhook][partners] generated", codes.length, "coupons for partner", meta.partner_id);
+      }
+    } catch (e) {
+      console.error("[webhook][partners] coupon-pack processing failed:", e);
+      result.errors.push(`partner-pack: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+    return result; // este pago no genera comisiones MLM
+  }
+
+  // 1c. PARTNERS: atribución de paciente (si viene partner_ref o partner_coupon_code)
+  let attributedPartnerCode: string | null = null;
+  let attributionSource: "link" | "cupon" | null = null;
+
+  if (patientEmail && meta.partner_coupon_code) {
+    // Marca cupón como redeemed
+    try {
+      const pdb = getPartnersDb();
+      const { data: coupon } = await pdb
+        .from("partner_coupon_codes")
+        .update({
+          status: "redeemed",
+          redeemed_at: new Date().toISOString(),
+          redeemed_by_email: patientEmail.toLowerCase(),
+          redeemed_payment_id: session.id,
+        })
+        .eq("code", meta.partner_coupon_code)
+        .eq("status", "active")
+        .select("partner_id")
+        .maybeSingle();
+      if (coupon) {
+        // Resuelve el código default del partner para atribución
+        const { data: defCode } = await pdb
+          .from("partner_codes")
+          .select("code")
+          .eq("partner_id", coupon.partner_id)
+          .eq("is_default", true)
+          .maybeSingle();
+        if (defCode) {
+          attributedPartnerCode = defCode.code;
+          attributionSource = "cupon";
+        }
+      }
+    } catch (e) {
+      console.error("[webhook][partners] coupon redemption failed:", e);
+    }
+  } else if (patientEmail && meta.partner_ref) {
+    attributedPartnerCode = meta.partner_ref.toUpperCase();
+    attributionSource = "link";
+  }
+
+  if (patientEmail && attributedPartnerCode && attributionSource) {
+    try {
+      await attributePatient({
+        patientEmail,
+        patientName: patientName || undefined,
+        partnerCode: attributedPartnerCode,
+        via: attributionSource,
+        paymentId: session.id,
+      });
+    } catch (e) {
+      console.error("[webhook][partners] attribution failed:", e);
+    }
+  }
+
+  // 1d. PARTNERS: generar comisiones MLM si el paciente está atribuido
+  if (patientEmail && session.amount_total) {
+    try {
+      const productType = detectProductType(session.amount_total, meta);
+      if (productType && productType !== "diagnostico" && productType !== "cupon-pack") {
+        await generateCommissions({
+          paymentId: session.id,
+          patientEmail,
+          patientName: patientName || undefined,
+          productType,
+          productAmountCents: session.amount_total,
+        });
+      }
+    } catch (e) {
+      console.error("[webhook][partners] commission generation failed:", e);
+      result.errors.push(`partner-commissions: ${e instanceof Error ? e.message : "unknown"}`);
+    }
+  }
 
   // 2. ebook purchase branch
   if (product) {
