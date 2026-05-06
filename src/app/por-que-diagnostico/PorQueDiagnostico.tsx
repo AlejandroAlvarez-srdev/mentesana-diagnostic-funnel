@@ -222,7 +222,7 @@ export default function PorQueDiagnostico() {
               </div>
               <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
                 <span className="font-serif text-3xl text-[#E8D4F0]">4,6<span className="text-base">/5</span></span>
-                <span className="text-xs text-white/70 text-left leading-snug">Trustpilot · 750 reseñas</span>
+                <span className="text-xs text-white/70 text-left leading-snug">valoración media · 750 reseñas</span>
               </div>
               <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
                 <span className="text-2xl">🏛️</span>
