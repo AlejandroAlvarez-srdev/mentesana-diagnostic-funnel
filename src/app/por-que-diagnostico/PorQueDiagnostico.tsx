@@ -6,10 +6,10 @@ import Footer from "@/components/Footer";
 import { track } from "@/lib/tracking";
 
 const PSICOLOGAS = [
-  { name: "Adriana Salas", spec: "Ansiedad", col: "M-28456", years: 10, video: "/videos/welcome/adriana-salas.mp4" },
-  { name: "Laura Acosta", spec: "Depresión · TCC", col: "M-29745", years: 12, video: "/videos/welcome/laura-acosta-acosta.mp4" },
-  { name: "Diana Salazar", spec: "Autoestima · TCA", col: "M-31204", years: 11, video: "/videos/welcome/diana-salazar-alzate.mp4" },
-  { name: "Alexandra Elías", spec: "Trauma · EMDR", col: "B-19872", years: 9, video: "/videos/welcome/alexandra-elias.mp4" },
+  { name: "Adriana Salas", spec: "Ansiedad", years: 10, video: "/videos/welcome/adriana-salas.mp4" },
+  { name: "Laura Acosta", spec: "Depresión · TCC", years: 12, video: "/videos/welcome/laura-acosta-acosta.mp4" },
+  { name: "Diana Salazar", spec: "Autoestima · TCA", years: 11, video: "/videos/welcome/diana-salazar-alzate.mp4" },
+  { name: "Alexandra Elías", spec: "Trauma · EMDR", years: 9, video: "/videos/welcome/alexandra-elias.mp4" },
 ];
 
 const PASOS = [
@@ -340,7 +340,7 @@ export default function PorQueDiagnostico() {
                     <PsychVideo src={p.video} />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent" />
                     <div className="absolute bottom-2 left-2 bg-white/95 backdrop-blur-sm text-[9px] font-bold text-[#6A178C] px-2 py-1 rounded-full tracking-wide">
-                      COL. {p.col}
+                      Colegiada
                     </div>
                     <div className="absolute top-2 right-2 flex items-center gap-1 bg-black/60 backdrop-blur-sm text-[9px] font-bold text-white px-2 py-0.5 rounded-full">
                       <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
