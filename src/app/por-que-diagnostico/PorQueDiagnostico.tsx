@@ -3,7 +3,6 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
-import PressLogos from "@/components/PressLogos";
 import { track } from "@/lib/tracking";
 
 const PSICOLOGAS = [
@@ -391,11 +390,6 @@ export default function PorQueDiagnostico() {
             </div>
           </div>
         </section>
-
-        {/* ═══════════ MEDIOS ═══════════ */}
-        <div className="bg-white border-t border-black/5">
-          <PressLogos />
-        </div>
 
         {/* ═══════════ METODOLOGÍA ═══════════ */}
         <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
