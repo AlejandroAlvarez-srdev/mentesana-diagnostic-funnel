@@ -5,11 +5,15 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import { track } from "@/lib/tracking";
 
+const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
+
 const PSICOLOGAS = [
-  { name: "Adriana Salas", spec: "Ansiedad", years: 10, video: "/videos/welcome/adriana-salas.mp4" },
-  { name: "Laura Acosta", spec: "Depresión · TCC", years: 12, video: "/videos/welcome/laura-acosta-acosta.mp4" },
-  { name: "Diana Salazar", spec: "Autoestima · TCA", years: 11, video: "/videos/welcome/diana-salazar-alzate.mp4" },
-  { name: "Alexandra Elías", spec: "Trauma · EMDR", years: 9, video: "/videos/welcome/alexandra-elias.mp4" },
+  { name: "Adriana Salas", video: `${PSY_CDN}/adriana-salas.mp4` },
+  { name: "Alejandra Elías", video: `${PSY_CDN}/alejandra-elias.mp4` },
+  { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4` },
+  { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4` },
+  { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4` },
+  { name: "Talia Aguilar", video: `${PSY_CDN}/talia-aguilar.mp4` },
 ];
 
 const PASOS = [
@@ -211,7 +215,7 @@ export default function PorQueDiagnostico() {
                   +28
                 </div>
               </div>
-              <p className="text-sm text-white/80 text-left leading-tight">32 psicólogas<br /><span className="text-xs text-white/55">colegiadas</span></p>
+              <p className="text-sm text-white/80 text-left leading-tight">Equipo<br /><span className="text-xs text-white/55">colegiadas</span></p>
             </div>
 
             <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-3 md:gap-4 max-w-3xl mx-auto">
@@ -333,7 +337,7 @@ export default function PorQueDiagnostico() {
               <p className="mt-3 text-base text-black/60 max-w-xl mx-auto">Todas colegiadas. Media de <strong>10 años de experiencia</strong>.</p>
             </div>
 
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-5 max-w-5xl mx-auto">
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 md:gap-5 max-w-5xl mx-auto">
               {PSICOLOGAS.map((p) => (
                 <div key={p.name} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04] hover:shadow-[0_12px_40px_rgba(106,23,140,.10)] hover:-translate-y-0.5 transition-all">
                   <div className="relative aspect-square overflow-hidden bg-[#6A178C]/5">
@@ -349,8 +353,7 @@ export default function PorQueDiagnostico() {
                   </div>
                   <div className="p-3 md:p-4 text-center">
                     <p className="font-serif text-sm md:text-base text-black leading-tight">{p.name}</p>
-                    <p className="text-[11px] text-[#6A178C] font-semibold mt-1">{p.spec}</p>
-                    <p className="text-[10px] text-black/45 mt-0.5">{p.years} años exp.</p>
+                    <p className="text-[11px] text-[#6A178C] font-semibold mt-1">Psicóloga Clínica</p>
                   </div>
                 </div>
               ))}
