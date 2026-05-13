@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
+import AppFeatureBanner from "@/components/AppFeatureBanner";
 import { track } from "@/lib/tracking";
 
 const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
@@ -512,6 +513,11 @@ export default function PorQueDiagnostico() {
             </div>
           </div>
         </section>
+
+        {/* ═══════════ APP BANNER ═══════════ */}
+        <div className="py-12 md:py-16">
+          <AppFeatureBanner variant="asistente" tone="dark" />
+        </div>
 
         {/* ═══════════ CTA FINAL ═══════════ */}
         <section id="cta-final" className="py-16 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
