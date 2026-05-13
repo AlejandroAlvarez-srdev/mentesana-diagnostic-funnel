@@ -212,7 +212,7 @@ export default function PorQueDiagnostico() {
                   </div>
                 ))}
                 <div className="w-11 h-11 rounded-full bg-white/15 backdrop-blur border-2 border-[#2d0d3f] flex items-center justify-center text-[11px] font-bold text-white">
-                  +28
+                  +150
                 </div>
               </div>
               <p className="text-sm text-white/80 text-left leading-tight">Equipo<br /><span className="text-xs text-white/55">colegiadas</span></p>
@@ -360,7 +360,7 @@ export default function PorQueDiagnostico() {
             </div>
 
             <p className="text-center mt-8 text-sm text-black/55">
-              <span className="font-serif text-2xl text-[#6A178C] font-bold align-middle">+28</span> <span className="align-middle">psicólogas más en el equipo</span>
+              <span className="font-serif text-2xl text-[#6A178C] font-bold align-middle">+150</span> <span className="align-middle">psicólogas más en el equipo</span>
             </p>
           </div>
         </section>
