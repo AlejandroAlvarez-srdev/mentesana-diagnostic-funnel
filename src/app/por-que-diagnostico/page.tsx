@@ -16,7 +16,7 @@ export const metadata: Metadata = {
     description: "Qué es, qué incluye y cómo se hace un diagnóstico psicológico online: informe, matching y sesión de 50 minutos con tu psicóloga.",
     url: "https://mentesanapsicologia.com/por-que-diagnostico",
     type: "article",
-    locale: "es_ES", images: [{ url: "https://mentesanapsicologia.com/images/studio/img_1775321182946.webp", width: 1200, height: 675, alt: "Mente Sana Psicología" }] },
+    locale: "es_ES", images: [{ url: "https://your-project.supabase.co/storage/v1/object/public/mentesana-images/og/home.jpg", width: 1200, height: 675, alt: "Mente Sana Psicología" }] },
 };
 
 const jsonLd = {
