@@ -2,35 +2,37 @@ import type { Metadata } from "next";
 import PorQueDiagnostico from "./PorQueDiagnostico";
 
 export const metadata: Metadata = {
-  title: "Diagnóstico Mente Sana 9,99€ — Por qué y cómo funciona | Mente Sana",
-  description: "Todo lo que incluye tu Diagnóstico Mente Sana por 9,99€: informe clínico firmado, matching con psicóloga y sesión de 50 min. Comparativa vs primera sesión gratis.",
+  title: "Cómo funciona un diagnóstico psicológico online — Paso a paso | Mente Sana",
+  description: "Qué es un diagnóstico psicológico, qué incluye el informe clínico, cómo se hace el matching con tu psicóloga y qué esperar en la sesión de 50 minutos. Explicado paso a paso.",
+  keywords: [
+    "cómo funciona diagnóstico psicológico", "qué es un diagnóstico psicológico",
+    "qué incluye un informe psicológico", "diagnóstico psicológico paso a paso",
+    "qué esperar diagnóstico psicológico", "matching con psicóloga cómo funciona",
+    "evaluación psicológica online qué es", "diferencia diagnóstico y terapia",
+  ],
   alternates: { canonical: "https://mentesanapsicologia.com/por-que-diagnostico" },
   openGraph: {
-    title: "Diagnóstico Mente Sana 9,99€ — Por qué y cómo funciona",
-    description: "Informe clínico firmado + matching real + sesión 50 min. 9,99€. Con garantía.",
+    title: "Cómo funciona un diagnóstico psicológico online — Paso a paso",
+    description: "Qué es, qué incluye y cómo se hace un diagnóstico psicológico online: informe, matching y sesión de 50 minutos con tu psicóloga.",
     url: "https://mentesanapsicologia.com/por-que-diagnostico",
-    type: "website",
-    locale: "es_ES",
-  },
+    type: "article",
+    locale: "es_ES", images: [{ url: "https://mentesanapsicologia.com/images/studio/img_1775321182946.webp", width: 1200, height: 675, alt: "Mente Sana Psicología" }] },
 };
 
 const jsonLd = {
   "@context": "https://schema.org",
   "@graph": [
     {
-      "@type": "Product",
-      name: "Diagnóstico Psicológico — Mente Sana",
-      description: "Informe clínico personalizado de 5-7 páginas firmado por psicóloga colegiada, matching con la profesional ideal, y sesión de 50 minutos por videollamada.",
+      "@type": "Article",
+      headline: "Cómo funciona un diagnóstico psicológico online: guía paso a paso",
+      description: "Qué es un diagnóstico psicológico, qué incluye el informe clínico, cómo funciona el matching con la psicóloga y qué esperar en la sesión.",
       url: "https://mentesanapsicologia.com/por-que-diagnostico",
-      brand: { "@type": "Brand", name: "Mente Sana Psicología" },
-      offers: {
-        "@type": "Offer",
-        price: "9.99",
-        priceCurrency: "EUR",
-        availability: "https://schema.org/InStock",
-        priceValidUntil: "2026-12-31",
-      },
-      aggregateRating: { "@type": "AggregateRating", ratingValue: "4.6", reviewCount: "750", bestRating: "5" },
+      datePublished: "2026-01-15",
+      dateModified: "2026-05-16",
+      author: { "@type": "Organization", name: "Mente Sana Psicología", url: "https://mentesanapsicologia.com" },
+      publisher: { "@id": "https://mentesanapsicologia.com/#organization" },
+      inLanguage: "es-ES",
+      about: { "@type": "Thing", name: "Diagnóstico psicológico online" },
     },
     {
       "@type": "FAQPage",

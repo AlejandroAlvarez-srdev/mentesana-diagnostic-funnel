@@ -189,8 +189,9 @@ export default function PorQueDiagnostico() {
               <span className="font-handwriting text-base text-[#E8D4F0]">un momento antes de empezar</span>
             </div>
             <h1 className="font-serif text-[2rem] md:text-5xl lg:text-6xl leading-[1.12] max-w-4xl mx-auto">
-              Por 9,99€ empiezas con<br />
-              <em className="italic text-[#E8D4F0]">claridad</em>. No con <em className="italic text-[#C9A9D1]">ruleta</em>.
+              Cómo funciona el<br />
+              diagnóstico psicológico<br />
+              de <em className="italic text-[#E8D4F0]">9,99€</em>, paso a <em className="italic text-[#C9A9D1]">paso</em>.
             </h1>
             <p className="mt-6 md:mt-8 text-base md:text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
               La mayoría de psicólogos online te ofrecen una primera sesión gratis. Nosotros cobramos 9,99€ para darte algo que ellos no pueden: un diagnóstico real antes de que empieces.
