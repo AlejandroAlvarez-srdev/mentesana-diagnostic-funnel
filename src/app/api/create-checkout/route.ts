@@ -54,11 +54,16 @@ export async function POST(req: NextRequest) {
 
   try {
     const session = await stripe.checkout.sessions.create({
-      payment_method_types: ["card"],
+      // FIX: omitir payment_method_types deja Stripe activar todos los habilitados en Dashboard
+      // (Card + Apple Pay + Google Pay + Bizum + Link). En España Bizum convierte 2x en móvil y
+      // Apple/Google Pay quitan toda la fricción de teclear tarjeta. 70%+ del tráfico de Meta es móvil.
+      // IMPORTANTE: activar Bizum/Apple Pay/Google Pay en Stripe Dashboard → Settings → Payment methods.
       mode: "payment",
       customer_email: email || undefined,
+      // Crea Stripe Customer si no existe → en la compra del bono después podemos hacer autofill.
+      customer_creation: "if_required",
       locale: "es",
-      ui_mode: "embedded_page" as Stripe.Checkout.SessionCreateParams.UiMode,
+      ui_mode: "embedded" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: [
         {
           price_data: {
