@@ -883,7 +883,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
               <button onClick={() => window.location.reload()} className="mt-3 text-xs text-purple font-bold underline">Reintentar</button>
             </div>
           )}
-          <div ref={checkoutRef} className={loading ? "hidden" : ""} />
+          <div ref={checkoutRef} className={`w-full min-h-[500px] ${loading ? "hidden" : ""}`} />
 
           <div className="mt-6 text-center space-y-2">
             <p className="text-[10px] text-foreground/30">🔒 Pago cifrado · Stripe · Devolución garantizada</p>
