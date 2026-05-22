@@ -61,10 +61,9 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email || undefined,
       locale: "es",
-      // FIX original CRÍTICO mantengo: el bug del 57% drop era que el front llamaba a
-      // stripe.createEmbeddedCheckoutPage() (función inexistente). Ese sigue arreglado.
-      // Aquí ui_mode='embedded' es necesario para que initEmbeddedCheckout funcione.
-      ui_mode: "embedded" as Stripe.Checkout.SessionCreateParams.UiMode,
+      // RESTAURADO: 'embedded_page' es el valor válido para esta versión de Stripe API.
+      // Yo lo cambié a 'embedded' por error pensando que era nuevo — Stripe lo rechaza.
+      ui_mode: "embedded_page" as Stripe.Checkout.SessionCreateParams.UiMode,
       line_items: [
         {
           price_data: {

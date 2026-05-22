@@ -806,15 +806,15 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
         }
 
         // Load Stripe.js and mount embedded checkout
-        // FIX: la API correcta en @stripe/stripe-js v9 es initEmbeddedCheckout (NO createEmbeddedCheckoutPage).
-        // El cast a `any` enmascaraba el TypeError de runtime → usuarios viendo "Error al cargar el pago".
+        // RESTAURADO: createEmbeddedCheckoutPage es la función que esta versión de Stripe.js
+        // tiene disponible (combina con ui_mode='embedded_page'). Yo cambié esto por error
+        // a initEmbeddedCheckout pensando que era la API correcta — fue mi confusión entre
+        // dos sistemas embebidos distintos de Stripe.
         const { loadStripe } = await import("@stripe/stripe-js");
         const stripe = await loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLIC_KEY!);
         if (!stripe || !mounted.current) return;
 
-        // Cast a any: los types de @stripe/stripe-js v9 no incluyen initEmbeddedCheckout aún
-        // pero la función SÍ existe en runtime (doc oficial: stripe.com/docs/payments/checkout/build-integration#mount-checkout).
-        const checkout = await (stripe as any).initEmbeddedCheckout({ clientSecret: data.clientSecret });
+        const checkout = await (stripe as any).createEmbeddedCheckoutPage({ clientSecret: data.clientSecret });
         if (!mounted.current) { checkout.destroy(); return; }
 
         if (checkoutRef.current) {
