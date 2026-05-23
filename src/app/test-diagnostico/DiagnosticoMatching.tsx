@@ -501,6 +501,9 @@ export default function DiagnosticoMatching() {
             {/* Qué recibes justo después del pago */}
             <NextStepsCard />
 
+            {/* Reasegurador anti-objeción #1 del RAG (96 menciones de confusión con renovación auto) */}
+            <NoSurprisesBox />
+
             <button
               onClick={handleConfirmSlot}
               disabled={!selectedDay || !selectedSlot || saving}
@@ -509,7 +512,7 @@ export default function DiagnosticoMatching() {
               {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
             </button>
 
-            <p className="mt-3 text-center text-[10px] text-foreground/30">🔒 Pago seguro · Devolución garantizada · Sin suscripción</p>
+            <p className="mt-3 text-center text-[11px] text-foreground/40">🔒 Pago único cifrado · Stripe · Sin tarjeta archivada · Devolución garantizada</p>
           </div>
         </main>
       </div>
@@ -870,6 +873,11 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             <NextStepsCard />
           </div>
 
+          {/* Reasegurador anti-objeción #1 del RAG */}
+          <div className="mb-6">
+            <NoSurprisesBox />
+          </div>
+
           {/* Stripe Checkout */}
           {loading && (
             <div className="flex flex-col items-center justify-center py-16">
@@ -886,7 +894,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
           <div ref={checkoutRef} className={`w-full min-h-[500px] ${loading ? "hidden" : ""}`} />
 
           <div className="mt-6 text-center space-y-2">
-            <p className="text-[10px] text-foreground/30">🔒 Pago cifrado · Stripe · Devolución garantizada</p>
+            <p className="text-[11px] text-foreground/40">🔒 Pago único cifrado · Stripe · Sin tarjeta archivada para futuros cobros</p>
             <p className="text-[10px] text-foreground/30">En tu extracto aparece como &ldquo;MS Servicios&rdquo;</p>
           </div>
         </div>
@@ -1033,6 +1041,34 @@ function NextStepsCard() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+// Reasegurador anti-objeción #1 del cerebro Voyage: 96 menciones de confusión con
+// renovación automática / suscripción. Se muestra ANTES del botón de pago y encima
+// del checkout Stripe para neutralizar la objeción en el momento exacto de la fricción.
+function NoSurprisesBox() {
+  const items = [
+    "Es un pago único de 9,99€. No te cobramos nada más automáticamente.",
+    "No archivamos tu tarjeta para futuros cargos.",
+    "Si después quieres seguir, tú eliges cuándo y qué bono (desde 23€/sesión). Pagas al usarlo.",
+    "Si no te aporta valor, te devolvemos los 9,99€ con un email. Sin formularios.",
+  ];
+  return (
+    <div className="bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-200/60 p-5 mb-4 shadow-sm">
+      <div className="flex items-center gap-2 mb-3">
+        <span className="w-7 h-7 rounded-full bg-emerald-500/15 flex items-center justify-center text-emerald-700 text-sm">🛡️</span>
+        <p className="text-xs font-bold text-emerald-800 uppercase tracking-wider">Sin letra pequeña</p>
+      </div>
+      <ul className="space-y-2.5">
+        {items.map((t, i) => (
+          <li key={i} className="flex items-start gap-2.5">
+            <span className="shrink-0 w-4 h-4 rounded-full bg-emerald-500 text-white text-[10px] flex items-center justify-center mt-0.5">✓</span>
+            <span className="text-[13px] text-foreground/80 leading-relaxed">{t}</span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
