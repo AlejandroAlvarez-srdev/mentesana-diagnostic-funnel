@@ -9,7 +9,24 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon } = await req.json();
+  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl } = await req.json();
+
+  // Extraer fbc/fbp también de las cookies (fallback si el cliente no las envió en el body)
+  let fbcFromCookie = "";
+  let fbpFromCookie = "";
+  try {
+    const jar = await cookies();
+    fbcFromCookie = jar.get("_fbc")?.value ?? "";
+    fbpFromCookie = jar.get("_fbp")?.value ?? "";
+  } catch {}
+  const fbc = (typeof bodyFbc === "string" && bodyFbc) || fbcFromCookie;
+  const fbp = (typeof bodyFbp === "string" && bodyFbp) || fbpFromCookie;
+  const fbEventId = typeof bodyFbEventId === "string" ? bodyFbEventId : "";
+  const landingUrl = typeof bodyLandingUrl === "string" ? bodyLandingUrl : "";
+
+  // Capturar IP + User-Agent para CAPI server-side (matching quality boost)
+  const clientIp = (req.headers.get("x-forwarded-for")?.split(",")[0] || req.headers.get("x-real-ip") || "").trim();
+  const clientUa = req.headers.get("user-agent") || "";
   const u = utms || {};
   const src = (typeof source === "string" && source.trim()) ? source.trim().slice(0, 60) : "test-sobrio";
 
@@ -103,6 +120,13 @@ export async function POST(req: NextRequest) {
         partner_ref: partner_ref || "",
         partner_coupon_code: coupon_code || "",
         partner_coupon_partner_id: coupon_partner_id || "",
+        // === Meta CAPI identifiers (server-side Purchase event on webhook) ===
+        fbc: (fbc || "").slice(0, 200),
+        fbp: (fbp || "").slice(0, 200),
+        fb_event_id: fbEventId.slice(0, 80),
+        landing_url: landingUrl.slice(0, 200),
+        client_ip: clientIp.slice(0, 64),
+        client_ua: clientUa.slice(0, 300),
       },
       client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
       return_url: `https://confrimacionregistro.vercel.app/?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,

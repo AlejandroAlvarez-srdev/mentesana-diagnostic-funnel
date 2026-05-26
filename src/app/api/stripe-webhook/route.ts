@@ -3,6 +3,7 @@ import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { sendEmail, diagnosticoPaidEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
+import { sendCAPIPurchase } from "@/lib/meta-capi-server";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -89,6 +90,49 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Supabase init failed", detail: String(err) }, { status: 500 });
   }
 
+  async function fireCapiPurchase(session: Stripe.Checkout.Session) {
+    const md = session.metadata ?? {};
+    const email = session.customer_details?.email || session.customer_email || "";
+    const fullName = session.customer_details?.name || md.patient_name || "";
+    const [firstName, ...rest] = fullName.split(" ").filter(Boolean);
+    const lastName = rest.join(" ");
+    const value = (session.amount_total ?? 0) / 100;
+    if (value <= 0) {
+      console.log("[webhook] CAPI skip: amount 0", session.id);
+      return;
+    }
+    // event_id: prefiere el guardado en metadata para dedupe con el pixel client-side
+    // (si el TYP page disparó Purchase con ese mismo id, Meta los une como 1 solo).
+    const eventId = md.fb_event_id || `purchase_${session.id}`;
+    const landing = md.landing_url || "https://mentesanapsicologia.com/test-diagnostico";
+    const out = await sendCAPIPurchase({
+      event_id: eventId,
+      event_source_url: landing,
+      value,
+      currency: (session.currency || "EUR").toUpperCase(),
+      content_name: md.product === "ebook" ? "Ebook Sanando desde adentro" : "Diagnóstico psicológico",
+      user_data: {
+        email: email || undefined,
+        phone: md.patient_phone || undefined,
+        fn: firstName || undefined,
+        ln: lastName || undefined,
+        country: "ES",
+        fbc: md.fbc || undefined,
+        fbp: md.fbp || undefined,
+        external_id: md.patient_phone || email || session.id,
+        client_ip_address: md.client_ip || undefined,
+        client_user_agent: md.client_ua || undefined,
+      },
+      custom_data: {
+        stripe_session_id: session.id,
+        utm_source: md.utm_source || undefined,
+        utm_campaign: md.utm_campaign || undefined,
+        utm_content: md.utm_content || undefined,
+      },
+    });
+    console.log("[webhook] CAPI Purchase:", out.ok ? "ok" : `FAIL ${out.error}`, "session=" + session.id, "fbc?", !!md.fbc, "value=" + value);
+  }
+
   async function runProcessing(session: Stripe.Checkout.Session) {
     // Idempotency coarse-check: skip if already processed.
     // Real atomic claim happens inside processCheckoutSessionCompleted before
@@ -126,6 +170,9 @@ export async function POST(req: NextRequest) {
     const session = event.data.object as Stripe.Checkout.Session;
     console.log("[webhook] completed", { id: session.id, product: session.metadata?.product, amount: session.amount_total });
     await runProcessing(session);
+    // Dispara Purchase a Meta CAPI server-side (recupera atribución que el pixel
+    // client-side se pierde si el usuario cierra el browser antes del TYP page).
+    fireCapiPurchase(session).catch((e) => console.error("[webhook] CAPI fire fail:", e));
   }
 
   else if (event.type === "checkout.session.expired") {
