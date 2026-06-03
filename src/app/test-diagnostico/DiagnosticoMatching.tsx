@@ -775,16 +775,22 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
   useEffect(() => {
     async function initCheckout() {
       try {
-        const utms: Record<string, string> = {};
-        try {
-          const p = new URLSearchParams(window.location.search);
-          ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => {
-            const v = p.get(k) || localStorage.getItem(`ms_first_${k}`) || "";
-            if (v) utms[k] = v;
-          });
-          utms.referrer = document.referrer || "";
-          utms.landing_page = "/test-diagnostico";
-        } catch {}
+        // Fuente canónica de UTMs: lib/utm.ts (mantiene first-touch en
+        // localStorage["ms_utm_first"] y last-touch en sessionStorage["ms_utm"]).
+        // Antes este componente leía claves legacy "ms_first_${k}" que solo
+        // /eva y /vuelve poblaban — el resto del funnel iba siempre vacío
+        // y el webhook tagueaba todo como "direct-seo / organic".
+        const { getUtms } = await import("@/lib/utm");
+        const stored = getUtms();
+        const p = new URLSearchParams(window.location.search);
+        const utms: Record<string, string> = { ...stored } as Record<string, string>;
+        // Last-touch override desde la URL actual (por si el usuario llega aquí con UTMs nuevos)
+        ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"].forEach(k => {
+          const v = p.get(k);
+          if (v) utms[k] = v;
+        });
+        utms.referrer = utms.referrer || document.referrer || "";
+        utms.landing_page = utms.landing_page || "/test-diagnostico";
 
         const res = await fetch("/api/create-checkout", {
           method: "POST",
