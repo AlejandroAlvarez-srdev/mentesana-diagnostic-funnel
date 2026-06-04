@@ -124,7 +124,18 @@ export default function DiagnosticoMatching() {
   const [realSlots, setRealSlots] = useState<{ day: string; weekday: string; hour: number; iso: string }[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
+  // Si la API falla o todavía no cargó, se cae al array hardcoded.
+  const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean }[] | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
+
+  // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
+  useEffect(() => {
+    fetch("/api/diagnostico/match-pool")
+      .then(r => r.json())
+      .then(d => { if (Array.isArray(d.pool) && d.pool.length > 0) setAmeliaPool(d.pool); })
+      .catch(() => { /* silencio: fallback al hardcoded */ });
+  }, []);
 
   // Carga slots reales cuando entramos a la fase "schedule"
   useEffect(() => {
@@ -214,18 +225,49 @@ export default function DiagnosticoMatching() {
     setPhase("match");
   };
 
-  // Match logic: filter by feeling profile. La elección dentro del pool es
-  // 100% aleatoria por sesión — se fija UNA vez en localStorage para que no
-  // cambie al re-renderizar (sino el match parpadearía). Si el usuario vuelve
-  // a hacer el test (cambia de feeling o limpia storage) recibe otra random.
+  // Match logic — 100% aleatorio sobre el pool COMPLETO de Amelia
+  // (las +150 psicólogas activas). Si el pool no cargó aún, fallback al
+  // array hardcoded para no romper la UI. Se fija en localStorage para
+  // que no parpadee en re-renders.
   const matchedPsych = (() => {
     const feeling = answers.feeling || "ansiedad";
+
+    if (typeof window === "undefined") return PSYCHOLOGISTS[0];
+
+    // 1) Si tenemos pool real de Amelia → random puro sobre TODAS las que tienen vídeo
+    //    (preferimos vídeo para mantener el card visual de la sección "TU MATCH").
+    if (ameliaPool && ameliaPool.length > 0) {
+      const storageKey = `ms_match_amelia_v3_${feeling}`;
+      const stored = localStorage.getItem(storageKey);
+      if (stored) {
+        const found = ameliaPool.find(p => p.name === stored);
+        if (found) {
+          return {
+            name: found.name,
+            city: "España",
+            exp: "Colegiada",
+            specialty: "Psicóloga colegiada · sesiones online",
+            video: found.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+          };
+        }
+      }
+      // Prefer las que tienen vídeo; si ninguna, todo el pool
+      const withVideo = ameliaPool.filter(p => p.has_video);
+      const finalPool = withVideo.length > 0 ? withVideo : ameliaPool;
+      const pick = finalPool[Math.floor(Math.random() * finalPool.length)];
+      try { localStorage.setItem(storageKey, pick.name); } catch {}
+      return {
+        name: pick.name,
+        city: "España",
+        exp: "Colegiada",
+        specialty: "Psicóloga colegiada · sesiones online",
+        video: pick.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+      };
+    }
+
+    // 2) Fallback: array hardcoded mientras carga la API
     const candidates = PSYCHOLOGISTS.filter((p) => p.profiles.includes(feeling));
     const pool = candidates.length > 0 ? candidates : PSYCHOLOGISTS;
-
-    if (typeof window === "undefined") return pool[0];
-
-    // Key incluye feeling: si cambia de feeling, debe re-randomizar.
     const storageKey = `ms_match_pick_v2_${feeling}`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
