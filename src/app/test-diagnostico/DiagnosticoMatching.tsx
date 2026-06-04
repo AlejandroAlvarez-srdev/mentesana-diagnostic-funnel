@@ -127,7 +127,31 @@ export default function DiagnosticoMatching() {
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
   const [checkoutLoading, setCheckoutLoading] = useState(false);
+  // Slots reales desde Amelia (se carga al entrar en phase='schedule')
+  const [realSlots, setRealSlots] = useState<{ day: string; weekday: string; hour: number; iso: string }[]>([]);
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsError, setSlotsError] = useState<string | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
+
+  // Carga slots reales cuando entramos a la fase "schedule"
+  useEffect(() => {
+    if (phase !== "schedule") return;
+    let cancel = false;
+    setSlotsLoading(true);
+    setSlotsError(null);
+    const name = encodeURIComponent(matchedPsych?.name ?? "");
+    fetch(`/api/diagnostico/free-slots?psychologist_name=${name}&days=7`)
+      .then(r => r.json())
+      .then((d) => {
+        if (cancel) return;
+        if (d.error) { setSlotsError(d.error); setRealSlots([]); }
+        else setRealSlots(d.slots ?? []);
+      })
+      .catch(() => { if (!cancel) setSlotsError("network"); })
+      .finally(() => { if (!cancel) setSlotsLoading(false); });
+    return () => { cancel = true; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase]);
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
@@ -337,42 +361,29 @@ export default function DiagnosticoMatching() {
     );
   }
 
-  // ═══ SCHEDULE PHASE — calendario 4 días ═══
+  // ═══ SCHEDULE PHASE — calendario con disponibilidad REAL Amelia ═══
   if (phase === "schedule") {
-    // Generate next 4 available days (skip Sundays)
-    const days: { date: Date; label: string; short: string }[] = [];
-    const now = new Date();
-    let d = new Date(now);
-    d.setDate(d.getDate() + 1); // start tomorrow
-    while (days.length < 4) {
-      if (d.getDay() !== 0 && d.getDay() !== 6) { // skip Saturday & Sunday
-        days.push({
-          date: new Date(d),
-          label: d.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "short" }),
-          short: d.toLocaleDateString("es-ES", { weekday: "short", day: "numeric" }),
-        });
-      }
-      d.setDate(d.getDate() + 1);
+    // Agrupar slots reales por día. Si aún no cargaron, queda vacío y mostramos loader.
+    const byDay = new Map<string, { hour: number; label: string; period: string }[]>();
+    for (const s of realSlots) {
+      const period = s.hour < 13 ? "manana" : s.hour < 20 ? "tarde" : "noche";
+      const label = `${String(s.hour).padStart(2, "0")}:00`;
+      const arr = byDay.get(s.day) ?? [];
+      arr.push({ hour: s.hour, label, period });
+      byDay.set(s.day, arr);
     }
+    const days = Array.from(byDay.keys()).slice(0, 5).map((key) => {
+      const d = new Date(key + "T00:00:00");
+      return { key, date: d };
+    });
 
-    // Time slots based on user preference
+    // Filtrar horas por preferencia (mañana/tarde/noche). "flexible"/"finde" → todas.
     const pref = answers.schedule || "flexible";
-    const allSlots = [
-      { id: "09:00", label: "9:00", period: "manana" },
-      { id: "10:00", label: "10:00", period: "manana" },
-      { id: "11:00", label: "11:00", period: "manana" },
-      { id: "12:00", label: "12:00", period: "manana" },
-      { id: "16:00", label: "16:00", period: "tarde" },
-      { id: "17:00", label: "17:00", period: "tarde" },
-      { id: "18:00", label: "18:00", period: "tarde" },
-      { id: "19:00", label: "19:00", period: "tarde" },
-      { id: "20:00", label: "20:00", period: "noche" },
-      { id: "21:00", label: "21:00", period: "noche" },
-    ];
-    // Show preferred slots first, then others
-    const slots = pref === "flexible" || pref === "finde"
-      ? allSlots
-      : [...allSlots.filter(s => s.period === pref), ...allSlots.filter(s => s.period !== pref)];
+    const slotsForSelectedDay = (() => {
+      const all = (selectedDay ? byDay.get(selectedDay) : []) ?? [];
+      if (pref === "flexible" || pref === "finde") return all;
+      return [...all.filter(s => s.period === pref), ...all.filter(s => s.period !== pref)];
+    })();
 
     const handleConfirmSlot = async () => {
       if (!selectedDay || !selectedSlot) return;
@@ -425,46 +436,64 @@ export default function DiagnosticoMatching() {
               <p className="mt-2 text-sm text-foreground/50">Con {matchedPsych.name}. Videollamada de 50 min.</p>
             </div>
 
-            {/* Day selector */}
-            <div className="grid grid-cols-4 gap-2 mb-6">
-              {days.map((day) => {
-                const key = day.date.toISOString().split("T")[0];
-                const isSelected = selectedDay === key;
-                return (
-                  <button
-                    key={key}
-                    onClick={() => { setSelectedDay(key); setSelectedSlot(""); }}
-                    className={`p-3 rounded-xl border text-center transition-all ${
-                      isSelected
-                        ? "bg-purple text-white border-purple shadow-lg"
-                        : "bg-white border-purple/10 hover:border-purple/30"
-                    }`}
-                  >
-                    <p className={`text-[10px] uppercase font-bold ${isSelected ? "text-white/70" : "text-foreground/40"}`}>
-                      {day.date.toLocaleDateString("es-ES", { weekday: "short" })}
-                    </p>
-                    <p className={`font-serif text-xl font-bold mt-0.5 ${isSelected ? "text-white" : "text-foreground"}`}>
-                      {day.date.getDate()}
-                    </p>
-                    <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-foreground/40"}`}>
-                      {day.date.toLocaleDateString("es-ES", { month: "short" })}
-                    </p>
-                  </button>
-                );
-              })}
-            </div>
+            {/* Loader / empty */}
+            {slotsLoading && (
+              <div className="text-center text-sm text-foreground/50 py-8">Cargando disponibilidad real de {matchedPsych.name}…</div>
+            )}
+            {!slotsLoading && slotsError && (
+              <div className="rounded-xl bg-red-50 border border-red-100 p-4 text-sm text-red-700 mb-4">
+                {slotsError === "psychologist_not_found"
+                  ? `No hemos podido localizar la agenda de ${matchedPsych.name} ahora mismo. Escríbenos por WhatsApp y te confirmamos la cita manualmente.`
+                  : `Error cargando disponibilidad. Vuelve a intentarlo en unos segundos.`}
+              </div>
+            )}
+            {!slotsLoading && !slotsError && days.length === 0 && (
+              <div className="rounded-xl bg-amber-50 border border-amber-100 p-4 text-sm text-amber-800 mb-4">
+                {matchedPsych.name} no tiene huecos esta semana. Estamos buscando alternativas — escríbenos por WhatsApp y te asignamos una colega con tu mismo perfil.
+              </div>
+            )}
 
-            {/* Time slots */}
-            {selectedDay && (
+            {/* Day selector — solo días con slots reales */}
+            {!slotsLoading && days.length > 0 && (
+              <div className={`grid gap-2 mb-6 ${days.length <= 4 ? "grid-cols-4" : "grid-cols-5"}`}>
+                {days.map((day) => {
+                  const isSelected = selectedDay === day.key;
+                  return (
+                    <button
+                      key={day.key}
+                      onClick={() => { setSelectedDay(day.key); setSelectedSlot(""); }}
+                      className={`p-3 rounded-xl border text-center transition-all ${
+                        isSelected
+                          ? "bg-purple text-white border-purple shadow-lg"
+                          : "bg-white border-purple/10 hover:border-purple/30"
+                      }`}
+                    >
+                      <p className={`text-[10px] uppercase font-bold ${isSelected ? "text-white/70" : "text-foreground/40"}`}>
+                        {day.date.toLocaleDateString("es-ES", { weekday: "short" })}
+                      </p>
+                      <p className={`font-serif text-xl font-bold mt-0.5 ${isSelected ? "text-white" : "text-foreground"}`}>
+                        {day.date.getDate()}
+                      </p>
+                      <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-foreground/40"}`}>
+                        {day.date.toLocaleDateString("es-ES", { month: "short" })}
+                      </p>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            {/* Time slots reales del día seleccionado */}
+            {selectedDay && slotsForSelectedDay.length > 0 && (
               <>
                 <p className="text-xs font-bold text-foreground/50 uppercase tracking-wider mb-3">Hora disponible</p>
                 <div className="grid grid-cols-5 gap-2 mb-6">
-                  {slots.map((slot) => {
-                    const isSelected = selectedSlot === slot.id;
+                  {slotsForSelectedDay.map((slot) => {
+                    const isSelected = selectedSlot === slot.label;
                     return (
                       <button
-                        key={slot.id}
-                        onClick={() => setSelectedSlot(slot.id)}
+                        key={slot.label}
+                        onClick={() => setSelectedSlot(slot.label)}
                         className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                           isSelected
                             ? "bg-purple text-white border-purple shadow-md"

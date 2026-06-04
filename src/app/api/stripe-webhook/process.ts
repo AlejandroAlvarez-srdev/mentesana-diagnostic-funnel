@@ -360,6 +360,40 @@ export async function processCheckoutSessionCompleted(
 
     await deps.supabase.from("diagnostico_tests").upsert(diagUpsert, { onConflict: "user_email" });
 
+    // ─── Crear cuenta en WordPress + Amelia + booking de diagnóstico ────────
+    // Solo si tenemos psicóloga matched y slot elegido. Best-effort: si falla,
+    // el flujo de email sigue, pero apuntamos error para revisión manual.
+    if (psychologist && utms.scheduled_date && utms.scheduled_time) {
+      try {
+        const { createDiagnosticoBookingFromPayment, resolveProviderIdByName } = await import("@/lib/amelia-create-booking");
+        const providerId = await resolveProviderIdByName(psychologist);
+        if (providerId) {
+          const booking = await createDiagnosticoBookingFromPayment({
+            email: patientEmail,
+            fullName: patientName || patientEmail.split("@")[0],
+            phone: (session.metadata?.patient_phone as string) || null,
+            scheduledDate: String(utms.scheduled_date),
+            scheduledTime: String(utms.scheduled_time),
+            providerId,
+            stripeSessionId: session.id,
+          });
+          if (booking.ok) {
+            (result as any).amelia = { customer_id: booking.customer_id, appointment_id: booking.appointment_id, cb_id: booking.customer_booking_id, wp_user_id: booking.wp_user_id, reused: booking.reused_existing ?? false };
+            // Marca scheduled_at en el row de diagnostico_tests
+            await deps.supabase.from("diagnostico_tests")
+              .update({ session_scheduled_at: new Date(`${utms.scheduled_date}T${utms.scheduled_time}:00`).toISOString() })
+              .eq("stripe_session_id", session.id);
+          } else {
+            result.errors.push(`amelia_booking: ${booking.error}${booking.detail ? ` (${booking.detail})` : ""}`);
+          }
+        } else {
+          result.errors.push(`amelia_booking: provider_not_found "${psychologist}"`);
+        }
+      } catch (e) {
+        result.errors.push(`amelia_booking_exc: ${(e as Error).message.slice(0, 100)}`);
+      }
+    }
+
     // Atomic claim — solo un handler concurrente envía el email
     const claim = await deps.supabase
       .from("diagnostico_tests")
