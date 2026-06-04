@@ -360,6 +360,27 @@ export async function processCheckoutSessionCompleted(
 
     await deps.supabase.from("diagnostico_tests").upsert(diagUpsert, { onConflict: "user_email" });
 
+    // ─── Google Ads Enhanced Conversion (server-side, best-effort) ─────────
+    // No bloquea el flujo. Si falta config, no-opera.
+    try {
+      const { sendGoogleAdsConversion } = await import("@/lib/google-ads-capi");
+      const gclid = (session.metadata?.gclid as string) || (utms.gclid as string | undefined);
+      void sendGoogleAdsConversion({
+        email: patientEmail,
+        phone: (session.metadata?.patient_phone as string) || undefined,
+        firstName: patientName?.split(" ")[0],
+        lastName: patientName?.split(" ").slice(1).join(" ") || undefined,
+        conversionValue: (session.amount_total ?? 999) / 100,
+        currency: (session.currency ?? "eur").toUpperCase(),
+        orderId: session.id,
+        gclid,
+      }).then((r) => {
+        if (!r.ok && !r.skipped) console.warn("[stripe-webhook] google-ads-capi failed:", r.error);
+      });
+    } catch (e) {
+      console.warn("[stripe-webhook] google-ads-capi exception:", (e as Error).message);
+    }
+
     // ─── Crear cuenta en WordPress + Amelia + booking de diagnóstico ────────
     // Solo si tenemos psicóloga matched y slot elegido. Best-effort: si falla,
     // el flujo de email sigue, pero apuntamos error para revisión manual.
