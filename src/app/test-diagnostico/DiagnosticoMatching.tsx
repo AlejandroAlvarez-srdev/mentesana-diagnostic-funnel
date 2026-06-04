@@ -390,7 +390,7 @@ export default function DiagnosticoMatching() {
 
   // ═══ SCHEDULE PHASE — calendario con disponibilidad REAL Amelia ═══
   if (phase === "schedule") {
-    // Agrupar slots reales por día. Si aún no cargaron, queda vacío y mostramos loader.
+    // Agrupar slots reales por día (los slots vienen ya en hora Madrid, en orden).
     const byDay = new Map<string, { hour: number; label: string; period: string }[]>();
     for (const s of realSlots) {
       const period = s.hour < 13 ? "manana" : s.hour < 20 ? "tarde" : "noche";
@@ -399,18 +399,20 @@ export default function DiagnosticoMatching() {
       arr.push({ hour: s.hour, label, period });
       byDay.set(s.day, arr);
     }
-    const days = Array.from(byDay.keys()).slice(0, 5).map((key) => {
-      const d = new Date(key + "T00:00:00");
-      return { key, date: d };
+    // Aseguramos orden ascendente por hora dentro de cada día.
+    for (const [k, arr] of byDay) {
+      arr.sort((a, b) => a.hour - b.hour);
+      byDay.set(k, arr);
+    }
+    const days = Array.from(byDay.keys()).sort().slice(0, 5).map((key) => {
+      const [y, m, dd] = key.split("-").map(Number);
+      return { key, date: new Date(y, m - 1, dd) };
     });
 
-    // Filtrar horas por preferencia (mañana/tarde/noche). "flexible"/"finde" → todas.
+    // Las horas siempre se muestran en orden ascendente. La preferencia
+    // (mañana/tarde/noche) solo resalta visualmente — nunca reordena.
     const pref = answers.schedule || "flexible";
-    const slotsForSelectedDay = (() => {
-      const all = (selectedDay ? byDay.get(selectedDay) : []) ?? [];
-      if (pref === "flexible" || pref === "finde") return all;
-      return [...all.filter(s => s.period === pref), ...all.filter(s => s.period !== pref)];
-    })();
+    const slotsForSelectedDay = (selectedDay ? byDay.get(selectedDay) : []) ?? [];
 
     const handleConfirmSlot = async () => {
       if (!selectedDay || !selectedSlot) return;
@@ -510,13 +512,16 @@ export default function DiagnosticoMatching() {
               </div>
             )}
 
-            {/* Time slots reales del día seleccionado */}
+            {/* Time slots reales del día seleccionado — siempre orden ascendente, hora ES */}
             {selectedDay && slotsForSelectedDay.length > 0 && (
               <>
-                <p className="text-xs font-bold text-foreground/50 uppercase tracking-wider mb-3">Hora disponible</p>
+                <p className="text-xs font-bold text-foreground/50 uppercase tracking-wider mb-3">
+                  Hora disponible <span className="text-foreground/30 normal-case font-normal">· hora España</span>
+                </p>
                 <div className="grid grid-cols-5 gap-2 mb-6">
                   {slotsForSelectedDay.map((slot) => {
                     const isSelected = selectedSlot === slot.label;
+                    const isPreferred = pref !== "flexible" && pref !== "finde" && slot.period === pref;
                     return (
                       <button
                         key={slot.label}
@@ -524,7 +529,9 @@ export default function DiagnosticoMatching() {
                         className={`py-2.5 rounded-xl border text-sm font-semibold transition-all ${
                           isSelected
                             ? "bg-purple text-white border-purple shadow-md"
-                            : "bg-white border-purple/10 hover:border-purple/30 text-foreground/70"
+                            : isPreferred
+                              ? "bg-purple/5 border-purple/30 hover:border-purple text-purple"
+                              : "bg-white border-purple/10 hover:border-purple/30 text-foreground/70"
                         }`}
                       >
                         {slot.label}

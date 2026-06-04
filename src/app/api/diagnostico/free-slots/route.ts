@@ -16,7 +16,46 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
-const HOURS = [9, 10, 11, 12, 16, 17, 18, 19, 20, 21];
+// Horas Madrid (ES) — esto es lo que ve el paciente. El cálculo de UTC
+// para cada slot se hace abajo respetando CET/CEST.
+const HOURS_MADRID = [9, 10, 11, 12, 16, 17, 18, 19, 20, 21];
+
+// Madrid offset en minutos para un instante dado (CET=+60, CEST=+120).
+function madridOffsetMin(at: Date): number {
+  const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", timeZoneName: "shortOffset" });
+  const off = fmt.formatToParts(at).find(p => p.type === "timeZoneName")?.value ?? "GMT+1";
+  const m = off.match(/GMT([+-])(\d{1,2})(?::(\d{2}))?/);
+  const sign = m?.[1] === "-" ? -1 : 1;
+  const hh = m ? +m[2] : 1;
+  const mm = m?.[3] ? +m[3] : 0;
+  return sign * (hh * 60 + mm);
+}
+
+// "YYYY-MM-DD" + hora Madrid → instante UTC ms.
+function madridLocalToUtcMs(dateStr: string, hour: number, minute = 0): number {
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const naiveUtc = Date.UTC(Y, M - 1, D, hour, minute, 0);
+  return naiveUtc - madridOffsetMin(new Date(naiveUtc)) * 60_000;
+}
+
+// "YYYY-MM-DD" para hoy en Madrid.
+function todayMadridISO(): string {
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+}
+
+// Suma days a una fecha "YYYY-MM-DD" en Madrid y devuelve el nuevo "YYYY-MM-DD".
+function addDaysMadrid(dateStr: string, days: number): string {
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  const dt = new Date(Date.UTC(Y, M - 1, D + days, 12));
+  return new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit" }).format(dt);
+}
+
+// Día de la semana 0..6 para una fecha Madrid "YYYY-MM-DD".
+function weekdayMadrid(dateStr: string): number {
+  const [Y, M, D] = dateStr.split("-").map(Number);
+  // Calendario gregoriano puro (sin TZ porque "YYYY-MM-DD" Madrid representa el día civil)
+  return new Date(Date.UTC(Y, M - 1, D)).getUTCDay();
+}
 
 async function resolveProviderByName(name: string): Promise<{ id: number; name: string } | null> {
   const trimmed = name.trim();
@@ -70,32 +109,43 @@ export async function GET(req: NextRequest) {
   }
 
   const ab = ameliaTable("appointments");
-  const now = new Date();
-  const endDate = new Date(now.getTime() + days * 86400000);
-  const fmt = (d: Date) => d.toISOString().slice(0, 19).replace("T", " ");
-  const rows = await ameliaQuery<any>(
+  const nowUtcMs = Date.now();
+  const todayMad = todayMadridISO();
+  const endMad = addDaysMadrid(todayMad, days);
+  const endUtcMs = madridLocalToUtcMs(endMad, 0);
+  const fmtMy = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
+
+  const rows = await ameliaQuery<{ bookingStart: string }>(
     `SELECT bookingStart FROM ${ab} WHERE providerId = ? AND bookingStart >= ? AND bookingStart < ? AND status NOT IN ('canceled','rejected') ORDER BY bookingStart ASC`,
-    [providerId, fmt(now), fmt(endDate)],
+    [providerId, fmtMy(nowUtcMs), fmtMy(endUtcMs)],
   );
+  // Set de slots ocupados, indexados por (díaMadrid, horaMadrid) — convertimos
+  // el bookingStart UTC del row a Madrid.
   const booked = new Set<string>();
   for (const r of rows) {
     if (!r.bookingStart) continue;
-    const d = new Date(r.bookingStart);
-    booked.add(`${d.toISOString().slice(0, 10)}_${d.getHours()}`);
+    const utcMs = new Date(r.bookingStart + "Z").getTime();
+    const parts = new Intl.DateTimeFormat("en-CA", {
+      timeZone: "Europe/Madrid",
+      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
+    }).formatToParts(new Date(utcMs)).reduce<Record<string, string>>((a, p) => { a[p.type] = p.value; return a; }, {});
+    const dayKey = `${parts.year}-${parts.month}-${parts.day}`;
+    const hourKey = parseInt(parts.hour, 10);
+    booked.add(`${dayKey}_${hourKey}`);
   }
 
   const { data: blockedRows } = await sb
     .from("provider_blocked_slots")
     .select("start_at, end_at")
     .eq("provider_id", providerId)
-    .gte("end_at", now.toISOString())
-    .lte("start_at", endDate.toISOString());
-  const blockedRanges: { start: number; end: number }[] = (blockedRows ?? []).map((r: any) => ({
+    .gte("end_at", new Date(nowUtcMs).toISOString())
+    .lte("start_at", new Date(endUtcMs).toISOString());
+  const blockedRanges: { start: number; end: number }[] = (blockedRows ?? []).map((r: { start_at: string; end_at: string }) => ({
     start: new Date(r.start_at).getTime(),
     end: new Date(r.end_at).getTime(),
   }));
 
-  const daysOff = await ameliaQuery<any>(
+  const daysOff = await ameliaQuery<{ startDate: string; endDate: string }>(
     `SELECT startDate, endDate FROM ${ameliaTable("providers_to_daysoff")} WHERE userId = ?`,
     [providerId],
   );
@@ -109,23 +159,27 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Genera slots en hora MADRID, ordenados por día y por hora ascendente.
   const slots: { day: string; weekday: string; hour: number; iso: string }[] = [];
   const weekdayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
   for (let i = 1; i <= days; i++) {
-    const d = new Date(now);
-    d.setDate(d.getDate() + i);
-    d.setHours(0, 0, 0, 0);
-    const dow = d.getDay();
-    if (dow === 0 || dow === 6) continue;
-    const dayStr = d.toISOString().slice(0, 10);
+    const dayStr = addDaysMadrid(todayMad, i);
+    const dow = weekdayMadrid(dayStr);
+    if (dow === 0 || dow === 6) continue; // sin sáb/dom
     if (fullDaysOff.has(dayStr)) continue;
-    for (const h of HOURS) {
-      const key = `${dayStr}_${h}`;
-      if (booked.has(key)) continue;
-      const slotStart = new Date(d.getTime() + h * 3600 * 1000).getTime();
-      const slotEnd = slotStart + 3600 * 1000;
-      if (blockedRanges.some(r => slotStart < r.end && slotEnd > r.start)) continue;
-      slots.push({ day: dayStr, weekday: weekdayNames[dow], hour: h, iso: new Date(slotStart).toISOString() });
+    for (const h of HOURS_MADRID) {
+      if (booked.has(`${dayStr}_${h}`)) continue;
+      const slotStartUtc = madridLocalToUtcMs(dayStr, h);
+      // No mostrar slots que ya pasaron (Madrid)
+      if (slotStartUtc <= nowUtcMs) continue;
+      const slotEndUtc = slotStartUtc + 3600_000;
+      if (blockedRanges.some(r => slotStartUtc < r.end && slotEndUtc > r.start)) continue;
+      slots.push({
+        day: dayStr,
+        weekday: weekdayNames[dow],
+        hour: h,
+        iso: new Date(slotStartUtc).toISOString(),
+      });
     }
   }
 
@@ -133,6 +187,7 @@ export async function GET(req: NextRequest) {
     slots,
     provider_id: providerId,
     psychologist_name: resolvedName ?? psyName,
-    debug: { booked_count: booked.size, blocked: blockedRanges.length, days_off: fullDaysOff.size },
+    tz: "Europe/Madrid",
+    debug: { booked_count: booked.size, blocked: blockedRanges.length, days_off: fullDaysOff.size, scanned_days: days },
   });
 }
