@@ -36,7 +36,7 @@ export async function GET() {
     `SELECT id, firstName, lastName FROM ${ub} WHERE type='provider' AND status='visible' ORDER BY id ASC`,
   );
   const videoSlugs = await getAvailableVideoSlugs();
-  const pool = rows.map((r) => {
+  const all = rows.map((r) => {
     const fullName = `${r.firstName ?? ""} ${r.lastName ?? ""}`.trim();
     const slug = slugify(fullName);
     // Match exacto del slug; si no, intenta solo firstName-lastName1
@@ -55,9 +55,13 @@ export async function GET() {
       has_video: !!videoSlug,
     };
   });
+  // SOLO devolvemos las psicólogas con vídeo — el match aleatorio se hace únicamente
+  // entre éstas. El total se mantiene visible para que sepamos cuántas activas hay
+  // realmente y cuántas faltan por grabar vídeo.
+  const pool = all.filter(p => p.has_video);
   return NextResponse.json({
     pool,
-    total: pool.length,
-    with_video: pool.filter(p => p.has_video).length,
+    total_active: all.length,
+    with_video: pool.length,
   });
 }

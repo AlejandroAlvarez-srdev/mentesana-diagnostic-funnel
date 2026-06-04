@@ -251,10 +251,8 @@ export default function DiagnosticoMatching() {
           };
         }
       }
-      // Prefer las que tienen vídeo; si ninguna, todo el pool
-      const withVideo = ameliaPool.filter(p => p.has_video);
-      const finalPool = withVideo.length > 0 ? withVideo : ameliaPool;
-      const pick = finalPool[Math.floor(Math.random() * finalPool.length)];
+      // La API ya devuelve SOLO psicólogas con vídeo — random puro.
+      const pick = ameliaPool[Math.floor(Math.random() * ameliaPool.length)];
       try { localStorage.setItem(storageKey, pick.name); } catch {}
       return {
         name: pick.name,
