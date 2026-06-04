@@ -28,7 +28,7 @@ async function resolveProviderByName(name: string): Promise<{ id: number; name: 
     const ln = parts.slice(1).join(" ");
     const r = await ameliaQuery<any>(
       `SELECT id, firstName, lastName FROM ${ameliaTable("users")}
-       WHERE type='provider' AND LOWER(firstName)=LOWER(?) AND LOWER(lastName) LIKE LOWER(?) LIMIT 1`,
+       WHERE type='provider' AND status='visible' AND LOWER(firstName)=LOWER(?) AND LOWER(lastName) LIKE LOWER(?) LIMIT 1`,
       [fn, `%${ln}%`],
     );
     if (r.length > 0) return { id: Number(r[0].id), name: `${r[0].firstName} ${r[0].lastName}` };
@@ -36,10 +36,19 @@ async function resolveProviderByName(name: string): Promise<{ id: number; name: 
   // Intento 2: nombre completo LIKE
   const r2 = await ameliaQuery<any>(
     `SELECT id, firstName, lastName FROM ${ameliaTable("users")}
-     WHERE type='provider' AND LOWER(CONCAT(firstName,' ',lastName)) LIKE LOWER(?) LIMIT 1`,
+     WHERE type='provider' AND status='visible' AND LOWER(CONCAT(firstName,' ',lastName)) LIKE LOWER(?) LIMIT 1`,
     [`%${trimmed}%`],
   );
   if (r2.length > 0) return { id: Number(r2[0].id), name: `${r2[0].firstName} ${r2[0].lastName}` };
+  // Intento 3 (fallback): solo firstName si es único entre providers visibles.
+  // Cubre el caso de marketing hardcoded ("Brenda Castillo") vs Amelia real ("Brenda Jaramillo").
+  const fn = parts[0];
+  const r3 = await ameliaQuery<any>(
+    `SELECT id, firstName, lastName FROM ${ameliaTable("users")}
+     WHERE type='provider' AND status='visible' AND LOWER(firstName)=LOWER(?) LIMIT 2`,
+    [fn],
+  );
+  if (r3.length === 1) return { id: Number(r3[0].id), name: `${r3[0].firstName} ${r3[0].lastName}` };
   return null;
 }
 
