@@ -108,13 +108,6 @@ const PSYCHOLOGISTS = [
   { name: "Mallerly Mesa", city: "Barcelona", exp: "8 años", specialty: "Autoestima, identidad, duelo", video: "/videos/welcome/mallerly-mesa.mp4", profiles: ["crecimiento", "depresion"] },
 ];
 
-// Hash simple determinista para rotar dentro de candidatos sin bias
-function hashString(s: string): number {
-  let h = 0;
-  for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0;
-  return Math.abs(h);
-}
-
 export default function DiagnosticoMatching() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
@@ -221,33 +214,27 @@ export default function DiagnosticoMatching() {
     setPhase("match");
   };
 
-  // Match logic: filter by feeling profile and rotate deterministically by email
-  // to spread load across the pool instead of always picking the first match.
+  // Match logic: filter by feeling profile. La elección dentro del pool es
+  // 100% aleatoria por sesión — se fija UNA vez en localStorage para que no
+  // cambie al re-renderizar (sino el match parpadearía). Si el usuario vuelve
+  // a hacer el test (cambia de feeling o limpia storage) recibe otra random.
   const matchedPsych = (() => {
     const feeling = answers.feeling || "ansiedad";
     const candidates = PSYCHOLOGISTS.filter((p) => p.profiles.includes(feeling));
     const pool = candidates.length > 0 ? candidates : PSYCHOLOGISTS;
-    // Seed: prefer email (stable per user). Fallback: combo of answers + persistent local id.
-    let seedSource = userEmail;
-    if (!seedSource && typeof window !== "undefined") {
-      const saved = localStorage.getItem("ms_user_email") || "";
-      if (saved) seedSource = saved;
+
+    if (typeof window === "undefined") return pool[0];
+
+    // Key incluye feeling: si cambia de feeling, debe re-randomizar.
+    const storageKey = `ms_match_pick_v2_${feeling}`;
+    const stored = localStorage.getItem(storageKey);
+    if (stored) {
+      const found = pool.find(p => p.name === stored);
+      if (found) return found;
     }
-    if (!seedSource) {
-      // derive from the answer combo + a persistent per-session nonce
-      if (typeof window !== "undefined") {
-        let nonce = localStorage.getItem("ms_match_seed");
-        if (!nonce) {
-          nonce = `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 10)}`;
-          localStorage.setItem("ms_match_seed", nonce);
-        }
-        seedSource = `${Object.values(answers).join("|")}|${nonce}`;
-      } else {
-        seedSource = Object.values(answers).join("|") || "fallback";
-      }
-    }
-    const idx = hashString(seedSource) % pool.length;
-    return pool[idx];
+    const pick = pool[Math.floor(Math.random() * pool.length)];
+    try { localStorage.setItem(storageKey, pick.name); } catch {}
+    return pick;
   })();
 
   // Match justification
