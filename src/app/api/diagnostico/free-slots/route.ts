@@ -16,9 +16,18 @@ export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
 export const maxDuration = 15;
 
-// Horas Madrid (ES) — esto es lo que ve el paciente. El cálculo de UTC
-// para cada slot se hace abajo respetando CET/CEST.
-const HOURS_MADRID = [9, 10, 11, 12, 16, 17, 18, 19, 20, 21];
+// Guardarraíles del flujo de diagnóstico (hora Madrid): primera entrada 11:00,
+// última entrada 20:00 (la sesión de las 20:00 termina a las 21:00). Las horas
+// REALES salen del horario semanal que cada psicóloga tiene en Amelia
+// (providers_to_weekdays + providers_to_periods); esto solo recorta los extremos.
+const MIN_START_HOUR = 11;
+const MAX_START_HOUR = 20;
+
+// "HH:MM:SS" -> minutos desde medianoche.
+function timeToMinutes(t: string): number {
+  const [h, m] = t.split(":").map(Number);
+  return (h || 0) * 60 + (m || 0);
+}
 
 // Madrid offset en minutos para un instante dado (CET=+60, CEST=+120).
 function madridOffsetMin(at: Date): number {
@@ -159,6 +168,43 @@ export async function GET(req: NextRequest) {
     }
   }
 
+  // Horario semanal REAL de la psicóloga en Amelia. Cada (dayIndex 1=lun..7=dom)
+  // tiene uno o varios periodos bookables; los huecos entre periodos (p.ej. un
+  // descanso a mediodía) = horas bloqueadas que no se ofrecen.
+  const weekRows = await ameliaQuery<{ dayIndex: number; startTime: string; endTime: string }>(
+    `SELECT w.dayIndex AS dayIndex, p.startTime AS startTime, p.endTime AS endTime
+       FROM ${ameliaTable("providers_to_weekdays")} w
+       JOIN ${ameliaTable("providers_to_periods")} p ON p.weekDayId = w.id
+      WHERE w.userId = ?`,
+    [providerId],
+  );
+  const scheduleByDay = new Map<number, { startMin: number; endMin: number }[]>();
+  for (const r of (weekRows ?? [])) {
+    if (!r.startTime || !r.endTime) continue;
+    const arr = scheduleByDay.get(r.dayIndex) ?? [];
+    arr.push({ startMin: timeToMinutes(r.startTime), endMin: timeToMinutes(r.endTime) });
+    scheduleByDay.set(r.dayIndex, arr);
+  }
+  const hasSchedule = scheduleByDay.size > 0;
+
+  // Horas de inicio válidas (Madrid) para un día Amelia según su horario real,
+  // recortadas a [MIN_START_HOUR, MAX_START_HOUR]. Una hora h vale si el slot de
+  // 1h cabe entero dentro de algún periodo. Sin horario cargado -> ventana por
+  // defecto, para no devolver 0 slots por un hueco de datos.
+  function allowedHoursFor(ameliaDay: number): number[] {
+    if (!hasSchedule) {
+      return Array.from({ length: MAX_START_HOUR - MIN_START_HOUR + 1 }, (_, i) => MIN_START_HOUR + i);
+    }
+    const periods = scheduleByDay.get(ameliaDay) ?? [];
+    const set = new Set<number>();
+    for (const pr of periods) {
+      for (let h = MIN_START_HOUR; h <= MAX_START_HOUR; h++) {
+        if (h * 60 >= pr.startMin && (h + 1) * 60 <= pr.endMin) set.add(h);
+      }
+    }
+    return [...set].sort((a, b) => a - b);
+  }
+
   // Genera slots en hora MADRID, ordenados por día y por hora ascendente.
   const slots: { day: string; weekday: string; hour: number; iso: string }[] = [];
   const weekdayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
@@ -167,7 +213,8 @@ export async function GET(req: NextRequest) {
     const dow = weekdayMadrid(dayStr);
     if (dow === 0 || dow === 6) continue; // sin sáb/dom
     if (fullDaysOff.has(dayStr)) continue;
-    for (const h of HOURS_MADRID) {
+    const ameliaDay = dow === 0 ? 7 : dow; // JS dom=0 -> Amelia 7; resto coincide
+    for (const h of allowedHoursFor(ameliaDay)) {
       if (booked.has(`${dayStr}_${h}`)) continue;
       const slotStartUtc = madridLocalToUtcMs(dayStr, h);
       // No mostrar slots que ya pasaron (Madrid)
@@ -188,6 +235,6 @@ export async function GET(req: NextRequest) {
     provider_id: providerId,
     psychologist_name: resolvedName ?? psyName,
     tz: "Europe/Madrid",
-    debug: { booked_count: booked.size, blocked: blockedRanges.length, days_off: fullDaysOff.size, scanned_days: days },
+    debug: { booked_count: booked.size, blocked: blockedRanges.length, days_off: fullDaysOff.size, schedule_days: scheduleByDay.size, scanned_days: days },
   });
 }
