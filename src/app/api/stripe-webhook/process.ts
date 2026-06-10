@@ -84,6 +84,8 @@ export async function processCheckoutSessionCompleted(
 
   const patientEmail = session.customer_details?.email || session.customer_email || null;
   const patientName = session.metadata?.patient_name || session.customer_details?.name || "";
+  // Tel: del funnel (metadata) o del formulario de Stripe (phone_number_collection)
+  const patientPhone = session.metadata?.patient_phone || session.customer_details?.phone || null;
   const psychologist = session.metadata?.psychologist || "";
   const product = session.metadata?.product;
 
@@ -149,7 +151,7 @@ export async function processCheckoutSessionCompleted(
       status: "completed",
       patient_name: patientName || null,
       patient_email: patientEmail,
-      patient_phone: session.metadata?.patient_phone || null,
+      patient_phone: patientPhone,
       psychologist: psychologist || null,
       source: session.metadata?.source || "unknown",
       metadata: {
@@ -283,7 +285,7 @@ export async function processCheckoutSessionCompleted(
         status: "completed",
         customer_email: patientEmail,
         customer_name: patientName || null,
-        customer_phone: session.metadata?.patient_phone || null,
+        customer_phone: patientPhone,
         source: session.metadata?.source || null,
         metadata: { payment_status: session.payment_status },
         updated_at: new Date().toISOString(),
@@ -350,7 +352,7 @@ export async function processCheckoutSessionCompleted(
       updated_at: new Date().toISOString(),
     };
     if (patientName) diagUpsert.user_name = patientName;
-    if (session.metadata?.patient_phone) diagUpsert.user_phone = session.metadata.patient_phone;
+    if (patientPhone) diagUpsert.user_phone = patientPhone;
     if (psychologist) diagUpsert.matched_psychologist = psychologist;
     if (utms.scheduled_date) diagUpsert.scheduled_date = utms.scheduled_date;
     if (utms.scheduled_time) diagUpsert.scheduled_time = utms.scheduled_time;
@@ -367,7 +369,7 @@ export async function processCheckoutSessionCompleted(
       const gclid = (session.metadata?.gclid as string) || (utms.gclid as string | undefined);
       void sendGoogleAdsConversion({
         email: patientEmail,
-        phone: (session.metadata?.patient_phone as string) || undefined,
+        phone: patientPhone || undefined,
         firstName: patientName?.split(" ")[0],
         lastName: patientName?.split(" ").slice(1).join(" ") || undefined,
         conversionValue: (session.amount_total ?? 999) / 100,
@@ -392,7 +394,7 @@ export async function processCheckoutSessionCompleted(
           const booking = await createDiagnosticoBookingFromPayment({
             email: patientEmail,
             fullName: patientName || patientEmail.split("@")[0],
-            phone: (session.metadata?.patient_phone as string) || null,
+            phone: patientPhone,
             scheduledDate: String(utms.scheduled_date),
             scheduledTime: String(utms.scheduled_time),
             providerId,

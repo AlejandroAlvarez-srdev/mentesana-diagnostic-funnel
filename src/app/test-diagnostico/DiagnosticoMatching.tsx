@@ -194,8 +194,12 @@ export default function DiagnosticoMatching() {
   }, [answers, currentQ]);
 
   // Save to API (always, whether they pay or not)
+  // Teléfono obligatorio (decisión CTO 2026-06-10): sin número no hay seguimiento
+  // por WhatsApp ni cruce con el CRM — mínimo 9 dígitos reales.
+  const phoneOk = userPhone.replace(/\D/g, "").length >= 9;
+
   const saveAndProceed = async () => {
-    if (!userEmail) return;
+    if (!userEmail || !phoneOk) return;
     setSaving(true);
     localStorage.setItem("ms_diagnostico_email", userEmail);
     localStorage.setItem("ms_diagnostico_name", userName);
@@ -740,15 +744,19 @@ export default function DiagnosticoMatching() {
                 type="tel"
                 value={userPhone}
                 onChange={(e) => setUserPhone(e.target.value)}
-                placeholder="WhatsApp (opcional, para recordatorios)"
+                placeholder="Tu WhatsApp * (recordatorios y acceso a tu cita)"
                 autoComplete="tel"
+                required
                 className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
               />
+              {userPhone.length > 0 && !phoneOk && (
+                <p className="text-[11px] text-red-600 px-1">Escribe un número válido (mínimo 9 dígitos) — lo usamos para enviarte el acceso a tu sesión.</p>
+              )}
             </div>
 
             <button
               onClick={saveAndProceed}
-              disabled={!userEmail || saving}
+              disabled={!userEmail || !phoneOk || saving}
               className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Guardando..." : "Ver mi psicóloga asignada →"}

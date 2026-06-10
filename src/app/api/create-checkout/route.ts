@@ -78,6 +78,9 @@ export async function POST(req: NextRequest) {
       mode: "payment",
       customer_email: email || undefined,
       locale: "es",
+      // Si el flujo no capturó teléfono antes (payment links, landings viejas),
+      // Stripe lo pide en su formulario — el webhook lo recoge de customer_details.
+      phone_number_collection: { enabled: !phone },
       // RESTAURADO: 'embedded_page' es el valor válido para esta versión de Stripe API.
       // Yo lo cambié a 'embedded' por error pensando que era nuevo — Stripe lo rechaza.
       ui_mode: "embedded_page" as Stripe.Checkout.SessionCreateParams.UiMode,
