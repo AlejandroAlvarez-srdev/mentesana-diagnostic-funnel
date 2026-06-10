@@ -19,7 +19,12 @@ export async function POST(req: NextRequest) {
     fbcFromCookie = jar.get("_fbc")?.value ?? "";
     fbpFromCookie = jar.get("_fbp")?.value ?? "";
   } catch {}
-  const fbc = (typeof bodyFbc === "string" && bodyFbc) || fbcFromCookie;
+  // fbc: cookie _fbc del pixel → o construido desde el fbclid de la URL (formato
+  // oficial fb.1.{ts}.{fbclid}). CLAVE: el banner AEPD bloquea el pixel en la mayoría
+  // de visitas (0/71 compras con fbc en jun-2026) → sin esto, Meta no liga las compras
+  // a los clicks y su algoritmo optimiza a ciegas.
+  const fbclid = typeof utms?.fbclid === "string" ? utms.fbclid : "";
+  const fbc = (typeof bodyFbc === "string" && bodyFbc) || fbcFromCookie || (fbclid ? `fb.1.${Date.now()}.${fbclid}` : "");
   const fbp = (typeof bodyFbp === "string" && bodyFbp) || fbpFromCookie;
   const fbEventId = typeof bodyFbEventId === "string" ? bodyFbEventId : "";
   const landingUrl = typeof bodyLandingUrl === "string" ? bodyLandingUrl : "";
