@@ -1,5 +1,7 @@
 import type { Metadata } from "next";
+import { headers } from "next/headers";
 import PorQueDiagnostico from "./PorQueDiagnostico";
+import PorQueDiagnosticoB from "./PorQueDiagnosticoB";
 
 export const metadata: Metadata = {
   title: "Cómo funciona un diagnóstico psicológico online — Paso a paso | Mente Sana",
@@ -57,11 +59,15 @@ const jsonLd = {
   ],
 };
 
-export default function Page() {
+export default async function Page() {
+  // Variante del A/B test de landing (la fija proxy.ts vía header de request).
+  // Bots / sin asignación → "A" (control indexado). El JSON-LD y la metadata son
+  // idénticos en ambas variantes → SEO intacto.
+  const variant = (await headers()).get("x-ab-landing") === "B" ? "B" : "A";
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      <PorQueDiagnostico />
+      {variant === "B" ? <PorQueDiagnosticoB /> : <PorQueDiagnostico />}
     </>
   );
 }

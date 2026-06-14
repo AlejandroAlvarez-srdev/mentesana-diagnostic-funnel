@@ -14,10 +14,16 @@ export async function POST(req: NextRequest) {
   // Extraer fbc/fbp también de las cookies (fallback si el cliente no las envió en el body)
   let fbcFromCookie = "";
   let fbpFromCookie = "";
+  // Variantes A/B (las fija proxy.ts). Persisten landing→test→checkout, así la
+  // conversión a PAGO queda segmentada por variante en el metadata de Stripe / webhook.
+  let abLanding = "", abWarming = "", abDiag = "";
   try {
     const jar = await cookies();
     fbcFromCookie = jar.get("_fbc")?.value ?? "";
     fbpFromCookie = jar.get("_fbp")?.value ?? "";
+    abLanding = jar.get("ms_ab_landing")?.value ?? "";
+    abWarming = jar.get("ms_ab_warming")?.value ?? "";
+    abDiag = jar.get("ms_ab_diag")?.value ?? "";
   } catch {}
   // fbc: cookie _fbc del pixel → o construido desde el fbclid de la URL (formato
   // oficial fb.1.{ts}.{fbclid}). CLAVE: el banner AEPD bloquea el pixel en la mayoría
@@ -124,6 +130,10 @@ export async function POST(req: NextRequest) {
         first_utm_campaign: (u.first_utm_campaign || "").slice(0, 120),
         first_utm_content: (u.first_utm_content || "").slice(0, 120),
         first_touch_at: (u.first_touch_at || "").slice(0, 30),
+        // === A/B tests (segmentación de conversión a pago) ===
+        ab_landing: abLanding,
+        ab_warming: abWarming,
+        ab_diag: abDiag,
         // === Partners attribution ===
         partner_ref: partner_ref || "",
         partner_coupon_code: coupon_code || "",
