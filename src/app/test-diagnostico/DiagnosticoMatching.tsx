@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { track } from "@/lib/tracking";
+import WarmingMatch from "./WarmingMatch";
 
 // ═══ Questions config ═══
 interface Option {
@@ -126,8 +127,16 @@ export default function DiagnosticoMatching() {
   const [slotsError, setSlotsError] = useState<string | null>(null);
   // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
   // Si la API falla o todavía no cargó, se cae al array hardcoded.
-  const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean }[] | null>(null);
+  const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null }[] | null>(null);
+  // Variante del A/B test de calentamiento (la fija proxy.ts en cookie ms_ab_warming).
+  // Default "A" (control) si no hay cookie → nunca rompe el flujo clásico.
+  const [warmingVariant, setWarmingVariant] = useState<"A" | "B">("A");
   const checkoutRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const m = document.cookie.match(/(?:^|;\s*)ms_ab_warming=([AB])/);
+    if (m) setWarmingVariant(m[1] as "A" | "B");
+  }, []);
 
   // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
   useEffect(() => {
@@ -140,6 +149,10 @@ export default function DiagnosticoMatching() {
   // Carga slots reales cuando entramos a la fase "schedule"
   useEffect(() => {
     if (phase !== "schedule") return;
+    // Evento de embudo: el usuario ha llegado a la página de agendar (antes no se
+    // registraba nada hasta select_slot → no se podía medir el drop match→agendar).
+    // ab_warming va colgado automáticamente desde tracking.ts.
+    track("view_schedule", { psychologist: matchedPsych?.name ?? "" });
     let cancel = false;
     setSlotsLoading(true);
     setSlotsError(null);
@@ -252,6 +265,8 @@ export default function DiagnosticoMatching() {
             exp: "Colegiada",
             specialty: "Psicóloga colegiada · sesiones online",
             video: found.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+            photo: found.photo_url ?? null,
+            description: found.description ?? null,
           };
         }
       }
@@ -264,6 +279,8 @@ export default function DiagnosticoMatching() {
         exp: "Colegiada",
         specialty: "Psicóloga colegiada · sesiones online",
         video: pick.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+        photo: pick.photo_url ?? null,
+        description: pick.description ?? null,
       };
     }
 
@@ -312,6 +329,19 @@ export default function DiagnosticoMatching() {
   }
 
   if (phase === "match") {
+    // ── Variante B (A/B test ms_ab_warming): capa de "calentamiento" del match.
+    // Mismo dato (matchedPsych) pero enmarcado para subir convicción antes de agendar.
+    // La variante A (control) se queda exactamente igual que siempre, debajo.
+    if (warmingVariant === "B") {
+      return (
+        <WarmingMatch
+          psych={matchedPsych}
+          answers={answers}
+          contextText={contextText}
+          onContinue={() => setPhase("schedule")}
+        />
+      );
+    }
     return (
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         {/* Header */}

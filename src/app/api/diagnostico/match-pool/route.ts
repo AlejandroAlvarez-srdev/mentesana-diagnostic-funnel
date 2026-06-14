@@ -32,8 +32,8 @@ async function getAvailableVideoSlugs(): Promise<Set<string>> {
 
 export async function GET() {
   const ub = ameliaTable("users");
-  const rows = await ameliaQuery<{ id: number; firstName: string; lastName: string }>(
-    `SELECT id, firstName, lastName FROM ${ub} WHERE type='provider' AND status='visible' ORDER BY id ASC`,
+  const rows = await ameliaQuery<{ id: number; firstName: string; lastName: string; description: string | null; pictureFullPath: string | null; pictureThumbPath: string | null }>(
+    `SELECT id, firstName, lastName, description, pictureFullPath, pictureThumbPath FROM ${ub} WHERE type='provider' AND status='visible' ORDER BY id ASC`,
   );
   const videoSlugs = await getAvailableVideoSlugs();
   const all = rows.map((r) => {
@@ -45,6 +45,11 @@ export async function GET() {
       const reduced = slugify(`${r.firstName ?? ""} ${(r.lastName ?? "").split(/\s+/)[0]}`);
       if (videoSlugs.has(reduced)) videoSlug = reduced;
     }
+    // Foto y descripción REALES de Amelia (perfil de la psicóloga). La foto puede ser
+    // pictureFullPath (alta) o pictureThumbPath (miniatura); description es texto libre
+    // que la propia psicóloga escribió sobre su enfoque.
+    const photoUrl = (r.pictureFullPath || r.pictureThumbPath || null)?.trim() || null;
+    const description = (r.description ?? "").trim() || null;
     return {
       id: Number(r.id),
       name: fullName,
@@ -53,6 +58,8 @@ export async function GET() {
       slug,
       video_url: videoSlug ? `/videos/welcome/${videoSlug}.mp4` : null,
       has_video: !!videoSlug,
+      photo_url: photoUrl,
+      description,
     };
   });
   // SOLO devolvemos las psicólogas con vídeo — el match aleatorio se hace únicamente
