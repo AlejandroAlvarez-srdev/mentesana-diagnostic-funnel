@@ -154,11 +154,15 @@ export default function PorQueDiagnosticoB() {
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3">
+              {/* Esfuerzo percibido bajo + message match con la 1ª pantalla del test */}
+              <span className="inline-flex items-center gap-1.5 bg-white/10 border border-white/20 text-[#E8D4F0] text-xs md:text-sm font-semibold px-4 py-1.5 rounded-full">
+                ⏱️ 5 preguntas · 2 minutos · sin compromiso
+              </span>
               <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("hero")}
                 className="bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-                Empezar ahora →
+                Responder las 5 preguntas →
               </Link>
-              <p className="text-xs text-white/55">2 minutos · Pago único · Sin suscripción</p>
+              <p className="text-xs text-white/55">Pago único · Sin suscripción · Con garantía</p>
             </div>
 
             {/* Prueba social compacta, above-the-fold */}
