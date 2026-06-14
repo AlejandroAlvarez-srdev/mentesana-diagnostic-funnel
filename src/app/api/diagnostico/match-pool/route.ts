@@ -16,6 +16,33 @@ function slugify(s: string): string {
     .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 }
 
+// Quita el número de colegiada/matrícula/profesional de la descripción de Amelia.
+// Las psicólogas lo escriben en formatos muy distintos (ES "Col. M-12345", LATAM
+// "matrícula profesional P-123456", "nº de colegiada ...") → cubrimos los patrones
+// comunes + códigos sueltos tipo "P-123456". Se limpia en ORIGEN para que desaparezca
+// de todos los sitios que consuman esta descripción.
+function stripLicenseNumbers(text: string): string {
+  let t = text;
+  const CODE = "[A-Za-zÑ]{0,4}[-\\s.]?\\d[\\d.\\-\\s/]*";
+  // 1) "(con) número/nº/núm (de) colegiada/profesional/matrícula/registro/licencia: CÓDIGO"
+  t = t.replace(new RegExp(`,?\\s*\\(?\\s*(?:con\\s+(?:el\\s+|la\\s+)?)?(?:n[úu]mero|n[úu]m\\.?|n[º°o]\\.?|nro\\.?)\\s+(?:de\\s+)?(?:colegiad[oa]|colegiaci[óo]n|colegiatura|profesional|matr[íi]cula|registro|licencia)\\s*[:#]?\\s*${CODE}\\)?`, "gi"), " ");
+  // 2) "(con) colegiada/matrícula/registro/licencia/colegiatura (profesional) (nº) CÓDIGO"
+  t = t.replace(new RegExp(`,?\\s*\\(?\\s*(?:con\\s+(?:el\\s+|la\\s+)?)?(?:colegiad[oa]|colegiatura|matr[íi]cula|registro|licencia)(?:\\s+profesional)?\\s*(?:n[º°o]\\.?|n[úu]m\\.?|n[úu]mero|nro\\.?)?\\s*[:#]?\\s*${CODE}\\)?`, "gi"), " ");
+  // 3) Abreviatura "Col. nº 12345"
+  t = t.replace(new RegExp(`,?\\s*\\bcol\\.\\s*(?:n[º°o]\\.?|n[úu]m\\.?|n[úu]mero)?\\s*[:#]?\\s*${CODE}\\.?`, "gi"), " ");
+  // 4) Código suelto con prefijo de letras y guion: "P-123456", "M-08234", "COP-12345"
+  t = t.replace(/\b[A-ZÑ]{1,4}-\d{3,7}\b/g, " ");
+  // Limpieza de restos (paréntesis vacíos, comas dobles, conectores colgados, etc.)
+  t = t.replace(/\(\s*\)/g, " ")
+       .replace(/\s*,\s*,/g, ",")
+       .replace(/\b(con|y|de)\s*,/gi, ",")
+       .replace(/\s+([,.;])/g, "$1")
+       .replace(/\s{2,}/g, " ")
+       .replace(/^\s*[,;.]\s*/, "")
+       .trim();
+  return t;
+}
+
 let videoSlugCache: { slugs: Set<string>; ts: number } | null = null;
 async function getAvailableVideoSlugs(): Promise<Set<string>> {
   if (videoSlugCache && Date.now() - videoSlugCache.ts < 5 * 60_000) return videoSlugCache.slugs;
@@ -49,7 +76,8 @@ export async function GET() {
     // pictureFullPath (alta) o pictureThumbPath (miniatura); description es texto libre
     // que la propia psicóloga escribió sobre su enfoque.
     const photoUrl = (r.pictureFullPath || r.pictureThumbPath || null)?.trim() || null;
-    const description = (r.description ?? "").trim() || null;
+    const rawDescription = (r.description ?? "").trim();
+    const description = rawDescription ? (stripLicenseNumbers(rawDescription) || null) : null;
     return {
       id: Number(r.id),
       name: fullName,

@@ -147,20 +147,35 @@ export default function WarmingMatch({
           </div>
 
           {/* ── BLOQUE 3 — Confianza de ELLA (su descripción real de Amelia) ── */}
-          {psych.description ? (
-            <div className="mt-5 bg-gradient-to-br from-purple/[0.04] to-white rounded-2xl border border-purple/10 p-5">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Su forma de trabajar</p>
-              <p className="text-sm text-foreground/80 leading-relaxed italic">“{psych.description}”</p>
-              <p className="text-[11px] text-foreground/45 mt-2">— {psych.name}, en sus propias palabras</p>
+          <div className="mt-5">
+            <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2 px-1">Su forma de trabajar</p>
+            <div className="relative overflow-hidden rounded-2xl border border-purple/15 shadow-md">
+              {/* Cabecera de marca con su foto */}
+              <div className="bg-gradient-to-r from-purple to-[#8B2FB5] px-4 py-3 flex items-center gap-3">
+                {psych.photo ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={psych.photo} alt={psych.name} className="w-11 h-11 rounded-full object-cover ring-2 ring-white/70 shrink-0" />
+                ) : (
+                  <span className="w-11 h-11 rounded-full bg-white/20 flex items-center justify-center text-white text-xl shrink-0">💜</span>
+                )}
+                <div className="leading-tight min-w-0">
+                  <p className="text-white font-semibold text-sm truncate">{psych.name}</p>
+                  <p className="text-white/85 text-[11px]">Psicóloga colegiada · en sus palabras</p>
+                </div>
+                <span className="ml-auto text-white/35 font-serif text-5xl leading-none -mb-3 select-none">”</span>
+              </div>
+              {/* Cuerpo */}
+              <div className="bg-white p-5">
+                {psych.description ? (
+                  <p className="text-[15px] text-foreground/85 leading-relaxed line-clamp-5">{psych.description}</p>
+                ) : (
+                  <p className="text-[15px] text-foreground/85 leading-relaxed">
+                    Trabaja online con personas que están justo donde estás tú. La conocerás en la sesión — y si no encajáis, la cambias <strong className="text-purple">gratis</strong> cuando quieras.
+                  </p>
+                )}
+              </div>
             </div>
-          ) : (
-            <div className="mt-5 bg-gradient-to-br from-purple/[0.04] to-white rounded-2xl border border-purple/10 p-5">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Sobre {firstName}</p>
-              <p className="text-sm text-foreground/80 leading-relaxed">
-                Es psicóloga colegiada y trabaja online con personas que están justo donde estás tú. La conocerás en la sesión — y si no encajáis, la cambias gratis cuando quieras.
-              </p>
-            </div>
-          )}
+          </div>
 
           {/* ── BLOQUE 4 — Desactivar el pico de compromiso (cosas que YA son verdad) ── */}
           <div className="mt-5 bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-200/60 p-5 shadow-sm">
