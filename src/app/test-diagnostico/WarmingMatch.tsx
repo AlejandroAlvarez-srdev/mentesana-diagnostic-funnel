@@ -146,6 +146,23 @@ export default function WarmingMatch({
             )}
           </div>
 
+          {/* ── BLOQUE 2.5 — Prueba social: alguien que llegó igual de dudoso ── */}
+          <div className="mt-5 bg-white rounded-2xl border border-purple/10 p-5 shadow-sm">
+            <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">Gente que llegó igual de dudosa</p>
+            <div className="flex items-center gap-3 mb-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/images/por-que-diagnostico/laura.webp" alt="Laura" className="w-11 h-11 rounded-full object-cover ring-2 ring-purple/15 shrink-0" />
+              <div className="leading-tight">
+                <p className="text-sm font-semibold text-foreground">Laura M., 29 años</p>
+                <p className="text-[11px] text-foreground/45">tras hacer su diagnóstico</p>
+              </div>
+              <span className="ml-auto text-[#E8B400] text-sm">★★★★★</span>
+            </div>
+            <p className="text-[15px] text-foreground/80 leading-relaxed italic">
+              “Por primera vez sentí que estaba empezando desde algún sitio, no desde cero otra vez.”
+            </p>
+          </div>
+
           {/* ── BLOQUE 3 — Confianza de ELLA (su descripción real de Amelia) ── */}
           <div className="mt-5">
             <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2 px-1">Su forma de trabajar</p>
@@ -185,6 +202,7 @@ export default function WarmingMatch({
             </div>
             <ul className="space-y-2.5">
               {[
+                "No es terapia de por vida: es un diagnóstico puntual de 50 min para entender qué te pasa.",
                 "Es una videollamada de 50 min. Desde casa, cuando te venga bien.",
                 "Pago único de 9,99€. Sin suscripción y sin archivar tu tarjeta.",
                 "Si no te aporta valor, te devolvemos los 9,99€ con un email. Sin formularios.",
@@ -195,6 +213,16 @@ export default function WarmingMatch({
                 </li>
               ))}
             </ul>
+          </div>
+
+          {/* ── BLOQUE 4.5 — Seguridad y privacidad ── */}
+          <div className="mt-5 bg-white rounded-2xl border border-black/5 p-4">
+            <div className="flex items-start gap-2.5">
+              <span className="shrink-0 w-7 h-7 rounded-full bg-purple/10 flex items-center justify-center text-purple text-sm">🔒</span>
+              <p className="text-[13px] text-foreground/70 leading-relaxed">
+                <strong className="text-foreground/85">Confidencial y privado.</strong> El cargo aparece como “MENTE SANA” en tu banco, sin mencionar terapia. No compartimos tus datos con terceros y tus respuestas solo las ve tu psicóloga.
+              </p>
+            </div>
           </div>
 
           {/* ── BLOQUE 5 — CTA único ── */}
