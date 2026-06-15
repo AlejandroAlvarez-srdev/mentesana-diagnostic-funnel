@@ -170,6 +170,18 @@ export default function DiagnosticoMatching() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [phase]);
 
+  // FRICCIÓN (fuga match→agenda): al cargar los huecos reales pre-seleccionamos el
+  // día y la hora MÁS CERCANOS, de modo que el usuario solo tenga que CONFIRMAR
+  // (antes había que elegir día + hora a mano → ahí se caía ~69%). Si ya eligió algo
+  // manualmente, respetamos su elección.
+  useEffect(() => {
+    if (phase !== "schedule" || realSlots.length === 0 || selectedDay) return;
+    const firstDay = realSlots[0].day;
+    const firstSlot = realSlots.find((s) => s.day === firstDay);
+    if (firstDay) setSelectedDay(firstDay);
+    if (firstSlot) setSelectedSlot(`${String(firstSlot.hour).padStart(2, "0")}:00`);
+  }, [phase, realSlots, selectedDay]);
+
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
     const saved = localStorage.getItem("ms_diagnostico_answers");
@@ -206,13 +218,15 @@ export default function DiagnosticoMatching() {
     }
   }, [answers, currentQ]);
 
-  // Save to API (always, whether they pay or not)
-  // Teléfono obligatorio (decisión CTO 2026-06-10): sin número no hay seguimiento
-  // por WhatsApp ni cruce con el CRM — mínimo 9 dígitos reales.
-  const phoneOk = userPhone.replace(/\D/g, "").length >= 9;
-
+  // Save to API (always, whether they pay or not).
+  // Teléfono OPCIONAL en el gate pre-match (antes era obligatorio): pedirlo aquí
+  // frenaba el embudo y, con WhatsApp caído, el email es el canal de recuperación.
+  // Se sigue capturando el número si el usuario lo escribe.
   const saveAndProceed = async () => {
-    if (!userEmail || !phoneOk) return;
+    // El email es obligatorio (es nuestro canal de recuperación de carrito). El
+    // teléfono es OPCIONAL en este gate pre-match: pedirlo aquí frenaba el embudo
+    // y, con WhatsApp caído, el email es lo que de verdad recupera. Se captura si lo dan.
+    if (!userEmail) return;
     setSaving(true);
     localStorage.setItem("ms_diagnostico_email", userEmail);
     localStorage.setItem("ms_diagnostico_name", userName);
@@ -320,8 +334,11 @@ export default function DiagnosticoMatching() {
     return (
       <AnalyzingPhase
         onComplete={() => {
-          track("view_match_result", { profile: answers.feeling || "" });
-          setPhase("match");
+          // Gate de email ANTES del match: capturamos el lead de TODOS los que ven su
+          // match (no solo los que llegan al checkout), para poder recuperar por email
+          // a los que abandonan en la agenda (~69% del drop). view_match_result + el
+          // guardado del lead se disparan en saveAndProceed (ya con el email).
+          setPhase("contact");
         }}
         matchedPsychName={matchedPsych.name}
       />
@@ -601,15 +618,17 @@ export default function DiagnosticoMatching() {
             {/* Reasegurador anti-objeción #1 del RAG (96 menciones de confusión con renovación auto) */}
             <NoSurprisesBox />
 
-            <button
-              onClick={handleConfirmSlot}
-              disabled={!selectedDay || !selectedSlot || saving}
-              className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
-            </button>
-
-            <p className="mt-3 text-center text-[11px] text-foreground/40">🔒 Pago único cifrado · Stripe · Sin tarjeta archivada · Devolución garantizada</p>
+            {/* CTA sticky abajo: en móvil queda siempre visible al hacer scroll. */}
+            <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-3 pb-4 bg-[#FFFAF2]/95 backdrop-blur supports-[backdrop-filter]:bg-[#FFFAF2]/80 border-t border-purple/10">
+              <button
+                onClick={handleConfirmSlot}
+                disabled={!selectedDay || !selectedSlot || saving}
+                className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
+              </button>
+              <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único cifrado · Stripe · Sin tarjeta archivada · Devolución garantizada</p>
+            </div>
           </div>
         </main>
       </div>
@@ -742,14 +761,14 @@ export default function DiagnosticoMatching() {
             <span className="text-[11px] text-foreground/40 font-medium">Último paso</span>
           </div>
         </header>
-        <div className="bg-purple/10 h-1.5"><div className="h-full bg-purple rounded-r-full" style={{ width: "95%" }} /></div>
+        <div className="bg-purple/10 h-1.5"><div className="h-full bg-purple rounded-r-full" style={{ width: "75%" }} /></div>
 
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
+        <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-10">
           <div className="max-w-lg w-full">
             <div className="text-center mb-6">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">¿Dónde te enviamos tu diagnóstico?</p>
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">Necesitamos tu email para enviarte el resultado</h1>
-              <p className="mt-2 text-sm text-foreground/50">También lo usará tu psicóloga para contactarte con tu cita.</p>
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Ya tenemos tu match ✨</p>
+              <h1 className="font-serif text-2xl md:text-3xl leading-tight">¿A qué email te enviamos tu psicóloga y tu diagnóstico?</h1>
+              <p className="mt-2 text-sm text-foreground/50">Te guardamos tu match y tu hueco para que no lo pierdas.</p>
             </div>
 
             <div className="space-y-3">
@@ -759,34 +778,32 @@ export default function DiagnosticoMatching() {
                 onChange={(e) => setUserName(e.target.value)}
                 placeholder="Tu nombre"
                 autoComplete="name"
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
               />
               <input
                 type="email"
+                inputMode="email"
                 value={userEmail}
                 onChange={(e) => setUserEmail(e.target.value)}
                 placeholder="Tu email *"
                 autoComplete="email"
                 required
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
               />
               <input
                 type="tel"
+                inputMode="tel"
                 value={userPhone}
                 onChange={(e) => setUserPhone(e.target.value)}
-                placeholder="Tu WhatsApp * (recordatorios y acceso a tu cita)"
+                placeholder="Tu WhatsApp (opcional · recordatorios)"
                 autoComplete="tel"
-                required
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-3.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
               />
-              {userPhone.length > 0 && !phoneOk && (
-                <p className="text-[11px] text-red-600 px-1">Escribe un número válido (mínimo 9 dígitos) — lo usamos para enviarte el acceso a tu sesión.</p>
-              )}
             </div>
 
             <button
               onClick={saveAndProceed}
-              disabled={!userEmail || !phoneOk || saving}
+              disabled={!userEmail || saving}
               className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {saving ? "Guardando..." : "Ver mi psicóloga asignada →"}
