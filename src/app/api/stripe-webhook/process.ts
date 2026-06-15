@@ -158,6 +158,11 @@ export async function processCheckoutSessionCompleted(
         payment_method_types: session.payment_method_types,
         payment_status: session.payment_status,
         ...utms,
+        // Variantes A/B (vienen en la metadata de Stripe vía /api/create-checkout) →
+        // así la conversión a PAGO por variante se consulta directa en Supabase.
+        ab_landing: session.metadata?.ab_landing || null,
+        ab_warming: session.metadata?.ab_warming || null,
+        ab_diag: session.metadata?.ab_diag || null,
       },
     },
     { onConflict: "stripe_session_id" },
