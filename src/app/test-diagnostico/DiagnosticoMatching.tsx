@@ -349,6 +349,8 @@ export default function DiagnosticoMatching() {
           // match (no solo los que llegan al checkout), para poder recuperar por email
           // a los que abandonan en la agenda (~69% del drop). view_match_result + el
           // guardado del lead se disparan en saveAndProceed (ya con el email).
+          // Evento de VISTA del gate → permite medir gate-visto → email-dejado.
+          track("view_email_gate", { profile: answers.feeling || "" });
           setPhase("contact");
         }}
         matchedPsychName={matchedPsych.name}
