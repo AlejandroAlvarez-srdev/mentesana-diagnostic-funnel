@@ -454,6 +454,9 @@ export default function DiagnosticoMatching() {
   if (phase === "schedule") {
     // matchedPsych puede ser el tipo Amelia (con photo) o el fallback hardcoded (sin photo).
     const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
+    // Tema del usuario (en su lenguaje) para personalizar el "encaja con tu perfil".
+    const TEMA: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
+    const temaLabel = TEMA[answers.feeling] || TEMA.otro;
     // Agrupar slots reales por día (los slots vienen ya en hora Madrid, en orden).
     const byDay = new Map<string, { hour: number; label: string; period: string }[]>();
     for (const s of realSlots) {
@@ -523,30 +526,36 @@ export default function DiagnosticoMatching() {
 
         <main className="flex-1 flex items-center justify-center px-4 py-8">
           <div className="max-w-lg w-full">
-            {/* PANTALLA ÚNICA: tu psicóloga (compacta) + tu agenda + pago, todo junto. */}
-            <div className="flex items-center gap-3 bg-white rounded-2xl border border-purple/10 p-3 mb-4 shadow-sm">
-              <div className="w-16 h-16 rounded-xl overflow-hidden bg-purple/5 shrink-0 relative">
-                {psychPhoto ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img src={psychPhoto} alt={matchedPsych.name} className="absolute inset-0 w-full h-full object-cover" />
-                ) : matchedPsych.video ? (
-                  <video src={matchedPsych.video} muted autoPlay loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center text-2xl">💜</div>
-                )}
-              </div>
-              <div className="min-w-0">
-                <div className="flex items-center gap-1.5">
-                  <p className="font-serif text-base font-semibold truncate">{matchedPsych.name}</p>
-                  <span className="text-[9px] font-bold bg-purple/10 text-purple px-1.5 py-0.5 rounded-full shrink-0">TU MATCH</span>
+            {/* PANTALLA ÚNICA: tu psicóloga (con valor) + tu agenda + pago, todo junto. */}
+            <div className="bg-white rounded-2xl border border-purple/10 p-3 mb-3 shadow-sm">
+              <div className="flex items-start gap-3">
+                <div className="w-[76px] h-[76px] rounded-xl overflow-hidden bg-purple/5 shrink-0 relative">
+                  {psychPhoto ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={psychPhoto} alt={matchedPsych.name} className="absolute inset-0 w-full h-full object-cover" />
+                  ) : matchedPsych.video ? (
+                    <video src={matchedPsych.video} muted autoPlay loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : (
+                    <div className="absolute inset-0 flex items-center justify-center text-2xl">💜</div>
+                  )}
+                  <span className="absolute top-1 left-1 bg-purple text-white text-[8px] font-bold px-1.5 py-0.5 rounded-full shadow">TU MATCH</span>
                 </div>
-                <p className="text-[11px] text-foreground/50 mt-0.5">Psicóloga colegiada · videollamada de 50 min</p>
+                <div className="min-w-0 flex-1">
+                  <p className="font-serif text-[17px] font-semibold leading-tight truncate">{matchedPsych.name}</p>
+                  <div className="flex items-center gap-1.5 mt-1">
+                    <span className="bg-green-50 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">✓ Colegiada</span>
+                    <span className="text-[10px] text-foreground/45">Sesiones online</span>
+                  </div>
+                  <p className="text-[12px] text-purple/90 font-medium mt-1.5 leading-snug">
+                    ✦ Elegida para tu perfil de <strong>{temaLabel}</strong> — llegará a la sesión con tu test ya leído.
+                  </p>
+                </div>
               </div>
             </div>
 
-            <div className="text-center mb-5">
+            <div className="text-center mb-4">
               <h1 className="font-serif text-xl md:text-2xl leading-tight">Reserva tu diagnóstico con {matchedPsych.name.split(" ")[0]}</h1>
-              <p className="mt-1 text-sm text-foreground/50">Te dejamos pre-elegido el hueco más cercano. Cámbialo si quieres 👇</p>
+              <p className="mt-1 text-xs text-foreground/45">Te dejamos pre-elegido el hueco más cercano 👇</p>
             </div>
 
             {/* Loader / empty */}
