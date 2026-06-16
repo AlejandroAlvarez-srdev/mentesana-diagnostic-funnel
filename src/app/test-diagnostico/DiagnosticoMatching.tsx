@@ -184,6 +184,15 @@ export default function DiagnosticoMatching() {
 
   // Persist in localStorage for remarketing recovery
   useEffect(() => {
+    // Pre-rellena email/nombre/teléfono si ya los dejó en una sesión previa
+    // (el gate pre-match solo pide email; nombre/teléfono se conservan si los tiene).
+    const savedEmail = localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email");
+    if (savedEmail) setUserEmail(savedEmail);
+    const savedName = localStorage.getItem("ms_user_name") || localStorage.getItem("ms_diagnostico_name");
+    if (savedName) setUserName(savedName);
+    const savedPhone = localStorage.getItem("ms_user_phone");
+    if (savedPhone) setUserPhone(savedPhone);
+
     const saved = localStorage.getItem("ms_diagnostico_answers");
     if (saved) {
       try {
@@ -191,7 +200,7 @@ export default function DiagnosticoMatching() {
         setAnswers(parsed);
         const answered = Object.keys(parsed).length;
         if (answered >= QUESTIONS.length) {
-          setPhase("match");
+          setPhase("schedule");
         } else if (answered > 0) {
           setPhase("questions");
           setCurrentQ(answered);
@@ -253,7 +262,9 @@ export default function DiagnosticoMatching() {
 
     track("view_match_result", { profile: answers.feeling || "", email: userEmail });
     setSaving(false);
-    setPhase("match");
+    // Pantalla ÚNICA: psicóloga + agenda + pago juntos (mobile-first). Saltamos la
+    // pantalla larga de "calentamiento" — toda la experiencia en un solo screen.
+    setPhase("schedule");
   };
 
   // Match logic — 100% aleatorio sobre el pool COMPLETO de Amelia
@@ -441,6 +452,8 @@ export default function DiagnosticoMatching() {
 
   // ═══ SCHEDULE PHASE — calendario con disponibilidad REAL Amelia ═══
   if (phase === "schedule") {
+    // matchedPsych puede ser el tipo Amelia (con photo) o el fallback hardcoded (sin photo).
+    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
     // Agrupar slots reales por día (los slots vienen ya en hora Madrid, en orden).
     const byDay = new Map<string, { hour: number; label: string; period: string }[]>();
     for (const s of realSlots) {
@@ -510,10 +523,30 @@ export default function DiagnosticoMatching() {
 
         <main className="flex-1 flex items-center justify-center px-4 py-8">
           <div className="max-w-lg w-full">
-            <div className="text-center mb-6">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Paso 3 de 6</p>
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">Elige el día y hora de tu cita de diagnóstico</h1>
-              <p className="mt-2 text-sm text-foreground/50">Con {matchedPsych.name}. Videollamada de 50 min.</p>
+            {/* PANTALLA ÚNICA: tu psicóloga (compacta) + tu agenda + pago, todo junto. */}
+            <div className="flex items-center gap-3 bg-white rounded-2xl border border-purple/10 p-3 mb-4 shadow-sm">
+              <div className="w-16 h-16 rounded-xl overflow-hidden bg-purple/5 shrink-0 relative">
+                {psychPhoto ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={psychPhoto} alt={matchedPsych.name} className="absolute inset-0 w-full h-full object-cover" />
+                ) : matchedPsych.video ? (
+                  <video src={matchedPsych.video} muted autoPlay loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
+                ) : (
+                  <div className="absolute inset-0 flex items-center justify-center text-2xl">💜</div>
+                )}
+              </div>
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="font-serif text-base font-semibold truncate">{matchedPsych.name}</p>
+                  <span className="text-[9px] font-bold bg-purple/10 text-purple px-1.5 py-0.5 rounded-full shrink-0">TU MATCH</span>
+                </div>
+                <p className="text-[11px] text-foreground/50 mt-0.5">Psicóloga colegiada · videollamada de 50 min</p>
+              </div>
+            </div>
+
+            <div className="text-center mb-5">
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">Reserva tu diagnóstico con {matchedPsych.name.split(" ")[0]}</h1>
+              <p className="mt-1 text-sm text-foreground/50">Te dejamos pre-elegido el hueco más cercano. Cámbialo si quieres 👇</p>
             </div>
 
             {/* Loader / empty */}
@@ -612,12 +645,6 @@ export default function DiagnosticoMatching() {
               </div>
             )}
 
-            {/* Qué recibes justo después del pago */}
-            <NextStepsCard />
-
-            {/* Reasegurador anti-objeción #1 del RAG (96 menciones de confusión con renovación auto) */}
-            <NoSurprisesBox />
-
             {/* CTA sticky abajo: en móvil queda siempre visible al hacer scroll. */}
             <div className="sticky bottom-0 z-10 -mx-4 px-4 pt-3 pb-4 bg-[#FFFAF2]/95 backdrop-blur supports-[backdrop-filter]:bg-[#FFFAF2]/80 border-t border-purple/10">
               <button
@@ -627,7 +654,7 @@ export default function DiagnosticoMatching() {
               >
                 {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
               </button>
-              <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único cifrado · Stripe · Sin tarjeta archivada · Devolución garantizada</p>
+              <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática · Devolución garantizada</p>
             </div>
           </div>
         </main>
@@ -771,35 +798,18 @@ export default function DiagnosticoMatching() {
               <p className="mt-2 text-sm text-foreground/50">Te guardamos tu match y tu hueco para que no lo pierdas.</p>
             </div>
 
-            <div className="space-y-3">
-              <input
-                type="text"
-                value={userName}
-                onChange={(e) => setUserName(e.target.value)}
-                placeholder="Tu nombre"
-                autoComplete="name"
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
-              />
-              <input
-                type="email"
-                inputMode="email"
-                value={userEmail}
-                onChange={(e) => setUserEmail(e.target.value)}
-                placeholder="Tu email *"
-                autoComplete="email"
-                required
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
-              />
-              <input
-                type="tel"
-                inputMode="tel"
-                value={userPhone}
-                onChange={(e) => setUserPhone(e.target.value)}
-                placeholder="Tu WhatsApp (opcional · recordatorios)"
-                autoComplete="tel"
-                className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
-              />
-            </div>
+            <input
+              type="email"
+              inputMode="email"
+              value={userEmail}
+              onChange={(e) => setUserEmail(e.target.value)}
+              onKeyDown={(e) => { if (e.key === "Enter" && userEmail) void saveAndProceed(); }}
+              placeholder="tucorreo@email.com"
+              autoComplete="email"
+              autoFocus
+              required
+              className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base text-center focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
+            />
 
             <button
               onClick={saveAndProceed}
