@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import Image from "next/image";
 import { track } from "@/lib/tracking";
-import WarmingMatch from "./WarmingMatch";
 
 // ═══ Questions config ═══
 interface Option {
@@ -112,11 +111,11 @@ const PSYCHOLOGISTS = [
 export default function DiagnosticoMatching() {
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
-  const [contextText, setContextText] = useState("");
+  const [contextText] = useState(""); // antes lo capturaba la fase 'context' (eliminada); ahora siempre vacío
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
-  const [phase, setPhase] = useState<"intro" | "questions" | "analyzing" | "context" | "contact" | "match" | "schedule" | "payment">("intro");
+  const [phase, setPhase] = useState<"intro" | "questions" | "analyzing" | "contact" | "schedule" | "payment">("intro");
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -128,15 +127,7 @@ export default function DiagnosticoMatching() {
   // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
   // Si la API falla o todavía no cargó, se cae al array hardcoded.
   const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null }[] | null>(null);
-  // Variante del A/B test de calentamiento (la fija proxy.ts en cookie ms_ab_warming).
-  // Default "A" (control) si no hay cookie → nunca rompe el flujo clásico.
-  const [warmingVariant, setWarmingVariant] = useState<"A" | "B">("A");
   const checkoutRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const m = document.cookie.match(/(?:^|;\s*)ms_ab_warming=([AB])/);
-    if (m) setWarmingVariant(m[1] as "A" | "B");
-  }, []);
 
   // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
   useEffect(() => {
@@ -323,24 +314,6 @@ export default function DiagnosticoMatching() {
     return pick;
   })();
 
-  // Match justification
-  const justification = (() => {
-    const feeling = answers.feeling;
-    const pref = answers.preference;
-    const parts: string[] = [];
-    if (feeling === "ansiedad") parts.push("experiencia especializada en ansiedad y TCC");
-    else if (feeling === "depresion") parts.push("especialista en depresión y estados de ánimo");
-    else if (feeling === "relaciones") parts.push("especialista en relaciones y vínculos");
-    else if (feeling === "estres") parts.push("experta en burnout y estrés laboral");
-    else parts.push("perfil senior con visión integrativa");
-
-    if (pref === "cercania") parts.push("su enfoque cálido y empático encaja con lo que buscas");
-    else if (pref === "practica") parts.push("su enfoque orientado a herramientas prácticas");
-    else if (pref === "clinica") parts.push(`${matchedPsych.exp} de experiencia clínica`);
-
-    return `Hemos elegido a ${matchedPsych.name} por su ${parts.join(" y ")}.`;
-  })();
-
   if (phase === "analyzing") {
     return (
       <AnalyzingPhase
@@ -355,100 +328,6 @@ export default function DiagnosticoMatching() {
         }}
         matchedPsychName={matchedPsych.name}
       />
-    );
-  }
-
-  if (phase === "match") {
-    // ── Variante B (A/B test ms_ab_warming): capa de "calentamiento" del match.
-    // Mismo dato (matchedPsych) pero enmarcado para subir convicción antes de agendar.
-    // La variante A (control) se queda exactamente igual que siempre, debajo.
-    if (warmingVariant === "B") {
-      return (
-        <WarmingMatch
-          psych={matchedPsych}
-          answers={answers}
-          contextText={contextText}
-          onContinue={() => setPhase("schedule")}
-        />
-      );
-    }
-    return (
-      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
-        {/* Header */}
-        <header className="bg-white border-b border-purple/10 px-4 py-4">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
-            <span className="text-[11px] text-foreground/40 font-medium">Diagnóstico clínico</span>
-          </div>
-        </header>
-
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
-          <div className="max-w-lg w-full">
-            <div className="text-center mb-8">
-              <div className="inline-flex items-center gap-1.5 bg-green-50 text-green-700 px-3 py-1.5 rounded-full text-xs font-bold mb-4">
-                ✓ Matching completado
-              </div>
-              <h1 className="font-serif text-2xl md:text-3xl leading-tight">
-                Hemos elegido a tu psicóloga.
-              </h1>
-              <p className="mt-2 text-sm text-foreground/60">La profesional más idónea para estudiar tu caso y elaborar tu diagnóstico.</p>
-            </div>
-
-            {/* Psychologist card with video */}
-            <div className="bg-white rounded-3xl overflow-hidden border border-purple/10 shadow-xl">
-              <div className="aspect-[4/5] overflow-hidden bg-purple/5 relative">
-                <video
-                  src={matchedPsych.video}
-                  muted
-                  autoPlay
-                  loop
-                  playsInline
-                  preload="metadata"
-                  className="absolute inset-0 w-full h-full object-cover"
-                />
-                <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/50 to-transparent p-4">
-                  <p className="text-white text-xs font-medium opacity-80">Vídeo de bienvenida</p>
-                </div>
-              </div>
-              <div className="p-6">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <h2 className="font-serif text-xl font-semibold">{matchedPsych.name}</h2>
-                    <p className="text-xs text-purple font-medium mt-0.5">Colegiada · {matchedPsych.exp}</p>
-                  </div>
-                  <div className="bg-purple/10 text-purple text-[10px] font-bold px-2 py-1 rounded-full">TU MATCH</div>
-                </div>
-                <p className="text-sm text-foreground/60 mt-2">{matchedPsych.specialty}</p>
-
-                {/* Justification */}
-                <div className="mt-4 bg-purple/5 rounded-xl p-4 border border-purple/10">
-                  <p className="text-xs font-bold text-purple mb-1">¿Por qué ella?</p>
-                  <p className="text-sm text-foreground/70 leading-relaxed">{justification}</p>
-                </div>
-
-                {/* Change option */}
-                <button
-                  onClick={() => { /* TODO: show alternative */ }}
-                  className="mt-3 text-xs text-foreground/40 hover:text-purple transition-colors underline underline-offset-2"
-                >
-                  ¿No te convence? Ver otra recomendación
-                </button>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="mt-8 text-center">
-              <button
-                onClick={() => setPhase("schedule")}
-                className="block w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors"
-              >
-                Elegir día y hora de mi cita →
-              </button>
-              <p className="mt-3 text-xs text-foreground/40">Tu psicóloga preparará tu diagnóstico antes de la sesión.</p>
-            </div>
-          </div>
-        </main>
-      </div>
     );
   }
 
@@ -750,46 +629,7 @@ export default function DiagnosticoMatching() {
   }
 
   // ═══ CONTEXT PHASE — pregunta abierta ═══
-  if (phase === "context") {
-    return (
-      <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
-        <header className="bg-white border-b border-purple/10 px-4 py-4">
-          <div className="max-w-2xl mx-auto flex items-center justify-between">
-            <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
-            <span className="text-[11px] text-foreground/40 font-medium">Casi listo</span>
-          </div>
-        </header>
-        <div className="bg-purple/10 h-1.5"><div className="h-full bg-purple rounded-r-full" style={{ width: "85%" }} /></div>
-
-        <main className="flex-1 flex items-center justify-center px-4 py-10">
-          <div className="max-w-lg w-full">
-            <div className="text-center mb-6">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Una última cosa</p>
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">Cuéntanos un poco más con tus palabras</h1>
-              <p className="mt-2 text-sm text-foreground/50">Esto ayuda a tu psicóloga a preparar mejor tu diagnóstico. Puedes escribir lo que quieras o dejarlo en blanco.</p>
-            </div>
-
-            <textarea
-              value={contextText}
-              onChange={(e) => setContextText(e.target.value)}
-              placeholder="Ej: Llevo meses sin dormir bien. Trabajo demasiado y siento que estoy al límite. Mi pareja me dice que he cambiado pero no sé cómo explicar qué me pasa..."
-              className="w-full h-32 bg-white rounded-2xl border border-purple/15 p-4 text-sm text-foreground/80 placeholder:text-foreground/30 resize-none focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
-            />
-
-            <button
-              onClick={() => setPhase("contact")}
-              disabled={!contextText.trim()}
-              className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
-            >
-              Continuar →
-            </button>
-          </div>
-        </main>
-      </div>
-    );
-  }
-
-  // ═══ CONTACT PHASE — email + nombre (obligatorio) ═══
+  // ═══ CONTACT PHASE — email (gate pre-match) ═══
   if (phase === "contact") {
     return (
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
