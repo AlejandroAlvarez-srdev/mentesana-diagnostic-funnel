@@ -717,7 +717,7 @@ export default function DiagnosticoMatching() {
               disabled={!userEmail || saving}
               className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Guardando..." : "Ver mi psicóloga asignada →"}
+              {saving ? "Guardando..." : "Conocer a mi psicóloga y agendar mi cita →"}
             </button>
 
             <p className="mt-3 text-center text-[10px] text-foreground/30">🔒 No spam. Solo te escribiremos para tu diagnóstico.</p>
@@ -752,6 +752,27 @@ export default function DiagnosticoMatching() {
       {/* Question */}
       <main className="flex-1 flex items-center justify-center px-4 py-10">
         <div className="max-w-lg w-full" key={q.id}>
+          {/* Burbuja de calentamiento contextual — recuerda que el test elige a la
+              psicóloga que llevará la cita y va calentando hacia la 1ª sesión. */}
+          {(() => {
+            const bubbles = [
+              { icon: "🌱", text: <>Este test va a elegir a <strong>la psicóloga que te atenderá</strong> en tu cita.</> },
+              { icon: "💜", text: <>Lo que respondas la ayudará a llegar <strong>preparada a tu primera sesión</strong>.</> },
+              { icon: "✨", text: <>Hay <strong>+150 psicólogas colegiadas</strong> esperando — buscamos la tuya.</> },
+              { icon: "🤍", text: <>Tu psicóloga llegará a la cita <strong>con tu test ya leído</strong>. Cero "empezar de cero".</> },
+              { icon: "🎯", text: <>Última pregunta — en segundos verás <strong>quién será tu psicóloga</strong>.</> },
+            ];
+            const b = bubbles[Math.min(currentQ, bubbles.length - 1)];
+            return (
+              <div className="mb-6 flex justify-center">
+                <div className="inline-flex items-center gap-2 bg-purple/8 border border-purple/15 rounded-full px-4 py-2 text-[12px] text-purple/90 max-w-full">
+                  <span className="text-base flex-shrink-0">{b.icon}</span>
+                  <span className="leading-snug">{b.text}</span>
+                </div>
+              </div>
+            );
+          })()}
+
           <div className="text-center mb-8">
             <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Pregunta {currentQ + 1}</p>
             <h1 className="font-serif text-xl md:text-2xl leading-tight">{q.title}</h1>
