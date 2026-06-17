@@ -141,6 +141,9 @@ export async function POST(req: NextRequest) {
         // === Meta CAPI identifiers (server-side Purchase event on webhook) ===
         fbc: (fbc || "").slice(0, 200),
         fbp: (fbp || "").slice(0, 200),
+        // Click-id crudo de Meta: lo guardamos además del fbc derivado para poder
+        // reconstruir el fbc en el webhook si hiciera falta y para tenerlo en payments.
+        fbclid: (fbclid || "").slice(0, 200),
         fb_event_id: fbEventId.slice(0, 80),
         landing_url: landingUrl.slice(0, 200),
         client_ip: clientIp.slice(0, 64),

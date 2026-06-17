@@ -105,6 +105,9 @@ export async function POST(req: NextRequest) {
     // (si el TYP page disparó Purchase con ese mismo id, Meta los une como 1 solo).
     const eventId = md.fb_event_id || `purchase_${session.id}`;
     const landing = md.landing_url || "https://mentesanapsicologia.com/test-diagnostico";
+    // fbc: el de la metadata, o reconstruido desde el fbclid crudo (formato oficial
+    // fb.1.{ts}.{fbclid}) si por lo que sea no se guardó el fbc derivado.
+    const fbc = md.fbc || (md.fbclid ? `fb.1.${Date.now()}.${md.fbclid}` : undefined);
     const out = await sendCAPIPurchase({
       event_id: eventId,
       event_source_url: landing,
@@ -117,7 +120,7 @@ export async function POST(req: NextRequest) {
         fn: firstName || undefined,
         ln: lastName || undefined,
         country: "ES",
-        fbc: md.fbc || undefined,
+        fbc: fbc,
         fbp: md.fbp || undefined,
         external_id: md.patient_phone || email || session.id,
         client_ip_address: md.client_ip || undefined,
@@ -130,7 +133,7 @@ export async function POST(req: NextRequest) {
         utm_content: md.utm_content || undefined,
       },
     });
-    console.log("[webhook] CAPI Purchase:", out.ok ? "ok" : `FAIL ${out.error}`, "session=" + session.id, "fbc?", !!md.fbc, "value=" + value);
+    console.log("[webhook] CAPI Purchase:", out.ok ? "ok" : `FAIL ${out.error}`, "session=" + session.id, "fbc?", !!fbc, "fbclid?", !!md.fbclid, "value=" + value);
   }
 
   async function runProcessing(session: Stripe.Checkout.Session) {
