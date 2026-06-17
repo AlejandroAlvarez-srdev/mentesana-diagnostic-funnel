@@ -148,7 +148,7 @@ export default function DiagnosticoMatching() {
     setSlotsLoading(true);
     setSlotsError(null);
     const name = encodeURIComponent(matchedPsych?.name ?? "");
-    fetch(`/api/diagnostico/free-slots?psychologist_name=${name}&days=7`)
+    fetch(`/api/diagnostico/free-slots?psychologist_name=${name}&days=14`)
       .then(r => r.json())
       .then((d) => {
         if (cancel) return;
@@ -352,10 +352,42 @@ export default function DiagnosticoMatching() {
       arr.sort((a, b) => a.hour - b.hour);
       byDay.set(k, arr);
     }
-    const days = Array.from(byDay.keys()).sort().slice(0, 5).map((key) => {
+    const days = Array.from(byDay.keys()).sort().map((key) => {
       const [y, m, dd] = key.split("-").map(Number);
       return { key, date: new Date(y, m - 1, dd) };
     });
+
+    // Calendario visual: rejilla de mes (L M X J V S D) con todos los días entre
+    // hoy y el último día disponible. Días sin huecos quedan deshabilitados.
+    const availableDayKeys = new Set(days.map((d) => d.key));
+    const toKey = (dt: Date) => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, "0")}-${String(dt.getDate()).padStart(2, "0")}`;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const lastAvailable = days.length > 0 ? days[days.length - 1].date : today;
+    // Alinear el inicio al lunes de la semana de hoy y el fin al domingo de la última.
+    const gridStart = new Date(today);
+    const dayOfWeekStart = (gridStart.getDay() + 6) % 7; // 0=lunes
+    gridStart.setDate(gridStart.getDate() - dayOfWeekStart);
+    const gridEnd = new Date(lastAvailable);
+    const dayOfWeekEnd = (gridEnd.getDay() + 6) % 7;
+    gridEnd.setDate(gridEnd.getDate() + (6 - dayOfWeekEnd));
+    const calendarCells: { key: string; date: Date; available: boolean; isPast: boolean; isToday: boolean }[] = [];
+    for (let cur = new Date(gridStart); cur <= gridEnd; cur.setDate(cur.getDate() + 1)) {
+      const key = toKey(cur);
+      calendarCells.push({
+        key,
+        date: new Date(cur),
+        available: availableDayKeys.has(key),
+        isPast: cur < today,
+        isToday: cur.getTime() === today.getTime(),
+      });
+    }
+    // Etiqueta del mes (o "Junio · Julio" si el rango cruza meses)
+    const firstAvailableMonth = days[0]?.date ?? today;
+    const lastAvailableMonth = lastAvailable;
+    const monthLabel = firstAvailableMonth.getMonth() === lastAvailableMonth.getMonth()
+      ? firstAvailableMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })
+      : `${firstAvailableMonth.toLocaleDateString("es-ES", { month: "long" })} · ${lastAvailableMonth.toLocaleDateString("es-ES", { month: "long", year: "numeric" })}`;
 
     // Las horas siempre se muestran en orden ascendente. La preferencia
     // (mañana/tarde/noche) solo resalta visualmente — nunca reordena.
@@ -456,33 +488,51 @@ export default function DiagnosticoMatching() {
               </div>
             )}
 
-            {/* Day selector — solo días con slots reales */}
+            {/* Calendario visual del mes — días disponibles en morado clickeable, no disponibles en gris */}
             {!slotsLoading && days.length > 0 && (
-              <div className={`grid gap-2 mb-6 ${days.length <= 4 ? "grid-cols-4" : "grid-cols-5"}`}>
-                {days.map((day) => {
-                  const isSelected = selectedDay === day.key;
-                  return (
-                    <button
-                      key={day.key}
-                      onClick={() => { setSelectedDay(day.key); setSelectedSlot(""); }}
-                      className={`p-3 rounded-xl border text-center transition-all ${
-                        isSelected
-                          ? "bg-purple text-white border-purple shadow-lg"
-                          : "bg-white border-purple/10 hover:border-purple/30"
-                      }`}
-                    >
-                      <p className={`text-[10px] uppercase font-bold ${isSelected ? "text-white/70" : "text-foreground/40"}`}>
-                        {day.date.toLocaleDateString("es-ES", { weekday: "short" })}
-                      </p>
-                      <p className={`font-serif text-xl font-bold mt-0.5 ${isSelected ? "text-white" : "text-foreground"}`}>
-                        {day.date.getDate()}
-                      </p>
-                      <p className={`text-[10px] ${isSelected ? "text-white/60" : "text-foreground/40"}`}>
-                        {day.date.toLocaleDateString("es-ES", { month: "short" })}
-                      </p>
-                    </button>
-                  );
-                })}
+              <div className="bg-white rounded-2xl border border-purple/10 p-4 mb-6 shadow-sm">
+                <p className="text-center font-serif text-base font-semibold text-foreground capitalize mb-3">
+                  {monthLabel}
+                </p>
+                <div className="grid grid-cols-7 gap-1 mb-2">
+                  {["L", "M", "X", "J", "V", "S", "D"].map((d) => (
+                    <p key={d} className="text-center text-[10px] font-bold text-foreground/40 uppercase tracking-wider py-1">
+                      {d}
+                    </p>
+                  ))}
+                </div>
+                <div className="grid grid-cols-7 gap-1">
+                  {calendarCells.map((cell) => {
+                    const isSelected = selectedDay === cell.key;
+                    const clickable = cell.available && !cell.isPast;
+                    return (
+                      <button
+                        key={cell.key}
+                        onClick={() => { if (clickable) { setSelectedDay(cell.key); setSelectedSlot(""); } }}
+                        disabled={!clickable}
+                        aria-label={cell.date.toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })}
+                        className={`relative aspect-square rounded-lg flex flex-col items-center justify-center text-sm font-semibold transition-all ${
+                          isSelected
+                            ? "bg-purple text-white shadow-md scale-105"
+                            : clickable
+                              ? "bg-purple/5 text-purple hover:bg-purple/10 hover:scale-105 cursor-pointer"
+                              : cell.isToday
+                                ? "text-foreground/40 ring-1 ring-purple/20"
+                                : "text-foreground/20 cursor-not-allowed"
+                        }`}
+                      >
+                        <span>{cell.date.getDate()}</span>
+                        {clickable && !isSelected && (
+                          <span className="absolute bottom-1 w-1 h-1 rounded-full bg-purple/60" />
+                        )}
+                      </button>
+                    );
+                  })}
+                </div>
+                <p className="mt-3 text-center text-[10px] text-foreground/40">
+                  <span className="inline-block w-2 h-2 rounded-full bg-purple/60 align-middle mr-1" />
+                  Días con disponibilidad
+                </p>
               </div>
             )}
 
