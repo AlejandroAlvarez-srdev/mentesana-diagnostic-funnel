@@ -210,10 +210,13 @@ export default function DiagnosticoMatching() {
     if (currentQ < QUESTIONS.length - 1) {
       setTimeout(() => setCurrentQ(currentQ + 1), 300);
     } else {
-      // After all 5 questions → pantalla de análisis antes del match
+      // After all 5 questions → email gate (antes pasaba por analyzing primero).
+      // Pedimos el email mientras la persona aún siente el cierre del test, sin
+      // gastar el suspense; las animaciones del match vienen DESPUÉS del email
+      // como recompensa por dejarlo.
       setTimeout(() => {
-        track("start_matching_analysis", { profile: newAnswers.feeling || "" });
-        setPhase("analyzing");
+        track("view_email_gate", { profile: newAnswers.feeling || "" });
+        setPhase("contact");
       }, 400);
     }
   }, [answers, currentQ]);
@@ -251,11 +254,12 @@ export default function DiagnosticoMatching() {
       });
     } catch {}
 
-    track("view_match_result", { profile: answers.feeling || "", email: userEmail });
+    track("start_matching_analysis", { profile: answers.feeling || "", email: userEmail });
     setSaving(false);
-    // Pantalla ÚNICA: psicóloga + agenda + pago juntos (mobile-first). Saltamos la
-    // pantalla larga de "calentamiento" — toda la experiencia en un solo screen.
-    setPhase("schedule");
+    // Tras email → animaciones de match (analyzing) → calendario (schedule).
+    // Las animaciones materializan el valor de dejar el email: la persona ve
+    // reveal de foto, por qué encaja, y entra al calendario ya enamorada.
+    setPhase("analyzing");
   };
 
   // Match logic — 100% aleatorio sobre el pool COMPLETO de Amelia
@@ -320,8 +324,8 @@ export default function DiagnosticoMatching() {
     return (
       <AnalyzingPhase
         onComplete={() => {
-          track("view_email_gate", { profile: answers.feeling || "" });
-          setPhase("contact");
+          track("view_match_result", { profile: answers.feeling || "", email: userEmail });
+          setPhase("schedule");
         }}
         matchedPsychName={matchedPsych.name}
         matchedPsychPhoto={psychPhoto}
