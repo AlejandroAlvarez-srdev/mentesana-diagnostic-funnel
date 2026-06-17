@@ -427,6 +427,64 @@ export default function DiagnosticoMatching() {
       setPhase("payment");
     };
 
+    // Loader full-screen mientras Amelia devuelve los slots reales.
+    // Da una microespera intencional con foto + tagline + bullets para que
+    // el calendario no aparezca en seco.
+    if (slotsLoading) {
+      return (
+        <div className="min-h-screen bg-gradient-to-b from-[#FFFAF2] via-[#FAF4FC] to-[#F0E3F7] flex flex-col">
+          <header className="bg-white/60 backdrop-blur-md border-b border-purple/10 px-4 py-4">
+            <div className="max-w-2xl mx-auto flex items-center justify-center">
+              <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
+            </div>
+          </header>
+          <main className="flex-1 flex items-center justify-center px-4 py-8">
+            <div className="max-w-md w-full text-center">
+              {/* Foto de la psi con halo pulsante */}
+              <div className="flex justify-center mb-6">
+                <div className="relative w-28 h-28">
+                  <div className="absolute -inset-2 rounded-full bg-gradient-to-br from-purple/30 via-[#D4AF37]/30 to-purple/30 blur-2xl animate-pulse" />
+                  <div className="absolute inset-0 rounded-full border-2 border-purple/30 animate-[ping_2s_ease-out_infinite]" />
+                  <div className="relative w-28 h-28 rounded-full overflow-hidden border-4 border-white shadow-2xl shadow-purple/40 bg-purple/5">
+                    {psychPhoto ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img src={psychPhoto} alt={matchedPsych.name} className="w-full h-full object-cover" />
+                    ) : matchedPsych.video ? (
+                      <video src={matchedPsych.video} muted autoPlay loop playsInline preload="metadata" className="w-full h-full object-cover" />
+                    ) : (
+                      <div className="w-full h-full flex items-center justify-center text-4xl">💜</div>
+                    )}
+                  </div>
+                </div>
+              </div>
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">{matchedPsych.name}</p>
+              <h1 className="font-serif text-2xl md:text-3xl leading-tight mb-2">
+                Preparando tus <em className="text-purple italic font-normal">horas disponibles</em>
+              </h1>
+              <p className="text-sm text-foreground/60 mb-6">Mirando la agenda real de tu psicóloga esta semana…</p>
+              <ul className="space-y-2.5 max-w-xs mx-auto text-left">
+                {[
+                  "Sincronizando su calendario clínico",
+                  "Filtrando huecos libres compatibles contigo",
+                  "Dejándote pre-elegido el más cercano",
+                ].map((b, i) => (
+                  <li
+                    key={b}
+                    className="flex items-start gap-2.5 bg-white/70 backdrop-blur rounded-xl border border-purple/10 px-3.5 py-2.5 shadow-sm"
+                    style={{ animation: `fadeInUp 600ms ease-out ${i * 200}ms both` }}
+                  >
+                    <span className="w-4 h-4 mt-0.5 border-2 border-purple/20 border-t-purple rounded-full animate-spin flex-shrink-0" />
+                    <span className="text-[13px] leading-snug text-foreground/80">{b}</span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          </main>
+          <style>{`@keyframes fadeInUp { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }`}</style>
+        </div>
+      );
+    }
+
     return (
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
