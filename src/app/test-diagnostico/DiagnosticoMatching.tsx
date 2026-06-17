@@ -315,18 +315,17 @@ export default function DiagnosticoMatching() {
   })();
 
   if (phase === "analyzing") {
+    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
+    const TEMA_PSI: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
     return (
       <AnalyzingPhase
         onComplete={() => {
-          // Gate de email ANTES del match: capturamos el lead de TODOS los que ven su
-          // match (no solo los que llegan al checkout), para poder recuperar por email
-          // a los que abandonan en la agenda (~69% del drop). view_match_result + el
-          // guardado del lead se disparan en saveAndProceed (ya con el email).
-          // Evento de VISTA del gate → permite medir gate-visto → email-dejado.
           track("view_email_gate", { profile: answers.feeling || "" });
           setPhase("contact");
         }}
         matchedPsychName={matchedPsych.name}
+        matchedPsychPhoto={psychPhoto}
+        feelingLabel={TEMA_PSI[answers.feeling] || TEMA_PSI.otro}
       />
     );
   }
@@ -960,23 +959,77 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
 }
 
 // ═══ ANALYZING PHASE — pantalla de carga antes del match ═══
-function AnalyzingPhase({ onComplete, matchedPsychName }: { onComplete: () => void; matchedPsychName: string }) {
-  const STEPS = [
-    { icon: "🔍", label: "Analizando tus respuestas…" },
-    { icon: "🧠", label: "Identificando tu perfil clínico…" },
-    { icon: "💜", label: "Cruzando con nuestro equipo de psicólogas…" },
-    { icon: "✨", label: `Preparando tu match con ${matchedPsychName.split(" ")[0]}…` },
+function AnalyzingPhase({
+  onComplete,
+  matchedPsychName,
+  matchedPsychPhoto,
+  feelingLabel,
+}: {
+  onComplete: () => void;
+  matchedPsychName: string;
+  matchedPsychPhoto: string | null;
+  feelingLabel: string;
+}) {
+  const firstName = matchedPsychName.split(" ")[0];
+
+  // 5 frames narrativos. Total ≈ 14 s. La gente lee, anticipa el match, ve la
+  // foto con un reveal, entiende por qué encaja y le da contexto al calendario.
+  const FRAMES = [
+    {
+      ms: 2800,
+      title: "Analizando tus 5 respuestas",
+      sub: "Las cruzamos con criterios clínicos, no con un test cualquiera.",
+      bullets: [
+        "Perfil emocional · qué te trae aquí",
+        "Tono que necesitas · cómo prefieres trabajar",
+        "Especialidad clínica que mejor encaja",
+      ],
+    },
+    {
+      ms: 2800,
+      title: `Buscando tu match en +150 psicólogas`,
+      sub: "Todas colegiadas, con experiencia validada en clínica privada.",
+      bullets: [
+        "Especialidad en " + feelingLabel,
+        "Disponibilidad esta semana",
+        "Estilo terapéutico compatible con tu perfil",
+      ],
+    },
+    {
+      ms: 3800,
+      title: `Encontramos a tu psicóloga`,
+      reveal: true,
+    },
+    {
+      ms: 2700,
+      title: `Por qué ${firstName} encaja contigo`,
+      bullets: [
+        `Experiencia trabajando ${feelingLabel}`,
+        "Tono cercano y directo en sesión",
+        "Lee tu test antes de la cita — no empiezas de cero",
+      ],
+    },
+    {
+      ms: 1900,
+      title: "Preparando tu calendario",
+      sub: "Cruzando los huecos reales que tiene esta semana…",
+    },
   ];
+
   const [current, setCurrent] = useState(0);
 
   useEffect(() => {
-    if (current >= STEPS.length) {
-      const t = setTimeout(onComplete, 700);
+    if (current >= FRAMES.length) {
+      const t = setTimeout(onComplete, 400);
       return () => clearTimeout(t);
     }
-    const t = setTimeout(() => setCurrent((c) => c + 1), 950);
+    const t = setTimeout(() => setCurrent((c) => c + 1), FRAMES[current].ms);
     return () => clearTimeout(t);
-  }, [current, onComplete, STEPS.length]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [current, onComplete]);
+
+  const frame = FRAMES[Math.min(current, FRAMES.length - 1)];
+  const progress = Math.min(100, Math.round(((current + 1) / FRAMES.length) * 100));
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFFAF2] via-[#FAF4FC] to-[#F0E3F7] flex flex-col">
@@ -986,68 +1039,93 @@ function AnalyzingPhase({ onComplete, matchedPsychName }: { onComplete: () => vo
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center px-4 py-10">
-        <div className="max-w-md w-full">
-          {/* Orbe pulsante */}
-          <div className="flex justify-center mb-10">
-            <div className="relative w-28 h-28">
-              <div className="absolute inset-0 rounded-full bg-purple/20 animate-ping" />
-              <div className="absolute inset-2 rounded-full bg-purple/30 animate-pulse" />
-              <div className="absolute inset-4 rounded-full bg-gradient-to-br from-purple to-[#8B2FB5] shadow-2xl shadow-purple/40 flex items-center justify-center">
-                <svg className="w-10 h-10 text-white animate-spin" viewBox="0 0 24 24" fill="none" style={{ animationDuration: "2s" }}>
-                  <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="35 20" strokeLinecap="round" opacity="0.9" />
-                </svg>
-              </div>
-            </div>
-          </div>
+      {/* Progress sutil */}
+      <div className="h-1 bg-purple/10">
+        <div
+          className="h-full bg-gradient-to-r from-purple to-[#8B2FB5] transition-all ease-out"
+          style={{ width: `${progress}%`, transitionDuration: "800ms" }}
+        />
+      </div>
 
-          <h1 className="font-serif text-2xl md:text-3xl text-center leading-tight mb-2">
-            Preparando tu <em className="text-purple italic font-normal">match perfecto</em>
-          </h1>
-          <p className="text-center text-sm text-foreground/60 mb-8">Tardamos unos segundos en cruzar tu perfil con nuestra red clínica.</p>
-
-          <div className="space-y-3">
-            {STEPS.map((s, i) => {
-              const done = i < current;
-              const active = i === current;
-              return (
-                <div
-                  key={i}
-                  className={`flex items-center gap-3 bg-white rounded-2xl border px-4 py-3.5 transition-all duration-500 ${
-                    done
-                      ? "border-green-200 bg-green-50/70"
-                      : active
-                      ? "border-purple/30 shadow-lg shadow-purple/10 scale-[1.02]"
-                      : "border-black/5 opacity-40"
-                  }`}
-                  style={{ transitionProperty: "transform, opacity, border-color, background-color, box-shadow" }}
-                >
-                  <div className="shrink-0 w-8 h-8 flex items-center justify-center">
-                    {done ? (
-                      <span className="w-7 h-7 rounded-full bg-green-500 text-white flex items-center justify-center text-sm font-bold shadow-md">✓</span>
-                    ) : active ? (
-                      <div className="w-5 h-5 border-2 border-purple/20 border-t-purple rounded-full animate-spin" />
-                    ) : (
-                      <span className="text-lg opacity-60">{s.icon}</span>
-                    )}
-                  </div>
-                  <p
-                    className={`text-sm leading-snug ${
-                      done
-                        ? "text-green-800 font-medium"
-                        : active
-                        ? "text-foreground font-semibold"
-                        : "text-foreground/40"
-                    }`}
-                  >
-                    {s.label}
-                  </p>
+      <main className="flex-1 flex items-center justify-center px-4 py-8">
+        <div className="max-w-md w-full" key={current}>
+          {/* Orbe o foto reveal */}
+          <div className="flex justify-center mb-8 animate-[fadeInUp_500ms_ease-out]">
+            {frame.reveal ? (
+              <div className="relative w-36 h-36">
+                {/* Halo animado */}
+                <div className="absolute -inset-3 rounded-full bg-gradient-to-br from-purple/30 via-[#D4AF37]/30 to-purple/30 blur-2xl animate-pulse" />
+                <div className="absolute inset-0 rounded-full border-2 border-purple/30 animate-[ping_2s_ease-out_infinite]" />
+                <div className="relative w-36 h-36 rounded-full overflow-hidden border-4 border-white shadow-2xl shadow-purple/40 bg-purple/5">
+                  {matchedPsychPhoto ? (
+                    /* eslint-disable-next-line @next/next/no-img-element */
+                    <img src={matchedPsychPhoto} alt={matchedPsychName} className="w-full h-full object-cover animate-[fadeIn_700ms_ease-out]" />
+                  ) : (
+                    <div className="w-full h-full flex items-center justify-center text-5xl">💜</div>
+                  )}
                 </div>
-              );
-            })}
+                <div className="absolute -bottom-2 left-1/2 -translate-x-1/2 bg-purple text-white text-[10px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full shadow-lg">
+                  Tu match
+                </div>
+              </div>
+            ) : (
+              <div className="relative w-24 h-24">
+                <div className="absolute inset-0 rounded-full bg-purple/20 animate-ping" />
+                <div className="absolute inset-2 rounded-full bg-purple/30 animate-pulse" />
+                <div className="absolute inset-4 rounded-full bg-gradient-to-br from-purple to-[#8B2FB5] shadow-2xl shadow-purple/40 flex items-center justify-center">
+                  <svg className="w-8 h-8 text-white animate-spin" viewBox="0 0 24 24" fill="none" style={{ animationDuration: "2s" }}>
+                    <circle cx="12" cy="12" r="9" stroke="currentColor" strokeWidth="2.5" strokeDasharray="35 20" strokeLinecap="round" opacity="0.9" />
+                  </svg>
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Título dinámico */}
+          <h1 className="font-serif text-2xl md:text-3xl text-center leading-tight mb-2 animate-[fadeInUp_600ms_ease-out]">
+            {frame.reveal ? (
+              <>Tu psicóloga es <em className="text-purple italic font-normal not-italic font-semibold">{matchedPsychName}</em></>
+            ) : (
+              frame.title
+            )}
+          </h1>
+          {frame.sub && (
+            <p className="text-center text-sm text-foreground/60 mb-6 animate-[fadeInUp_700ms_ease-out]">{frame.sub}</p>
+          )}
+          {frame.reveal && (
+            <p className="text-center text-sm text-foreground/60 mb-6 animate-[fadeInUp_700ms_ease-out]">
+              Colegiada · sesiones online · perfil clínico compatible con el tuyo
+            </p>
+          )}
+
+          {/* Bullets */}
+          {frame.bullets && (
+            <ul className="space-y-2.5 max-w-xs mx-auto animate-[fadeInUp_800ms_ease-out]">
+              {frame.bullets.map((b, i) => (
+                <li
+                  key={b}
+                  className="flex items-start gap-2.5 bg-white/70 backdrop-blur rounded-xl border border-purple/10 px-3.5 py-2.5 shadow-sm"
+                  style={{ animation: `fadeInUp 600ms ease-out ${i * 120}ms both` }}
+                >
+                  <span className="text-purple text-base leading-snug flex-shrink-0">✓</span>
+                  <span className="text-[13px] leading-snug text-foreground/80">{b}</span>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       </main>
+
+      <style>{`
+        @keyframes fadeInUp {
+          from { opacity: 0; transform: translateY(8px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+          from { opacity: 0; transform: scale(0.96); }
+          to { opacity: 1; transform: scale(1); }
+        }
+      `}</style>
     </div>
   );
 }
