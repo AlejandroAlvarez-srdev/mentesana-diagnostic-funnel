@@ -433,7 +433,7 @@ export default function DiagnosticoMatching() {
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
-            <span className="text-[11px] text-foreground/40 font-medium">Elige tu cita</span>
+            <span className="text-[11px] text-foreground/40 font-medium">Elige tu sesión</span>
           </div>
         </header>
 
@@ -467,7 +467,7 @@ export default function DiagnosticoMatching() {
             </div>
 
             <div className="text-center mb-4">
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">Reserva tu diagnóstico con {matchedPsych.name.split(" ")[0]}</h1>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">Reserva tu sesión con {matchedPsych.name.split(" ")[0]}</h1>
               <p className="mt-1 text-xs text-foreground/45">Te dejamos pre-elegido el hueco más cercano 👇</p>
             </div>
 
@@ -571,7 +571,7 @@ export default function DiagnosticoMatching() {
               <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Tu cita de diagnóstico</p>
+                    <p className="text-sm font-semibold text-foreground">Tu sesión</p>
                     <p className="text-xs text-foreground/50 mt-0.5">
                       {new Date(selectedDay).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })} a las {selectedSlot}h
                     </p>
