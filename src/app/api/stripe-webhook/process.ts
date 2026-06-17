@@ -51,12 +51,17 @@ export interface BuildSessionEmailFn {
   (args: { name: string; amount: string; psychologistName: string }): { subject: string; html: string };
 }
 
+export interface BuildSlotTakenEmailFn {
+  (args: { name: string; psychologistName: string }): { subject: string; html: string };
+}
+
 export interface ProcessDeps {
   supabase: SupabaseLike;
   sendEmail: SendEmailFn;
   fetchPdf: FetchPdfFn;
   buildEbookEmail: BuildEbookEmailFn;
   buildSessionEmail: BuildSessionEmailFn;
+  buildSlotTakenEmail: BuildSlotTakenEmailFn;
   origin: string;
 }
 
@@ -419,6 +424,12 @@ export async function processCheckoutSessionCompleted(
               .eq("stripe_session_id", session.id);
           } else {
             result.errors.push(`amelia_booking: ${booking.error}${booking.detail ? ` (${booking.detail})` : ""}`);
+            if (booking.error === "slot_unavailable") {
+              (result as any).slotTaken = true;
+              await deps.supabase.from("diagnostico_tests")
+                .update({ needs_manual_booking: true })
+                .eq("stripe_session_id", session.id);
+            }
           }
         } else {
           result.errors.push(`amelia_booking: provider_not_found "${psychologist}"`);
@@ -442,7 +453,9 @@ export async function processCheckoutSessionCompleted(
     }
 
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
-    const { subject, html } = deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
+    const { subject, html } = (result as any).slotTaken
+      ? deps.buildSlotTakenEmail({ name: patientName, psychologistName: psychologist })
+      : deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
     const emailResult = await deps.sendEmail({ to: patientEmail, toName: patientName, subject, html });
     result.emailSent = emailResult.success;
 

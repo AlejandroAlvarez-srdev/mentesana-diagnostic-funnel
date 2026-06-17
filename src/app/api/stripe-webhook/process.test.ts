@@ -58,6 +58,7 @@ function makeDeps(overrides: Partial<ProcessDeps> = {}): {
     fetchPdf,
     buildEbookEmail: ({ name }) => ({ subject: `eBook ${name}`, html: "<p>ebook</p>" }),
     buildSessionEmail: ({ name, amount }) => ({ subject: `Sesión ${name} ${amount}`, html: "<p>sesion</p>" }),
+    buildSlotTakenEmail: ({ name }) => ({ subject: `Slot ocupado ${name}`, html: "<p>slot-taken</p>" }),
     origin: "https://mentesanapsicologia.com",
     ...overrides,
   };
@@ -171,6 +172,7 @@ describe("processCheckoutSessionCompleted", () => {
       fetchPdf: async () => null,
       buildEbookEmail: () => ({ subject: "x", html: "x" }),
       buildSessionEmail: () => ({ subject: "x", html: "x" }),
+      buildSlotTakenEmail: () => ({ subject: "x", html: "x" }),
       origin: "https://mentesanapsicologia.com",
     };
     const session = makeSession();

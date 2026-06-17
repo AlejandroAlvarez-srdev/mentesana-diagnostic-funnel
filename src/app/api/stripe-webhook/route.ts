@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { sendEmail, diagnosticoPaidEmail, ebookDeliveryEmail } from "@/lib/emails";
+import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
 
@@ -157,6 +157,7 @@ export async function POST(req: NextRequest) {
         fetchPdf: fetchEbookPdfBase64,
         buildEbookEmail: ebookDeliveryEmail,
         buildSessionEmail: ({ name, psychologistName }: { name: string; amount: string; psychologistName: string }) => diagnosticoPaidEmail({ name, psychologistName, email: session.customer_details?.email || session.customer_email || "" }),
+        buildSlotTakenEmail: ({ name, psychologistName }: { name: string; psychologistName: string }) => diagnosticoSlotTakenEmail({ name, psychologistName }),
         origin,
       });
       console.log("[webhook] result", JSON.stringify(result));
