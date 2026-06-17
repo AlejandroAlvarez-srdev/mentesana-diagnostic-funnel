@@ -756,10 +756,10 @@ export default function DiagnosticoMatching() {
               psicóloga que llevará la cita y va calentando hacia la 1ª sesión. */}
           {(() => {
             const bubbles = [
-              { icon: "🌱", text: <>Este test va a elegir a <strong>la psicóloga que te atenderá</strong> en tu cita.</> },
+              { icon: "📋", text: <>Estas 5 preguntas son <strong>solo para hacer match con tu psicóloga</strong>. El diagnóstico clínico (30 preguntas) llega después de agendar tu sesión.</> },
+              { icon: "🌱", text: <>Este test va a elegir a <strong>la psicóloga que te atenderá</strong> en tu sesión.</> },
               { icon: "💜", text: <>Lo que respondas le ayuda a <strong>tu psicóloga a llegar preparada</strong>.</> },
               { icon: "✨", text: <>Hay <strong>+150 psicólogas colegiadas</strong> esperando — buscamos la tuya.</> },
-              { icon: "🤍", text: <>Tu psicóloga llegará a la cita <strong>con tu test ya leído</strong>. Cero "empezar de cero".</> },
               { icon: "🎯", text: <>Última pregunta — en segundos verás <strong>quién será tu psicóloga</strong>.</> },
             ];
             const b = bubbles[Math.min(currentQ, bubbles.length - 1)];
