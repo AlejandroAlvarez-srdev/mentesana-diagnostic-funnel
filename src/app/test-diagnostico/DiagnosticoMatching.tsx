@@ -757,7 +757,7 @@ export default function DiagnosticoMatching() {
           {(() => {
             const bubbles = [
               { icon: "🌱", text: <>Este test va a elegir a <strong>la psicóloga que te atenderá</strong> en tu cita.</> },
-              { icon: "💜", text: <>Lo que respondas la ayudará a llegar <strong>preparada a tu primera sesión</strong>.</> },
+              { icon: "💜", text: <>Lo que respondas le ayuda a <strong>tu psicóloga a llegar preparada</strong>.</> },
               { icon: "✨", text: <>Hay <strong>+150 psicólogas colegiadas</strong> esperando — buscamos la tuya.</> },
               { icon: "🤍", text: <>Tu psicóloga llegará a la cita <strong>con tu test ya leído</strong>. Cero "empezar de cero".</> },
               { icon: "🎯", text: <>Última pregunta — en segundos verás <strong>quién será tu psicóloga</strong>.</> },
