@@ -126,7 +126,7 @@ export default function DiagnosticoMatching() {
   const [slotsError, setSlotsError] = useState<string | null>(null);
   // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
   // Si la API falla o todavía no cargó, se cae al array hardcoded.
-  const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null }[] | null>(null);
+  const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null; earliest_iso?: string | null; earliest_day?: string | null; soon?: boolean }[] | null>(null);
   const checkoutRef = useRef<HTMLDivElement>(null);
 
   // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
@@ -274,7 +274,8 @@ export default function DiagnosticoMatching() {
     // 1) Si tenemos pool real de Amelia → random puro sobre TODAS las que tienen vídeo
     //    (preferimos vídeo para mantener el card visual de la sección "TU MATCH").
     if (ameliaPool && ameliaPool.length > 0) {
-      const storageKey = `ms_match_amelia_v3_${feeling}`;
+      // v4: prioriza disponibilidad cercana (ver selección abajo).
+      const storageKey = `ms_match_amelia_v4_${feeling}`;
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const found = ameliaPool.find(p => p.name === stored);
@@ -290,8 +291,17 @@ export default function DiagnosticoMatching() {
           };
         }
       }
-      // La API ya devuelve SOLO psicólogas con vídeo — random puro.
-      const pick = ameliaPool[Math.floor(Math.random() * ameliaPool.length)];
+      // Priorizar disponibilidad cercana: 1º las que tienen hueco HOY o MAÑANA (random entre ellas);
+      // si no hay ninguna, las de primer hueco más próximo (top 8); si no hay datos, random puro.
+      const soonOnes = ameliaPool.filter(p => p.soon);
+      let candidates = soonOnes;
+      if (candidates.length === 0) {
+        const withSlot = ameliaPool.filter(p => p.earliest_iso);
+        candidates = withSlot.length > 0
+          ? [...withSlot].sort((a, b) => String(a.earliest_iso).localeCompare(String(b.earliest_iso))).slice(0, 8)
+          : ameliaPool;
+      }
+      const pick = candidates[Math.floor(Math.random() * candidates.length)];
       try { localStorage.setItem(storageKey, pick.name); } catch {}
       return {
         name: pick.name,

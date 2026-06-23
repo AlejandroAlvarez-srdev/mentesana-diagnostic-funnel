@@ -6,6 +6,7 @@ import { NextResponse } from "next/server";
 import { promises as fs } from "fs";
 import path from "path";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { computeEarliestForProviders } from "@/lib/diagnostico-availability";
 
 export const dynamic = "force-dynamic";
 export const runtime = "nodejs";
@@ -90,13 +91,29 @@ export async function GET() {
       description,
     };
   });
-  // SOLO devolvemos las psicólogas con vídeo — el match aleatorio se hace únicamente
-  // entre éstas. El total se mantiene visible para que sepamos cuántas activas hay
-  // realmente y cuántas faltan por grabar vídeo.
-  const pool = all.filter(p => p.has_video);
+  // SOLO devolvemos las psicólogas con vídeo — el match se hace únicamente entre éstas.
+  const poolBase = all.filter(p => p.has_video);
+
+  // Disponibilidad: primer hueco de cada una (incluyendo HOY) para que el match
+  // priorice a las que pueden ver al paciente antes. Si falla, se cae a sin-prioridad.
+  let avail = new Map<number, { iso: string; day: string; soon: boolean }>();
+  try {
+    avail = await computeEarliestForProviders(poolBase.map(p => p.id), { includeToday: true, days: 10 });
+  } catch (e) {
+    console.error("match-pool availability", e);
+  }
+  const pool = poolBase
+    .map(p => {
+      const a = avail.get(p.id);
+      return { ...p, earliest_iso: a?.iso ?? null, earliest_day: a?.day ?? null, soon: !!a?.soon };
+    })
+    // Soonest primero (las "soon" arriba, luego por primer hueco); el cliente sesga sobre esto.
+    .sort((a, b) => (Number(b.soon) - Number(a.soon)) || String(a.earliest_iso ?? "9999").localeCompare(String(b.earliest_iso ?? "9999")));
+
   return NextResponse.json({
     pool,
     total_active: all.length,
     with_video: pool.length,
+    soon_count: pool.filter(p => p.soon).length,
   });
 }

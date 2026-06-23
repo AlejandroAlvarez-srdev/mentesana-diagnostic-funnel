@@ -208,7 +208,8 @@ export async function GET(req: NextRequest) {
   // Genera slots en hora MADRID, ordenados por día y por hora ascendente.
   const slots: { day: string; weekday: string; hour: number; iso: string }[] = [];
   const weekdayNames = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
-  for (let i = 1; i <= days; i++) {
+  // i=0 incluye HOY (mismo día); los slots ya pasados se filtran abajo por slotStartUtc<=now.
+  for (let i = 0; i <= days; i++) {
     const dayStr = addDaysMadrid(todayMad, i);
     const dow = weekdayMadrid(dayStr);
     if (dow === 0 || dow === 6) continue; // sin sáb/dom
