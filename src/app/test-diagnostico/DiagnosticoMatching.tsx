@@ -108,7 +108,23 @@ const PSYCHOLOGISTS = [
   { name: "Mallerly Mesa", city: "Barcelona", exp: "8 años", specialty: "Autoestima, identidad, duelo", video: "/videos/welcome/mallerly-mesa.mp4", profiles: ["crecimiento", "depresion"] },
 ];
 
-export default function DiagnosticoMatching() {
+export default function DiagnosticoMatching({ variant = "web" }: { variant?: "web" | "app" } = {}) {
+  const isApp = variant === "app";
+  const COPY = {
+    intro: {
+      kicker: isApp ? "Bienvenida desde la app" : "Así funciona tu diagnóstico",
+      titleLine1: isApp ? "Tu premium, tu diagnóstico" : "6 pasos para entender qué te pasa",
+      titleLine2: isApp ? "y tu 1ª cita psicológica." : "y tener un plan real.",
+      step4Title: isApp ? "Pagas 9,99€ (incluye todo)" : "Pagas 9,99€",
+      step4Desc: isApp ? "Pago único que incluye premium de la app + diagnóstico + cita psicológica. Sin suscripción." : "Pago único. Sin suscripción. Devolución garantizada si no te ayuda.",
+    },
+    contact: {
+      kicker: isApp ? "Un paso más" : "Ya tenemos tu match ✨",
+      title: isApp ? "Usa el mismo email con el que te registraste en la app" : "¿A qué email te enviamos tu psicóloga y tu diagnóstico?",
+      subtitle: isApp ? "Así activamos tu premium en el mismo email + te enviamos tu diagnóstico + confirmamos tu cita." : "Te guardamos tu match y tu hueco para que no lo pierdas.",
+      placeholder: isApp ? "El email con el que te registraste en la app" : "tucorreo@email.com",
+    },
+  };
   const [currentQ, setCurrentQ] = useState(0);
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [contextText] = useState(""); // antes lo capturaba la fase 'context' (eliminada); ahora siempre vacío
@@ -699,10 +715,10 @@ export default function DiagnosticoMatching() {
         <main className="flex-1 px-4 py-8 md:py-10">
           <div className="max-w-lg w-full mx-auto">
             <div className="text-center mb-6">
-              <p className="font-handwriting text-lg text-purple mb-1">Así funciona tu diagnóstico</p>
+              <p className="font-handwriting text-lg text-purple mb-1">{COPY.intro.kicker}</p>
               <h1 className="font-serif text-xl md:text-2xl leading-tight">
-                6 pasos para entender qué te pasa<br />
-                <em className="text-purple italic font-normal">y tener un plan real.</em>
+                {COPY.intro.titleLine1}<br />
+                <em className="text-purple italic font-normal">{COPY.intro.titleLine2}</em>
               </h1>
             </div>
 
@@ -715,7 +731,7 @@ export default function DiagnosticoMatching() {
                 { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
                 { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
                 { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita." },
-                { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Sin suscripción. Devolución garantizada si no te ayuda." },
+                { n: "4", icon: "💳", title: COPY.intro.step4Title, desc: COPY.intro.step4Desc },
                 { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
                 { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
               ].map((step) => (
@@ -765,9 +781,9 @@ export default function DiagnosticoMatching() {
         <main className="flex-1 flex items-center justify-center px-4 py-8 sm:py-10">
           <div className="max-w-lg w-full">
             <div className="text-center mb-6">
-              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">Ya tenemos tu match ✨</p>
-              <h1 className="font-serif text-2xl md:text-3xl leading-tight">¿A qué email te enviamos tu psicóloga y tu diagnóstico?</h1>
-              <p className="mt-2 text-sm text-foreground/50">Te guardamos tu match y tu hueco para que no lo pierdas.</p>
+              <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">{COPY.contact.kicker}</p>
+              <h1 className="font-serif text-2xl md:text-3xl leading-tight">{COPY.contact.title}</h1>
+              <p className="mt-2 text-sm text-foreground/50">{COPY.contact.subtitle}</p>
             </div>
 
             <input
@@ -776,7 +792,7 @@ export default function DiagnosticoMatching() {
               value={userEmail}
               onChange={(e) => setUserEmail(e.target.value)}
               onKeyDown={(e) => { if (e.key === "Enter" && userEmail) void saveAndProceed(); }}
-              placeholder="tucorreo@email.com"
+              placeholder={COPY.contact.placeholder}
               autoComplete="email"
               autoFocus
               required
