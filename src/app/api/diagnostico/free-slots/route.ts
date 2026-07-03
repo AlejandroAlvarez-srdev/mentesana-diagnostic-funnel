@@ -29,6 +29,15 @@ function timeToMinutes(t: string): number {
   return (h || 0) * 60 + (m || 0);
 }
 
+// DATETIME de Amelia (UTC) -> ms UTC. Robusto ante Date (default mysql2) o string.
+function ameliaDatetimeToUtcMs(v: unknown): number {
+  if (v == null) return NaN;
+  if (v instanceof Date) return v.getTime();
+  const s = String(v).trim();
+  const iso = (s.includes("T") ? s : s.replace(" ", "T")).replace(/Z?$/, "Z");
+  return new Date(iso).getTime();
+}
+
 // Madrid offset en minutos para un instante dado (CET=+60, CEST=+120).
 function madridOffsetMin(at: Date): number {
   const fmt = new Intl.DateTimeFormat("en-US", { timeZone: "Europe/Madrid", timeZoneName: "shortOffset" });
@@ -124,23 +133,22 @@ export async function GET(req: NextRequest) {
   const endUtcMs = madridLocalToUtcMs(endMad, 0);
   const fmtMy = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
 
-  const rows = await ameliaQuery<{ bookingStart: string }>(
-    `SELECT bookingStart FROM ${ab} WHERE providerId = ? AND bookingStart >= ? AND bookingStart < ? AND status NOT IN ('canceled','rejected') ORDER BY bookingStart ASC`,
-    [providerId, fmtMy(nowUtcMs), fmtMy(endUtcMs)],
+  // Citas que solapan [ahora, fin] como RANGOS (inicio→fin), para tapar sesiones
+  // largas o que no caen justo en la hora, e incluir citas en curso.
+  const rows = await ameliaQuery<{ bookingStart: unknown; bookingEnd: unknown }>(
+    `SELECT bookingStart, bookingEnd FROM ${ab}
+       WHERE providerId = ? AND status NOT IN ('canceled','rejected')
+         AND bookingStart < ? AND (bookingEnd > ? OR bookingEnd IS NULL)
+       ORDER BY bookingStart ASC`,
+    [providerId, fmtMy(endUtcMs), fmtMy(nowUtcMs)],
   );
-  // Set de slots ocupados, indexados por (díaMadrid, horaMadrid) — convertimos
-  // el bookingStart UTC del row a Madrid.
-  const booked = new Set<string>();
+  const apptRanges: { start: number; end: number }[] = [];
   for (const r of rows) {
-    if (!r.bookingStart) continue;
-    const utcMs = new Date(r.bookingStart + "Z").getTime();
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: "Europe/Madrid",
-      year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hour12: false,
-    }).formatToParts(new Date(utcMs)).reduce<Record<string, string>>((a, p) => { a[p.type] = p.value; return a; }, {});
-    const dayKey = `${parts.year}-${parts.month}-${parts.day}`;
-    const hourKey = parseInt(parts.hour, 10);
-    booked.add(`${dayKey}_${hourKey}`);
+    const start = ameliaDatetimeToUtcMs(r.bookingStart);
+    if (!Number.isFinite(start)) continue;
+    let end = ameliaDatetimeToUtcMs(r.bookingEnd);
+    if (!Number.isFinite(end) || end <= start) end = start + 3600_000; // fallback 60 min
+    apptRanges.push({ start, end });
   }
 
   const { data: blockedRows } = await sb
@@ -216,11 +224,12 @@ export async function GET(req: NextRequest) {
     if (fullDaysOff.has(dayStr)) continue;
     const ameliaDay = dow === 0 ? 7 : dow; // JS dom=0 -> Amelia 7; resto coincide
     for (const h of allowedHoursFor(ameliaDay)) {
-      if (booked.has(`${dayStr}_${h}`)) continue;
       const slotStartUtc = madridLocalToUtcMs(dayStr, h);
       // No mostrar slots que ya pasaron (Madrid)
       if (slotStartUtc <= nowUtcMs) continue;
       const slotEndUtc = slotStartUtc + 3600_000;
+      // Tapar si solapa una cita existente (rango real) o un bloqueo manual.
+      if (apptRanges.some(r => slotStartUtc < r.end && slotEndUtc > r.start)) continue;
       if (blockedRanges.some(r => slotStartUtc < r.end && slotEndUtc > r.start)) continue;
       slots.push({
         day: dayStr,
@@ -236,6 +245,6 @@ export async function GET(req: NextRequest) {
     provider_id: providerId,
     psychologist_name: resolvedName ?? psyName,
     tz: "Europe/Madrid",
-    debug: { booked_count: booked.size, blocked: blockedRanges.length, days_off: fullDaysOff.size, schedule_days: scheduleByDay.size, scanned_days: days },
+    debug: { booked_count: apptRanges.length, blocked: blockedRanges.length, days_off: fullDaysOff.size, schedule_days: scheduleByDay.size, scanned_days: days },
   });
 }
