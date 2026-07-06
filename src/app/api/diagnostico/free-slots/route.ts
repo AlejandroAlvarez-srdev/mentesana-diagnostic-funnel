@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { HOLD_SENTINEL_EMAIL, holdCutoffIso } from "@/lib/diagnostico-hold";
 
 const sb = createClient(
   process.env.NEXT_PUBLIC_BLOG_SUPABASE_URL!,
@@ -129,8 +130,10 @@ export async function GET(req: NextRequest) {
   const ab = ameliaTable("appointments");
   const nowUtcMs = Date.now();
   const todayMad = todayMadridISO();
-  const endMad = addDaysMadrid(todayMad, days);
-  const endUtcMs = madridLocalToUtcMs(endMad, 0);
+  // OJO: el bucle de slots recorre i=0..days (incluye el día +days). La ventana de
+  // consulta de citas/bloqueos debe cubrir el FIN de ese último día, no su 00:00, o
+  // el último día saldría 100% abierto (sin aplicar reservas ni bloqueos). Por eso +1.
+  const endUtcMs = madridLocalToUtcMs(addDaysMadrid(todayMad, days + 1), 0);
   const fmtMy = (ms: number) => new Date(ms).toISOString().slice(0, 19).replace("T", " ");
 
   // Citas que solapan [ahora, fin] como RANGOS (inicio→fin), para tapar sesiones
@@ -156,7 +159,9 @@ export async function GET(req: NextRequest) {
     .select("start_at, end_at")
     .eq("provider_id", providerId)
     .gte("end_at", new Date(nowUtcMs).toISOString())
-    .lte("start_at", new Date(endUtcMs).toISOString());
+    .lte("start_at", new Date(endUtcMs).toISOString())
+    // Ignora holds de checkout expirados (created_by_email = sentinel y > 15 min).
+    .or(`created_by_email.neq.${HOLD_SENTINEL_EMAIL},created_at.gte.${holdCutoffIso()}`);
   const blockedRanges: { start: number; end: number }[] = (blockedRows ?? []).map((r: { start_at: string; end_at: string }) => ({
     start: new Date(r.start_at).getTime(),
     end: new Date(r.end_at).getTime(),

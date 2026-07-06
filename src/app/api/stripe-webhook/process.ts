@@ -403,6 +403,7 @@ export async function processCheckoutSessionCompleted(
     // Solo si tenemos psicóloga matched y slot elegido. Best-effort: si falla,
     // el flujo de email sigue, pero apuntamos error para revisión manual.
     if (psychologist && utms.scheduled_date && utms.scheduled_time) {
+      let bookingOk = false;
       try {
         const { createDiagnosticoBookingFromPayment, resolveProviderIdByName } = await import("@/lib/amelia-create-booking");
         const providerId = await resolveProviderIdByName(psychologist);
@@ -417,25 +418,35 @@ export async function processCheckoutSessionCompleted(
             stripeSessionId: session.id,
           });
           if (booking.ok) {
-            (result as any).amelia = { customer_id: booking.customer_id, appointment_id: booking.appointment_id, cb_id: booking.customer_booking_id, wp_user_id: booking.wp_user_id, reused: booking.reused_existing ?? false };
-            // Marca scheduled_at en el row de diagnostico_tests
+            bookingOk = true;
+            (result as any).amelia = { customer_id: booking.customer_id, appointment_id: booking.appointment_id, cb_id: booking.customer_booking_id, wp_user_id: booking.wp_user_id, reused: booking.reused_existing ?? false, adjusted_slot: booking.adjusted_slot ?? false, adjusted_provider: booking.adjusted_provider ?? false };
+            // Marca scheduled_at con la hora REALMENTE agendada (puede diferir de la
+            // elegida si el hueco se ocupó y se auto-movió al más cercano).
+            const scheduledIso = booking.scheduled_start_utc
+              ? new Date(booking.scheduled_start_utc.replace(" ", "T") + "Z").toISOString()
+              : new Date(`${utms.scheduled_date}T${utms.scheduled_time}:00`).toISOString();
             await deps.supabase.from("diagnostico_tests")
-              .update({ session_scheduled_at: new Date(`${utms.scheduled_date}T${utms.scheduled_time}:00`).toISOString() })
+              .update({ session_scheduled_at: scheduledIso })
               .eq("stripe_session_id", session.id);
           } else {
             result.errors.push(`amelia_booking: ${booking.error}${booking.detail ? ` (${booking.detail})` : ""}`);
-            if (booking.error === "slot_unavailable") {
-              (result as any).slotTaken = true;
-              await deps.supabase.from("diagnostico_tests")
-                .update({ needs_manual_booking: true })
-                .eq("stripe_session_id", session.id);
-            }
           }
         } else {
           result.errors.push(`amelia_booking: provider_not_found "${psychologist}"`);
         }
       } catch (e) {
         result.errors.push(`amelia_booking_exc: ${(e as Error).message.slice(0, 100)}`);
+      }
+      // CUALQUIER fallo al crear la cita (slot ocupado, provider no encontrado, excepción de
+      // Amelia…) NO puede terminar en un email de "sesión confirmada": el paciente pagó pero
+      // NO tiene cita. Marcamos para enviar el email de reagenda y para revisión manual.
+      if (!bookingOk) {
+        (result as any).bookingFailed = true;
+        try {
+          await deps.supabase.from("diagnostico_tests")
+            .update({ needs_manual_booking: true })
+            .eq("stripe_session_id", session.id);
+        } catch { /* best-effort, no bloquea el envío del email */ }
       }
     }
 
@@ -453,7 +464,7 @@ export async function processCheckoutSessionCompleted(
     }
 
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
-    const { subject, html } = (result as any).slotTaken
+    const { subject, html } = (result as any).bookingFailed
       ? deps.buildSlotTakenEmail({ name: patientName, psychologistName: psychologist })
       : deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
     const emailResult = await deps.sendEmail({ to: patientEmail, toName: patientName, subject, html });

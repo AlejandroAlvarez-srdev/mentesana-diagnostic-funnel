@@ -3,6 +3,9 @@ import Stripe from "stripe";
 import { cookies } from "next/headers";
 import { getPartnersDb } from "@/lib/partners/supabase";
 import { ATTRIBUTION_COOKIE_NAME } from "@/lib/partners/config";
+import { holdDiagnosticoSlot } from "@/lib/diagnostico-hold";
+
+export const runtime = "nodejs";
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
   httpClient: Stripe.createFetchHttpClient(),
@@ -79,6 +82,15 @@ export async function POST(req: NextRequest) {
   // Mejor approach: redirigir a una página interna sin Stripe cuando el cupón cubre todo.
   // Por ahora, si hay cupón, el monto se mantiene a 0,50€ simbólico (manejable).
   if (coupon_code) unit_amount = 50;
+
+  // HOLD del hueco elegido mientras el paciente paga: bloquea ese slot para el
+  // resto (la disponibilidad ya excluye provider_blocked_slots) y así se evita la
+  // carrera que dejaba "pagó pero el hueco se ocupó". Best-effort: no bloquea el pago.
+  await holdDiagnosticoSlot({
+    psychologistName: psychologistName || "",
+    scheduledDate: (u.scheduled_date || "").slice(0, 20),
+    scheduledTime: (u.scheduled_time || "").slice(0, 10),
+  });
 
   try {
     const session = await stripe.checkout.sessions.create({
