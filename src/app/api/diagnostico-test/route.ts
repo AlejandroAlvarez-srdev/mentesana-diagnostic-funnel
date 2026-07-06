@@ -29,7 +29,9 @@ export async function POST(req: NextRequest) {
     process.env.BLOG_SUPABASE_SERVICE_KEY || process.env.NEXT_PUBLIC_BLOG_SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
   );
 
-  const userEmail = email || `anon-${Date.now()}@pendiente.com`;
+  // Minúsculas siempre: la clave de conflicto/lectura (user_email) debe ser
+  // consistente con check-access, que consulta en minúsculas.
+  const userEmail = (email || `anon-${Date.now()}@pendiente.com`).toLowerCase();
   const isTestMentalHealth = source === "test-mental-health";
   const isTestDiagnostico = source === "test-diagnostico";
 

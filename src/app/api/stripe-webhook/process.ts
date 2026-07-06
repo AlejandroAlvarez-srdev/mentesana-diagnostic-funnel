@@ -360,7 +360,10 @@ export async function processCheckoutSessionCompleted(
     // Only include optional fields when present — so we never overwrite a pre-payment
     // save (answers, schedule) with nulls.
     const diagUpsert: Record<string, unknown> = {
-      user_email: patientEmail,
+      // Normalizamos a minúsculas: check-access y el flujo del test consultan en
+      // minúsculas. Si el email de Stripe trae mayúsculas, sin esto quedaba una fila
+      // "Email@" con paid=true que el gate (que busca "email@") nunca encontraba.
+      user_email: patientEmail.toLowerCase(),
       paid: true,
       paid_at: new Date().toISOString(),
       stripe_session_id: session.id,
