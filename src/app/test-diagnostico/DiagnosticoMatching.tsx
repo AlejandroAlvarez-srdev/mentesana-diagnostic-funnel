@@ -765,6 +765,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       selectedDay={selectedDay}
       selectedSlot={selectedSlot}
       checkoutRef={checkoutRef}
+      ab={ab}
     />;
   }
 
@@ -962,9 +963,10 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
 }
 
 // ═══ PAYMENT COMPONENT — Stripe Embedded Checkout ═══
-function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef }: {
+function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef, ab }: {
   email: string; name: string; phone: string; psychologistName: string;
   selectedDay: string; selectedSlot: string; checkoutRef: React.RefObject<HTMLDivElement | null>;
+  ab: "A" | "B";
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1005,6 +1007,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             psychologistName,
             source: "test-diagnostico",
             utms: { ...utms, scheduled_date: selectedDay, scheduled_time: selectedSlot },
+            ab_diagnostico: ab, // QW5: A=card-only · B=Apple/Google Pay + wallets
           }),
         });
 

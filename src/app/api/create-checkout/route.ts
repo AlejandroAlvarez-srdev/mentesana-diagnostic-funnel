@@ -12,7 +12,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl } = await req.json();
+  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag } = await req.json();
+  // A/B test "diagnostico-v2" (viene del cliente): en variante 'B' habilitamos
+  // Apple Pay / Google Pay / Bizum / Link vía automatic_payment_methods. Control 'A'
+  // mantiene solo tarjeta (el flujo actual, sin regresión).
+  const abV2: "A" | "B" = bodyAbDiag === "B" ? "B" : "A";
 
   // Extraer fbc/fbp también de las cookies (fallback si el cliente no las envió en el body)
   let fbcFromCookie = "";
@@ -93,11 +97,15 @@ export async function POST(req: NextRequest) {
   });
 
   try {
+    // A/B: en variante 'B' del diagnostico-v2 activamos automatic_payment_methods
+    // → Stripe muestra automáticamente Apple Pay / Google Pay / Link / Bizum si
+    // están habilitados en el dashboard. Control 'A' se queda con solo tarjeta.
+    const paymentMethodConfig = abV2 === "B"
+      ? { automatic_payment_methods: { enabled: true as const } }
+      : { payment_method_types: ["card" as const] };
+
     const session = await stripe.checkout.sessions.create({
-      // Restaurado payment_method_types=['card'] como estaba originalmente.
-      // Si en el futuro quieres habilitar Bizum/Apple Pay/Google Pay desde aquí,
-      // hay que probar que tu cuenta Stripe tiene esos métodos activos en Dashboard primero.
-      payment_method_types: ["card"],
+      ...(paymentMethodConfig as Partial<Stripe.Checkout.SessionCreateParams>),
       mode: "payment",
       customer_email: email || undefined,
       locale: "es",
@@ -146,6 +154,8 @@ export async function POST(req: NextRequest) {
         ab_landing: abLanding,
         ab_warming: abWarming,
         ab_diag: abDiag,
+        ab_diagnostico_v2: abV2, // A=card only · B=Apple/Google Pay + wallets
+        ab_diagnostico_v2_wallet: abV2 === "B" ? "auto" : "card",
         // === Partners attribution ===
         partner_ref: partner_ref || "",
         partner_coupon_code: coupon_code || "",
