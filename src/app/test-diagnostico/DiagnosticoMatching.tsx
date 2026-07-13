@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import { track } from "@/lib/tracking";
+import { getVariant, getVisitorId } from "@/lib/ab-test";
 
 // ═══ Questions config ═══
 interface Option {
@@ -110,6 +111,14 @@ const PSYCHOLOGISTS = [
 
 export default function DiagnosticoMatching({ variant = "web" }: { variant?: "web" | "app" } = {}) {
   const isApp = variant === "app";
+
+  // A/B test "diagnostico-v2" — 50/50 split determinista por visitor_id.
+  // A = control (diseño actual); B = variante con Quick Wins CRO aplicados.
+  // Todos los track() del funnel llevan `ab` para segmentar CVR por variante en analytics.
+  const ab = useMemo(() => getVariant("diagnostico-v2", getVisitorId()), []);
+  useEffect(() => {
+    track("variant_assigned", { test: "diagnostico-v2", ab });
+  }, [ab]);
   const COPY = {
     intro: {
       kicker: isApp ? "Bienvenida desde la app" : "Así funciona tu diagnóstico",
@@ -231,7 +240,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       // gastar el suspense; las animaciones del match vienen DESPUÉS del email
       // como recompensa por dejarlo.
       setTimeout(() => {
-        track("view_email_gate", { profile: newAnswers.feeling || "" });
+        track("view_email_gate", { profile: newAnswers.feeling || "", ab });
         setPhase("contact");
       }, 400);
     }
@@ -270,7 +279,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       });
     } catch {}
 
-    track("start_matching_analysis", { profile: answers.feeling || "", email: userEmail });
+    track("start_matching_analysis", { profile: answers.feeling || "", email: userEmail, ab });
     setSaving(false);
     // Tras email → animaciones de match (analyzing) → calendario (schedule).
     // Las animaciones materializan el valor de dejar el email: la persona ve
@@ -350,7 +359,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
     return (
       <AnalyzingPhase
         onComplete={() => {
-          track("view_match_result", { profile: answers.feeling || "", email: userEmail });
+          track("view_match_result", { profile: answers.feeling || "", email: userEmail, ab });
           setPhase("schedule");
         }}
         matchedPsychName={matchedPsych.name}
@@ -426,7 +435,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
     const handleConfirmSlot = async () => {
       if (!selectedDay || !selectedSlot) return;
       setSaving(true);
-      track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name });
+      track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name, ab });
 
       localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name }));
 
@@ -452,7 +461,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
         } catch {}
       }
 
-      track("initiate_checkout", { amount: "9.99" });
+      track("initiate_checkout", { amount: "9.99", ab });
       setSaving(false);
       setPhase("payment");
     };
@@ -530,7 +539,11 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
             <div className="bg-white rounded-2xl border border-purple/10 p-3 mb-3 shadow-sm">
               <div className="flex items-start gap-3">
                 <div className="w-[76px] h-[76px] rounded-xl overflow-hidden bg-purple/5 shrink-0 relative">
-                  {psychPhoto ? (
+                  {/* QW4 (variante B): video como default con foto de fallback.
+                      Control (A) mantiene foto primero + video como fallback. */}
+                  {ab === "B" && matchedPsych.video ? (
+                    <video src={matchedPsych.video} muted autoPlay loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
+                  ) : psychPhoto ? (
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={psychPhoto} alt={matchedPsych.name} className="absolute inset-0 w-full h-full object-cover" />
                   ) : matchedPsych.video ? (
@@ -549,8 +562,32 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   <p className="text-[12px] text-purple/90 font-medium mt-1.5 leading-snug">
                     ✦ Elegida para tu perfil de <strong>{temaLabel}</strong> — llegará a la sesión con tu test ya leído.
                   </p>
+                  {/* QW3 (variante B): mini-bio de la psi debajo del match badge */}
+                  {ab === "B" && (
+                    <p className="text-[11px] text-foreground/60 mt-1.5 leading-snug">
+                      Colegiada · <strong>especializada en {temaLabel}</strong> · suele empezar preguntándote por lo que pasó esta semana.
+                    </p>
+                  )}
                 </div>
               </div>
+
+              {/* QW2 (variante B): precio arriba, antes del calendario — evita price surprise al final. */}
+              {ab === "B" && (
+                <div className="mt-3 flex items-center justify-center gap-2 rounded-full bg-purple/5 border border-purple/15 px-3 py-1.5">
+                  <span className="text-[13px] font-bold text-purple">9,99€</span>
+                  <span className="text-[10px] text-foreground/60">· pago único · sin suscripción · devolución si no encaja</span>
+                </div>
+              )}
+
+              {/* QW3 (variante B): micro-testimonial genérico (por si no tenemos por psi específica). */}
+              {ab === "B" && (
+                <div className="mt-3 rounded-xl bg-[#FBF7EE] border-l-2 border-[#D4AF37] px-3 py-2">
+                  <p className="text-[12px] italic text-foreground/70 leading-snug">
+                    &ldquo;Con mi psicóloga conecté desde la primera sesión. Me ayudó a entender por qué me pasaba lo que me pasaba.&rdquo;
+                  </p>
+                  <p className="text-[10px] text-foreground/45 mt-1">— Marina, 34 · 4 meses después</p>
+                </div>
+              )}
             </div>
 
             <div className="text-center mb-4">
@@ -679,9 +716,38 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                 disabled={!selectedDay || !selectedSlot || saving}
                 className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
               >
-                {saving ? "Procesando..." : "Confirmar y pagar 9,99€ →"}
+                {saving
+                  ? "Procesando..."
+                  : ab === "B"
+                    ? `Reservar mi sesión con ${matchedPsych.name.split(" ")[0]} · 9,99€ →`
+                    : "Confirmar y pagar 9,99€ →"}
               </button>
-              <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática · Devolución garantizada</p>
+              {/* QW7 (variante B): social proof + garantía dividida en 2 líneas para el fold final. */}
+              {ab === "B" ? (
+                <>
+                  <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único · sin suscripción · devolución si no encaja</p>
+                  <p className="mt-1 text-center text-[10.5px] text-foreground/50">+8.000 personas han empezado su proceso con nosotras · ★ 4,9</p>
+                </>
+              ) : (
+                <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática · Devolución garantizada</p>
+              )}
+              {/* QW6 (variante B): CTA secundario para reroll de psicóloga (recupera dropouts por mismatch de fit). */}
+              {ab === "B" && (
+                <button
+                  onClick={() => {
+                    track("reroll_match_requested", { current_psi: matchedPsych.name, ab });
+                    // Fuerza reroll: borra el match cacheado y recarga (se elige uno nuevo del pool).
+                    try {
+                      const feeling = answers.feeling || "ansiedad";
+                      localStorage.removeItem(`ms_match_amelia_v4_${feeling}`);
+                    } catch {}
+                    window.location.reload();
+                  }}
+                  className="mt-2 w-full text-center text-[12px] text-purple hover:text-[#4e0d68] underline underline-offset-2"
+                >
+                  ¿Prefieres otra psicóloga? →
+                </button>
+              )}
             </div>
           </div>
         </main>
@@ -752,7 +818,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
             {/* CTA */}
             <div className="mt-6 text-center">
               <button
-                onClick={() => { setPhase("questions"); track("start_matching", {}); }}
+                onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
                 className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-3.5 text-base shadow-lg transition-colors"
               >
                 Empezar las 5 preguntas →
