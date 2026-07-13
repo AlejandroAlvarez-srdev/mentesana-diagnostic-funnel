@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import { track } from "@/lib/tracking";
-import { getVariant, getVisitorId } from "@/lib/ab-test";
+import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
 
 // ═══ Questions config ═══
 interface Option {
@@ -114,11 +114,17 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
 
   // A/B test "diagnostico-v2" — 50/50 split determinista por visitor_id.
   // A = control (diseño actual); B = variante con Quick Wins CRO aplicados.
-  // Todos los track() del funnel llevan `ab` para segmentar CVR por variante en analytics.
-  const ab = useMemo(() => getVariant("diagnostico-v2", getVisitorId()), []);
+  // Override manual: si vienes con ?ab=A o ?ab=B en la URL, forzamos esa variante
+  // (útil para QA/demo). Marcamos `forced=true` en el event para poder excluirlos
+  // del análisis estadístico del test real.
+  const [ab, abForced] = useMemo(() => {
+    const forced = getForcedVariant();
+    if (forced) return [forced, true] as const;
+    return [getVariant("diagnostico-v2", getVisitorId()), false] as const;
+  }, []);
   useEffect(() => {
-    track("variant_assigned", { test: "diagnostico-v2", ab });
-  }, [ab]);
+    track("variant_assigned", { test: "diagnostico-v2", ab, forced: abForced });
+  }, [ab, abForced]);
   const COPY = {
     intro: {
       kicker: isApp ? "Bienvenida desde la app" : "Así funciona tu diagnóstico",
