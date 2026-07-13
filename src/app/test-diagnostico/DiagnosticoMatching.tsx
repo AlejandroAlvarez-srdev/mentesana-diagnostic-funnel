@@ -777,6 +777,15 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
 
   // ═══ INTRO PHASE — paso a paso creativo ═══
   if (phase === "intro") {
+    // QW1 (variante B): rediseño del hero con promesa arriba, 3 caras de psicólogas
+    // reales sobre el fold, CTA con precio 9,99€ visible, y timeline colapsado por
+    // defecto en un <details> "¿Cómo funciona?".
+    const heroPsis = [
+      PSYCHOLOGISTS[0], // Adriana Salas — ansiedad
+      PSYCHOLOGISTS[4], // Diana Salazar — depresión
+      PSYCHOLOGISTS[15], // Selene Oropeza — crecimiento
+    ];
+
     return (
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
         <header className="bg-white border-b border-purple/10 px-4 py-4">
@@ -787,51 +796,126 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
 
         <main className="flex-1 px-4 py-8 md:py-10">
           <div className="max-w-lg w-full mx-auto">
-            <div className="text-center mb-6">
-              <p className="font-handwriting text-lg text-purple mb-1">{COPY.intro.kicker}</p>
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">
-                {COPY.intro.titleLine1}<br />
-                <em className="text-purple italic font-normal">{COPY.intro.titleLine2}</em>
-              </h1>
-            </div>
-
-            {/* Timeline creativa */}
-            <div className="space-y-0 relative">
-              {/* Línea vertical */}
-              <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
-
-              {[
-                { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
-                { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
-                { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita." },
-                { n: "4", icon: "💳", title: COPY.intro.step4Title, desc: COPY.intro.step4Desc },
-                { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
-                { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
-              ].map((step) => (
-                <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
-                  <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
-                    {step.icon}
-                  </div>
-                  <div className="pt-1">
-                    <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground"}`}>
-                      <span className="text-foreground/60 mr-1.5">{step.n}.</span>{step.title}
-                    </p>
-                    <p className="text-[11px] text-foreground/80 mt-0.5 leading-relaxed">{step.desc}</p>
-                  </div>
+            {ab === "B" ? (
+              <>
+                {/* HERO B — promesa arriba, 3 caras reales, CTA con precio, trust bar */}
+                <div className="text-center mb-5">
+                  <span className="inline-block bg-purple/8 text-purple text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3">
+                    ✦ 1ª sesión con psicóloga colegiada
+                  </span>
+                  <h1 className="font-serif text-[26px] md:text-3xl leading-[1.1] mb-3">
+                    Habla hoy con una psicóloga colegiada por <em className="text-purple italic font-normal not-italic font-bold">9,99€</em>
+                  </h1>
+                  <p className="text-[13.5px] text-foreground/70 leading-snug px-2">
+                    5 preguntas, conoce a tu psicóloga y agenda tu cita. En 2 minutos.
+                  </p>
                 </div>
-              ))}
-            </div>
 
-            {/* CTA */}
-            <div className="mt-6 text-center">
-              <button
-                onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
-                className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-3.5 text-base shadow-lg transition-colors"
-              >
-                Empezar las 5 preguntas →
-              </button>
-              <p className="mt-2 text-[11px] text-foreground/70">🔒 Tus respuestas son confidenciales · 2 minutos</p>
-            </div>
+                {/* 3 rostros reales del pool */}
+                <div className="flex justify-center items-center gap-2 mb-5">
+                  {heroPsis.map((p) => (
+                    <div key={p.name} className="flex-1 max-w-[100px] text-center">
+                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-purple/5 border-2 border-white shadow-md">
+                        <video src={p.video} muted autoPlay loop playsInline preload="metadata" className="w-full h-full object-cover" />
+                      </div>
+                      <p className="text-[10px] font-semibold text-foreground/80 mt-1.5 truncate px-1">{p.name.split(" ")[0]}</p>
+                      <p className="text-[9px] text-foreground/50 truncate px-1">{p.specialty.split(",")[0]}</p>
+                    </div>
+                  ))}
+                </div>
+                <p className="text-center text-[10.5px] text-foreground/50 mb-5">
+                  y otras +150 psicólogas colegiadas · elegimos la tuya según tu perfil
+                </p>
+
+                {/* CTA principal con precio visible + trust bar */}
+                <div className="text-center">
+                  <button
+                    onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
+                    className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg shadow-purple/30 transition-colors"
+                  >
+                    Empezar (2 min) · 9,99€ →
+                  </button>
+                  <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Devolución garantizada si no encaja</p>
+                  <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
+                </div>
+
+                {/* Timeline colapsable */}
+                <details className="mt-6 group">
+                  <summary className="list-none cursor-pointer text-center py-2.5 text-[12.5px] text-purple font-semibold hover:underline">
+                    ¿Cómo funciona? Ver los 6 pasos <span className="inline-block transition-transform group-open:rotate-90">→</span>
+                  </summary>
+                  <div className="mt-4 space-y-0 relative">
+                    <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
+                    {[
+                      { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas.", active: true },
+                      { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga colegiada más idónea para tu caso." },
+                      { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad real y reservas." },
+                      { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Sin suscripción. Devolución garantizada." },
+                      { n: "5", icon: "📧", title: "Recibes tu test clínico por email", desc: "PHQ-9, GAD-7, DSM-5. Para que tu psicóloga prepare tu sesión." },
+                      { n: "6", icon: "💬", title: "Sesión de 50 min + tu diagnóstico", desc: "Tu psicóloga llega con tu informe leído. Plan de acción concreto." },
+                    ].map((step) => (
+                      <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
+                        <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
+                          {step.icon}
+                        </div>
+                        <div className="pt-1">
+                          <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground"}`}>
+                            <span className="text-foreground/60 mr-1.5">{step.n}.</span>{step.title}
+                          </p>
+                          <p className="text-[11px] text-foreground/80 mt-0.5 leading-relaxed">{step.desc}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </details>
+              </>
+            ) : (
+              <>
+                {/* HERO A — control (diseño actual, sin cambios) */}
+                <div className="text-center mb-6">
+                  <p className="font-handwriting text-lg text-purple mb-1">{COPY.intro.kicker}</p>
+                  <h1 className="font-serif text-xl md:text-2xl leading-tight">
+                    {COPY.intro.titleLine1}<br />
+                    <em className="text-purple italic font-normal">{COPY.intro.titleLine2}</em>
+                  </h1>
+                </div>
+
+                <div className="space-y-0 relative">
+                  <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
+
+                  {[
+                    { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
+                    { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
+                    { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita." },
+                    { n: "4", icon: "💳", title: COPY.intro.step4Title, desc: COPY.intro.step4Desc },
+                    { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
+                    { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
+                  ].map((step) => (
+                    <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
+                      <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
+                        {step.icon}
+                      </div>
+                      <div className="pt-1">
+                        <p className={`text-sm font-semibold ${step.active ? "text-purple" : "text-foreground"}`}>
+                          <span className="text-foreground/60 mr-1.5">{step.n}.</span>{step.title}
+                        </p>
+                        <p className="text-[11px] text-foreground/80 mt-0.5 leading-relaxed">{step.desc}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
+                    className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-3.5 text-base shadow-lg transition-colors"
+                  >
+                    Empezar las 5 preguntas →
+                  </button>
+                  <p className="mt-2 text-[11px] text-foreground/70">🔒 Tus respuestas son confidenciales · 2 minutos</p>
+                </div>
+              </>
+            )}
           </div>
         </main>
       </div>
