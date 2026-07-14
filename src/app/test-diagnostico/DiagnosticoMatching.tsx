@@ -109,6 +109,41 @@ const PSYCHOLOGISTS = [
   { name: "Mallerly Mesa", city: "Barcelona", exp: "8 años", specialty: "Autoestima, identidad, duelo", video: "/videos/welcome/mallerly-mesa.mp4", profiles: ["crecimiento", "depresion"] },
 ];
 
+// Videos del "equipo" que se ven en el hero del home (src/components/Hero.tsx).
+// Se muestran en la fase intro de /test-diagnostico-app (variant="app") para dar
+// continuidad visual desde el home cuando el usuario entra desde la app móvil.
+const TEAM_VIDEOS: { src: string; video: string; caption: string; alt: string }[] = [
+  { src: "/images/studio/img_1775329545580.webp", video: "/videos/studio/vid_1775330061942.mp4", alt: "Psicóloga online",      caption: "Tu psicóloga" },
+  { src: "/images/studio/img_1775329570001.webp", video: "/videos/studio/vid_1775330265017.mp4", alt: "Terapia desde casa",    caption: "Desde casa" },
+  { src: "/images/studio/img_1775329636833.webp", video: "/videos/studio/vid_1775330460566.mp4", alt: "Consulta online",       caption: "Tu espacio" },
+  { src: "/images/studio/img_1775329661586.webp", video: "/videos/studio/vid_1775330658684.mp4", alt: "Psicóloga Mente Sana",  caption: "Empatía real" },
+  { src: "/images/studio/img_1775330229663.webp", video: "/videos/studio/vid_1775334512609.mp4", alt: "Terapia de pareja",     caption: "Sin tabúes" },
+  { src: "/images/studio/img_1775329736019.webp", video: "/videos/studio/vid_1775331064457.mp4", alt: "Equipo Mente Sana",     caption: "Nuestro equipo" },
+  { src: "/images/studio/img_1775330204983.webp", video: "/videos/studio/vid_1775334709433.mp4", alt: "Terapia digital",       caption: "100% online" },
+  { src: "/images/studio/img_1775329824110.webp", video: "/videos/studio/vid_1775331485286.mp4", alt: "Psicóloga profesional", caption: "Profesional" },
+];
+
+function TeamVideosStrip() {
+  return (
+    <section className="mt-6 -mx-4">
+      <div className="px-4 mb-2.5 text-center">
+        <p className="text-[10.5px] font-bold uppercase tracking-wider text-purple/70">Conoce a nuestro equipo</p>
+        <p className="text-[11.5px] text-foreground/60 mt-0.5">Psicólogas colegiadas que atienden desde estudios profesionales</p>
+      </div>
+      <div className="flex gap-3 overflow-x-auto snap-x snap-mandatory px-4 pb-3 scrollbar-hide" style={{ scrollbarWidth: "none" }}>
+        {TEAM_VIDEOS.map((v) => (
+          <div key={v.video} className="snap-start shrink-0 w-[128px]">
+            <div className="w-full aspect-[3/4] rounded-xl overflow-hidden bg-purple/5 border-2 border-white shadow-md relative">
+              <video src={v.video} poster={v.src} muted autoPlay loop playsInline preload="metadata" className="w-full h-full object-cover" />
+            </div>
+            <p className="text-[10px] font-semibold text-foreground/75 text-center mt-1.5 leading-tight">{v.caption}</p>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 export default function DiagnosticoMatching({ variant = "web" }: { variant?: "web" | "app" } = {}) {
   const isApp = variant === "app";
 
@@ -843,6 +878,9 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
                 </div>
 
+                {/* Videos del equipo (mismo que el home) — solo en la landing de la app */}
+                {isApp && <TeamVideosStrip />}
+
                 {/* Prueba social — 3 testimonios cortos de pacientes reales del funnel */}
                 <div className="mt-7 -mx-4 px-4">
                   <p className="text-center text-[10.5px] font-bold uppercase tracking-wider text-purple/70 mb-3">Lo que cuentan quienes ya lo hicieron</p>
@@ -948,6 +986,9 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   </button>
                   <p className="mt-2 text-[11px] text-foreground/70">🔒 Tus respuestas son confidenciales · 2 minutos</p>
                 </div>
+
+                {/* Videos del equipo (mismo que el home) — solo en la landing de la app */}
+                {isApp && <TeamVideosStrip />}
               </>
             )}
           </div>
