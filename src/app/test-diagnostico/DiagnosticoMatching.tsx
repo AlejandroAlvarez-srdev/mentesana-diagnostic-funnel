@@ -798,32 +798,33 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
           <div className="max-w-lg w-full mx-auto">
             {ab === "B" ? (
               <>
-                {/* HERO B — promesa arriba, 3 caras reales, CTA con precio, trust bar */}
+                {/* HERO B v2 — beneficio arriba (no proceso), 3 caras reales, CTA con precio+garantía */}
                 <div className="text-center mb-5">
                   <span className="inline-block bg-purple/8 text-purple text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3">
-                    ✦ 1ª sesión con psicóloga colegiada
+                    ✦ Diagnóstico con psicóloga colegiada
                   </span>
-                  <h1 className="font-serif text-[26px] md:text-3xl leading-[1.1] mb-3">
-                    Habla hoy con una psicóloga colegiada por <em className="text-purple italic font-normal not-italic font-bold">9,99€</em>
+                  <h1 className="font-serif text-[26px] md:text-[30px] leading-[1.08] mb-3">
+                    Entiende qué te pasa y sal con un <em className="text-purple italic font-normal not-italic font-bold">plan real</em>
                   </h1>
-                  <p className="text-[13.5px] text-foreground/70 leading-snug px-2">
-                    5 preguntas, conoce a tu psicóloga y agenda tu cita. En 2 minutos.
+                  <p className="text-[13.5px] text-foreground/75 leading-snug px-2">
+                    Una sesión de 50 min con tu psicóloga colegiada. Hoy, por 9,99€.
                   </p>
                 </div>
 
                 {/* 3 rostros reales del pool */}
-                <div className="flex justify-center items-center gap-2 mb-5">
+                <div className="flex justify-center items-center gap-2 mb-4">
                   {heroPsis.map((p) => (
                     <div key={p.name} className="flex-1 max-w-[100px] text-center">
-                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-purple/5 border-2 border-white shadow-md">
+                      <div className="w-full aspect-square rounded-2xl overflow-hidden bg-purple/5 border-2 border-white shadow-md relative">
                         <video src={p.video} muted autoPlay loop playsInline preload="metadata" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-1 left-1 right-1 bg-white/90 backdrop-blur-sm text-[8px] font-bold text-purple py-0.5 rounded-full leading-none">Colegiada</span>
                       </div>
                       <p className="text-[10px] font-semibold text-foreground/80 mt-1.5 truncate px-1">{p.name.split(" ")[0]}</p>
                       <p className="text-[9px] text-foreground/50 truncate px-1">{p.specialty.split(",")[0]}</p>
                     </div>
                   ))}
                 </div>
-                <p className="text-center text-[10.5px] text-foreground/50 mb-5">
+                <p className="text-center text-[10.5px] text-foreground/50 mb-4">
                   y otras +150 psicólogas colegiadas · elegimos la tuya según tu perfil
                 </p>
 
@@ -833,13 +834,33 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                     onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
                     className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg shadow-purple/30 transition-colors"
                   >
-                    Empezar (2 min) · 9,99€ →
+                    Reservar mi diagnóstico · 9,99€ →
                   </button>
-                  <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Devolución garantizada si no encaja</p>
+                  <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Si no encaja, te devolvemos los 9,99€</p>
                   <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
                 </div>
 
-                {/* Timeline colapsable */}
+                {/* Prueba social — 3 testimonios cortos de pacientes reales del funnel */}
+                <div className="mt-7 -mx-4 px-4">
+                  <p className="text-center text-[10.5px] font-bold uppercase tracking-wider text-purple/70 mb-3">Lo que cuentan quienes ya lo hicieron</p>
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {[
+                      { q: "Salí con un plan claro de qué hacer esta semana, no con más dudas. Por 9,99€, vale mucho más.", a: "Marina, 34", tag: "ansiedad" },
+                      { q: "Pensé que era otra app impersonal. Mi psicóloga había leído mi test antes de la sesión. Se notó.", a: "Carla, 29", tag: "estado de ánimo" },
+                      { q: "Nunca había hablado con una psicóloga. Fue más fácil de lo que pensaba, y no me sentí juzgada ni un segundo.", a: "Laura, 41", tag: "primera vez" },
+                    ].map((t) => (
+                      <div key={t.a} className="bg-white rounded-2xl border border-purple/10 p-3.5 shadow-sm">
+                        <p className="text-[12.5px] text-foreground/85 leading-snug italic">&ldquo;{t.q}&rdquo;</p>
+                        <div className="mt-2 flex items-center justify-between">
+                          <p className="text-[10.5px] font-semibold text-purple">— {t.a}</p>
+                          <span className="text-[9px] text-foreground/50 bg-purple/5 px-2 py-0.5 rounded-full">{t.tag}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Timeline colapsable — proceso DESPUÉS del beneficio */}
                 <details className="mt-6 group">
                   <summary className="list-none cursor-pointer text-center py-2.5 text-[12.5px] text-purple font-semibold hover:underline">
                     ¿Cómo funciona? Ver los 6 pasos <span className="inline-block transition-transform group-open:rotate-90">→</span>
@@ -850,7 +871,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                       { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas.", active: true },
                       { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga colegiada más idónea para tu caso." },
                       { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad real y reservas." },
-                      { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Sin suscripción. Devolución garantizada." },
+                      { n: "4", icon: "💳", title: "Reservas tu diagnóstico — 9,99€ únicos, con garantía", desc: "Pago único, sin suscripción. Si no encaja, te devolvemos los 9,99€." },
                       { n: "5", icon: "📧", title: "Recibes tu test clínico por email", desc: "PHQ-9, GAD-7, DSM-5. Para que tu psicóloga prepare tu sesión." },
                       { n: "6", icon: "💬", title: "Sesión de 50 min + tu diagnóstico", desc: "Tu psicóloga llega con tu informe leído. Plan de acción concreto." },
                     ].map((step) => (
@@ -868,6 +889,16 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                     ))}
                   </div>
                 </details>
+
+                {/* CTA secundario tras testimonios/timeline */}
+                <div className="mt-6 text-center">
+                  <button
+                    onClick={() => { setPhase("questions"); track("start_matching", { ab, source: "cta_secondary" }); }}
+                    className="text-purple font-semibold text-[13px] underline underline-offset-4 hover:text-[#4e0d68]"
+                  >
+                    Empezar las 5 preguntas ahora →
+                  </button>
+                </div>
               </>
             ) : (
               <>
