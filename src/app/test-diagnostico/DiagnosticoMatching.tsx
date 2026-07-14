@@ -820,7 +820,8 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
     const HOME_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
     const heroPsis = [
       { ...PSYCHOLOGISTS[0], video: `${HOME_CDN}/adriana-salas.mp4` },   // Adriana Salas — ansiedad
-      { ...PSYCHOLOGISTS[16], video: `${HOME_CDN}/juliana-urioste.mp4` }, // Juliana Urioste — crecimiento
+      // Giovanna Vago no está en el pool PSYCHOLOGISTS (solo en el home Psychologists.tsx)
+      { name: "Giovanna Vago", city: "Madrid", exp: "9 años", specialty: "Psicóloga clínica", video: `${HOME_CDN}/giovanna-vago.mp4`, profiles: ["crecimiento", "otro"] },
       { ...PSYCHOLOGISTS[3], video: `${HOME_CDN}/talia-aguilar.mp4` },   // Talia Aguilar — ansiedad
     ];
 
