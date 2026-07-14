@@ -780,10 +780,13 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
     // QW1 (variante B): rediseño del hero con promesa arriba, 3 caras de psicólogas
     // reales sobre el fold, CTA con precio 9,99€ visible, y timeline colapsado por
     // defecto en un <details> "¿Cómo funciona?".
+    // Los 3 del hero usan las tomas del home (CDN Supabase, versión curada) — son
+    // los mismos videos que se ven en Psychologists.tsx en la home.
+    const HOME_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
     const heroPsis = [
-      PSYCHOLOGISTS[0], // Adriana Salas — ansiedad
-      PSYCHOLOGISTS[4], // Diana Salazar — depresión
-      PSYCHOLOGISTS[15], // Selene Oropeza — crecimiento
+      { ...PSYCHOLOGISTS[0], video: `${HOME_CDN}/adriana-salas.mp4` },   // Adriana Salas — ansiedad
+      { ...PSYCHOLOGISTS[16], video: `${HOME_CDN}/juliana-urioste.mp4` }, // Juliana Urioste — crecimiento
+      { ...PSYCHOLOGISTS[3], video: `${HOME_CDN}/talia-aguilar.mp4` },   // Talia Aguilar — ansiedad
     ];
 
     return (
