@@ -97,12 +97,14 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    // A/B: en variante 'B' del diagnostico-v2 activamos automatic_payment_methods
-    // → Stripe muestra automáticamente Apple Pay / Google Pay / Link / Bizum si
-    // están habilitados en el dashboard. Control 'A' se queda con solo tarjeta.
+    // A/B: en variante 'B' del diagnostico-v2 activamos wallets explícitamente.
+    // NOTA: automatic_payment_methods NO es compatible con ui_mode='embedded_page'
+    // (Stripe devuelve 'Received unknown parameter'). Solución: payment_method_types
+    // explícito con card + link + bizum. Apple Pay y Google Pay se muestran
+    // automáticamente cuando 'card' está habilitado y el device los soporta.
     const paymentMethodConfig = abV2 === "B"
-      ? { automatic_payment_methods: { enabled: true as const } }
-      : { payment_method_types: ["card" as const] };
+      ? { payment_method_types: ["card", "link", "bizum"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] }
+      : { payment_method_types: ["card"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] };
 
     const session = await stripe.checkout.sessions.create({
       ...(paymentMethodConfig as Partial<Stripe.Checkout.SessionCreateParams>),
