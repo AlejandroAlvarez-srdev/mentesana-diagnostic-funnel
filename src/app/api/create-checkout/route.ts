@@ -97,14 +97,18 @@ export async function POST(req: NextRequest) {
   });
 
   try {
-    // A/B: en variante 'B' del diagnostico-v2 activamos wallets explícitamente.
-    // NOTA: automatic_payment_methods NO es compatible con ui_mode='embedded_page'
-    // (Stripe devuelve 'Received unknown parameter'). Solución: payment_method_types
-    // explícito con card + link + bizum. Apple Pay y Google Pay se muestran
-    // automáticamente cuando 'card' está habilitado y el device los soporta.
-    const paymentMethodConfig = abV2 === "B"
-      ? { payment_method_types: ["card", "link", "bizum"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] }
-      : { payment_method_types: ["card"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] };
+    // A/B: en variante 'B' del diagnostico-v2 la idea era activar Apple/Google Pay/Bizum.
+    // NOTAS del incidente 2026-07-14:
+    //   1. automatic_payment_methods NO es compatible con ui_mode='embedded_page'
+    //      (Stripe: 'Received unknown parameter') — 110 fallos, 22 usuarios.
+    //   2. Añadir 'bizum' explícito falla porque no está activado en el dashboard
+    //      Stripe ('payment method type bizum is invalid').
+    // Solución conservadora: ambas variantes usan solo 'card'. Apple Pay y Google Pay
+    // salen AUTOMÁTICAMENTE cuando 'card' está habilitado y el device los soporta,
+    // sin necesidad de configuración extra. Cuando se active bizum/link en el
+    // dashboard, añadirlos aquí explícitamente en la rama 'B'.
+    const paymentMethodConfig = { payment_method_types: ["card"] as Stripe.Checkout.SessionCreateParams.PaymentMethodType[] };
+    void abV2; // se sigue guardando en metadata más abajo para análisis del A/B
 
     const session = await stripe.checkout.sessions.create({
       ...(paymentMethodConfig as Partial<Stripe.Checkout.SessionCreateParams>),
