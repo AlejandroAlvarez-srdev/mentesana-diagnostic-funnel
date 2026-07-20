@@ -41,7 +41,7 @@ const FAQ = [
   { q: "¿Y si ya he hecho terapia antes y no me funcionó?", a: "Precisamente por eso existe el Diagnóstico. La mayoría de las terapias fallidas empiezan sin un plan claro. Aquí tu psicóloga llega a la primera sesión con tu informe leído y con un plan propuesto. Trabajáis desde algo, no desde cero." },
   { q: "¿Y si no conecto con la psicóloga asignada?", a: "Cambio gratuito, cuando tú quieras, sin dar explicaciones. Tu matching se ajusta y te asignamos otra profesional del equipo." },
   { q: "¿Me van a diagnosticar con algo grave?", a: "No trabajamos con etiquetas asustadoras. Describimos patrones y proponemos trabajo. Si tu caso requiere derivación a un profesional sanitario de mayor complejidad, te lo indicamos honestamente en el informe." },
-  { q: "¿Cuánto cuesta después?", a: "Después del diagnóstico, solo si decides continuar: bonos desde 23€ por sesión (pack de 8) o sesiones sueltas a 45€. Sin suscripción, sin permanencia." },
+  { q: "¿Cuánto cuesta después?", a: "Después del diagnóstico, solo si decides continuar: bonos desde 28,75€ por sesión (pack de 8) o sesiones sueltas a 50€. Sin suscripción, sin permanencia." },
   { q: "¿Mi pareja, familia o banco pueden ver que he pagado esto?", a: "El cargo en tu extracto aparece como \"MENTE SANA\" sin más detalle. No mencionamos terapia ni diagnóstico en el concepto." },
   { q: "¿Quién firma el informe? ¿Es generado por IA?", a: "Lo firma una psicóloga senior del equipo, colegiada y habilitada. El sistema estructura la información desde tus respuestas, pero la firma y la validación final son humanas — siempre." },
 ];

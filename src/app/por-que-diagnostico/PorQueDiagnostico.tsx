@@ -94,7 +94,7 @@ const FAQ = [
   },
   {
     q: "¿Cuánto cuesta después?",
-    a: "Después del diagnóstico, solo si decides continuar: bonos desde 23€ por sesión (pack de 8) o sesiones sueltas a 45€. Sin suscripción, sin permanencia.",
+    a: "Después del diagnóstico, solo si decides continuar: bonos desde 28,75€ por sesión (pack de 8) o sesiones sueltas a 50€. Sin suscripción, sin permanencia.",
   },
   {
     q: "¿Mi pareja, familia o banco pueden ver que he pagado esto?",
@@ -376,7 +376,7 @@ export default function PorQueDiagnostico() {
               En consulta privada, un informe firmado + sesión de 50 min cuesta <strong>60-120€</strong>. Nosotros lo damos por 9,99€ como precio de entrada.
             </p>
             <p className="text-base md:text-lg text-black/75 leading-relaxed">
-              Si decides seguir, bonos desde <strong>23€/sesión</strong>. Si no, el informe ya es tuyo.
+              Si decides seguir, bonos desde <strong>28,75€/sesión</strong>. Si no, el informe ya es tuyo.
             </p>
           </div>
         </section>

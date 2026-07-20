@@ -1509,7 +1509,7 @@ function NoSurprisesBox() {
   const items = [
     "Es un pago único de 9,99€. No te cobramos nada más automáticamente.",
     "No archivamos tu tarjeta para futuros cargos.",
-    "Si después quieres seguir, tú eliges cuándo y qué bono (desde 23€/sesión). Pagas al usarlo.",
+    "Si después quieres seguir, tú eliges cuándo y qué bono (desde 28,75€/sesión). Pagas al usarlo.",
     "Si no te aporta valor, te devolvemos los 9,99€ con un email. Sin formularios.",
   ];
   return (
