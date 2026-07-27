@@ -21,7 +21,7 @@ const PASOS = [
   { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas." },
   { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para tu caso." },
   { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad y reservas tu cita." },
-  { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único. Devolución garantizada." },
+  { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único." },
   { n: "5", icon: "📧", title: "Test en tu correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5). 10-15 min." },
   { n: "6", icon: "💬", title: "Asistes y recibes tu diagnóstico", desc: "50 min. Tu psicóloga llega con tu informe leído." },
 ];
@@ -202,7 +202,7 @@ export default function PorQueDiagnostico() {
                 className="bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
                 Comenzar →
               </Link>
-              <p className="text-xs text-white/55">Pago único · Sin suscripción · Con garantía</p>
+              <p className="text-xs text-white/55">Pago único · Sin suscripción</p>
             </div>
 
             {/* Avatar stack — social proof */}
@@ -464,23 +464,6 @@ export default function PorQueDiagnostico() {
           </div>
         </section>
 
-        {/* ═══════════ GARANTÍA ═══════════ */}
-        <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-3xl p-8 md:p-12 border-2 border-[#6A178C]/20 shadow-[0_20px_60px_rgba(106,23,140,.12)] text-center">
-              <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-[#6A178C]/10 mb-6">
-                <span className="text-3xl">🛡️</span>
-              </div>
-              <p className="font-handwriting text-xl text-[#6A178C] mb-2">nuestra promesa</p>
-              <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-5">Garantía audaz</h2>
-              <p className="text-base md:text-lg text-black/75 leading-relaxed mb-4">
-                Si después del diagnóstico y la sesión de 50 minutos no te aportamos valor, te devolvemos los 9,99€. Sin preguntas. Sin formularios. Un email y se procesa.
-              </p>
-              <p className="text-sm text-black/55 italic">No queremos tu dinero si no te ayudamos. Punto.</p>
-            </div>
-          </div>
-        </section>
-
         {/* ═══════════ FAQ ═══════════ */}
         <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto">
@@ -536,7 +519,7 @@ export default function PorQueDiagnostico() {
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
               Comenzar (9,99€) →
             </Link>
-            <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción · Devolución garantizada</p>
+            <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
           </div>
         </section>
 

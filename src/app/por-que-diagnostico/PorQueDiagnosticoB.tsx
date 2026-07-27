@@ -9,9 +9,9 @@ import { track } from "@/lib/tracking";
 // VARIANTE B (challenger) del A/B test ms_ab_landing en /por-que-diagnostico.
 // Hipótesis: la gente no llega al clic → bajamos la energía de activación.
 //  • Hook de BENEFICIO above-the-fold (transformación, no "6 pasos").
-//  • Prueba social + garantía ARRIBA (lo más persuasivo, que casi nadie ve por scroll).
+//  • Prueba social ARRIBA (lo más persuasivo, que casi nadie ve por scroll).
 //  • CTA sticky persistente (móvil Y desktop) para empezar en cuanto se convence.
-//  • "Cómo funciona" baja y el precio se reencuadra (entrada con devolución garantizada).
+//  • "Cómo funciona" baja y el precio se reencuadra.
 // El control (A) queda intacto en PorQueDiagnostico.tsx. Datos clave duplicados aquí a
 // propósito para no tocar el control. Eventos idénticos (page:"por-que-diagnostico") →
 // la variante se distingue por ab_landing, que tracking.ts cuelga en cada evento.
@@ -32,7 +32,7 @@ const PASOS = [
   { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas." },
   { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para tu caso." },
   { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad y reservas tu cita." },
-  { n: "4", icon: "🛡️", title: "Reservas tu plaza por 9,99€", desc: "Pago único, con devolución garantizada si no te aporta valor. Sin suscripción." },
+  { n: "4", icon: "💳", title: "Reservas tu plaza por 9,99€", desc: "Pago único. Sin suscripción." },
   { n: "5", icon: "📧", title: "Test en tu correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5). 10-15 min." },
   { n: "6", icon: "💬", title: "Asistes y recibes tu diagnóstico", desc: "50 min. Tu psicóloga llega con tu informe leído." },
 ];
@@ -150,7 +150,7 @@ export default function PorQueDiagnosticoB() {
               <em className="italic text-[#E8D4F0]">qué te pasa</em>.
             </h1>
             <p className="mt-5 md:mt-6 text-base md:text-xl text-white/85 leading-relaxed max-w-xl mx-auto">
-              Un diagnóstico psicológico real — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">9,99€</strong>. Con devolución garantizada.
+              Un diagnóstico psicológico real — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">9,99€</strong>.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3">
@@ -162,7 +162,7 @@ export default function PorQueDiagnosticoB() {
                 className="bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
                 Responder las 5 preguntas →
               </Link>
-              <p className="text-xs text-white/55">Pago único · Sin suscripción · Con garantía</p>
+              <p className="text-xs text-white/55">Pago único · Sin suscripción</p>
             </div>
 
             {/* Prueba social compacta, above-the-fold */}
@@ -181,7 +181,6 @@ export default function PorQueDiagnosticoB() {
               <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
                 <span className="text-[#E8D4F0] font-semibold">★ 4,6/5 <span className="text-white/55 font-normal">· 750 reseñas</span></span>
                 <span className="text-white/70">🏛️ Firmado por colegiada</span>
-                <span className="text-white/70">🛡️ Devolución garantizada</span>
               </div>
             </div>
           </div>
@@ -229,25 +228,6 @@ export default function PorQueDiagnosticoB() {
                   <p className="text-sm text-black/70 leading-relaxed">{c.d}</p>
                 </div>
               ))}
-            </div>
-          </div>
-        </section>
-
-        {/* ═══════════ GARANTÍA (subida) ═══════════ */}
-        <section className="py-12 md:py-16 px-4 bg-[#FAF7F2]">
-          <div className="max-w-3xl mx-auto">
-            <div className="bg-white rounded-3xl p-7 md:p-10 border-2 border-[#6A178C]/20 shadow-[0_20px_60px_rgba(106,23,140,.12)] text-center">
-              <div className="inline-flex items-center justify-center w-14 h-14 rounded-full bg-[#6A178C]/10 mb-5"><span className="text-2xl">🛡️</span></div>
-              <h2 className="font-serif text-[1.6rem] md:text-[2.3rem] leading-[1.15] text-black mb-4">Si no te aporta valor, te devolvemos los 9,99€</h2>
-              <p className="text-base md:text-lg text-black/75 leading-relaxed">
-                Sin preguntas. Sin formularios. Un email y se procesa. No queremos tu dinero si no te ayudamos.
-              </p>
-              <div className="mt-7">
-                <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("value")}
-                  className="inline-block bg-[#6A178C] text-white font-bold rounded-full px-9 py-3.5 text-base hover:-translate-y-0.5 transition-all shadow-[0_8px_24px_rgba(106,23,140,.3)]">
-                  Empezar mi diagnóstico →
-                </Link>
-              </div>
             </div>
           </div>
         </section>
@@ -335,12 +315,12 @@ export default function PorQueDiagnosticoB() {
             <h2 className="font-serif text-[2rem] md:text-[3rem] leading-[1.15] mb-5">
               9,99€ para entender<br /><em className="italic text-[#E8D4F0]">qué te pasa</em>.
             </h2>
-            <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-9">Informe + matching + 50 min con tu psicóloga. Con devolución garantizada.</p>
+            <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-9">Informe + matching + 50 min con tu psicóloga.</p>
             <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
               Empezar ahora (9,99€) →
             </Link>
-            <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción · Devolución garantizada</p>
+            <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
           </div>
         </section>
 
@@ -355,7 +335,7 @@ export default function PorQueDiagnosticoB() {
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <div className="hidden sm:block">
             <p className="text-sm font-semibold text-black leading-tight">Tu diagnóstico por 9,99€</p>
-            <p className="text-[11px] text-black/50">Con devolución garantizada · 2 min</p>
+            <p className="text-[11px] text-black/50">2 min</p>
           </div>
           <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("sticky")}
             className="flex-1 sm:flex-none flex items-center justify-center bg-[#6A178C] text-white font-bold rounded-full px-6 py-3.5 text-sm shadow-[0_8px_24px_rgba(106,23,140,.3)] hover:-translate-y-0.5 transition-all">

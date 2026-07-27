@@ -166,7 +166,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       titleLine1: isApp ? "Tu premium, tu diagnóstico" : "6 pasos para entender qué te pasa",
       titleLine2: isApp ? "y tu 1ª cita psicológica." : "y tener un plan real.",
       step4Title: isApp ? "Pagas 9,99€ (incluye todo)" : "Pagas 9,99€",
-      step4Desc: isApp ? "Pago único que incluye premium de la app + diagnóstico + cita psicológica. Sin suscripción." : "Pago único. Sin suscripción. Devolución garantizada si no te ayuda.",
+      step4Desc: isApp ? "Pago único que incluye premium de la app + diagnóstico + cita psicológica. Sin suscripción." : "Pago único. Sin suscripción.",
     },
     contact: {
       kicker: isApp ? "Un paso más" : "Ya tenemos tu match ✨",
@@ -770,7 +770,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   <p className="mt-1 text-center text-[10.5px] text-foreground/50">+8.000 personas han empezado su proceso con nosotras · ★ 4,9</p>
                 </>
               ) : (
-                <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática · Devolución garantizada</p>
+                <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática</p>
               )}
               {/* QW6 (variante B): CTA secundario para reroll de psicóloga (recupera dropouts por mismatch de fit). */}
               {ab === "B" && (
@@ -875,7 +875,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   >
                     Reservar mi diagnóstico · 9,99€ →
                   </button>
-                  <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Si no encaja, te devolvemos los 9,99€</p>
+                  <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Sin suscripción</p>
                   <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
                 </div>
 
@@ -913,7 +913,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                       { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas.", active: true },
                       { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga colegiada más idónea para tu caso." },
                       { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad real y reservas." },
-                      { n: "4", icon: "💳", title: "Reservas tu diagnóstico — 9,99€ únicos, con garantía", desc: "Pago único, sin suscripción. Si no encaja, te devolvemos los 9,99€." },
+                      { n: "4", icon: "💳", title: "Reservas tu diagnóstico — 9,99€ únicos", desc: "Pago único, sin suscripción." },
                       { n: "5", icon: "📧", title: "Recibes tu test clínico por email", desc: "PHQ-9, GAD-7, DSM-5. Para que tu psicóloga prepare tu sesión." },
                       { n: "6", icon: "💬", title: "Sesión de 50 min + tu diagnóstico", desc: "Tu psicóloga llega con tu informe leído. Plan de acción concreto." },
                     ].map((step) => (
@@ -1510,7 +1510,6 @@ function NoSurprisesBox() {
     "Es un pago único de 9,99€. No te cobramos nada más automáticamente.",
     "No archivamos tu tarjeta para futuros cargos.",
     "Si después quieres seguir, tú eliges cuándo y qué bono (desde 28,75€/sesión). Pagas al usarlo.",
-    "Si no te aporta valor, te devolvemos los 9,99€ con un email. Sin formularios.",
   ];
   return (
     <div className="bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-200/60 p-5 mb-4 shadow-sm">
