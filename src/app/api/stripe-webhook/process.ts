@@ -70,7 +70,7 @@ export interface ProcessResult {
   ebookSaved: boolean;
   emailSent: boolean;
   emailWithPdf: boolean;
-  branch: "ebook" | "session" | "no-email" | "skipped";
+  branch: "ebook" | "session" | "no-email" | "skipped" | "terapia-unitaria";
   errors: string[];
 }
 
@@ -286,6 +286,27 @@ export async function processCheckoutSessionCompleted(
       console.error("[webhook][partners] commission generation failed:", e);
       result.errors.push(`partner-commissions: ${e instanceof Error ? e.message : "unknown"}`);
     }
+  }
+
+  // 2a. TERAPIA UNITARIA branch (/terapia-para-* landings 9,99€).
+  // Antes de la rama genérica de ebook_purchases, si es un pago del flujo
+  // terapia-unitaria disparamos el helper que crea booking Amelia + upsert
+  // user en Supabase App + push + email confirmación con deep link.
+  // Se ejecuta EN PARALELO al INSERT en ebook_purchases (que sigue abajo
+  // como registro contable). Solo cambia el flujo emocional/notificaciones.
+  if (session.metadata?.product_family === "terapia-unitaria") {
+    try {
+      const { processTerapiaPayment } = await import("@/lib/terapia/post-payment");
+      const tp = await processTerapiaPayment(session);
+      result.branch = "terapia-unitaria";
+      if (tp.errors?.length) result.errors.push(...tp.errors.map((e) => `terapia: ${e}`));
+      console.log("[webhook][terapia-unitaria]", JSON.stringify(tp));
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[webhook][terapia-unitaria] fatal:", msg);
+      result.errors.push(`terapia-fatal: ${msg}`);
+    }
+    // No return: dejamos que siga el ebook_purchases upsert como bookkeeping.
   }
 
   // 2. ebook purchase branch
