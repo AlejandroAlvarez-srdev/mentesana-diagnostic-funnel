@@ -25,7 +25,6 @@ const PSICOLOGAS = [
   { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4` },
   { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4` },
   { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4` },
-  { name: "Talia Aguilar", video: `${PSY_CDN}/talia-aguilar.mp4` },
 ];
 
 const PASOS = [
@@ -264,7 +263,7 @@ export default function PorQueDiagnosticoB() {
               <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">Psicólogas que te atenderán</h2>
               <p className="mt-2 text-sm text-black/60">Todas colegiadas. Media de <strong>10 años</strong> de experiencia.</p>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-6 gap-3 md:gap-4 max-w-4xl mx-auto">
+            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 max-w-4xl mx-auto">
               {PSICOLOGAS.map((p) => (
                 <div key={p.name} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04]">
                   <div className="relative aspect-square overflow-hidden bg-[#6A178C]/5">

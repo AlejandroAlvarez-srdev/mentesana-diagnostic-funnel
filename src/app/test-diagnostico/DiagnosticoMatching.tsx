@@ -87,7 +87,6 @@ const PSYCHOLOGISTS = [
   { name: "Adriana Salas", city: "Madrid", exp: "10 años", specialty: "Ansiedad, pánico, TCC", video: "/videos/welcome/adriana-salas.mp4", profiles: ["ansiedad", "estres"] },
   { name: "Carolina Prudencio", city: "Madrid", exp: "9 años", specialty: "Ansiedad generalizada, mindfulness", video: "/videos/welcome/carolina-prudencio.mp4", profiles: ["ansiedad", "otro"] },
   { name: "María Infante", city: "Valencia", exp: "8 años", specialty: "Ansiedad social, fobias, TCC", video: "/videos/welcome/maria-infante.mp4", profiles: ["ansiedad", "relaciones"] },
-  { name: "Talia Aguilar", city: "Barcelona", exp: "7 años", specialty: "Ansiedad, ataques de pánico", video: "/videos/welcome/talia-aguilar.mp4", profiles: ["ansiedad", "crecimiento"] },
   // Depresión
   { name: "Diana Salazar", city: "Madrid", exp: "11 años", specialty: "Depresión, insomnio, duelo", video: "/videos/welcome/diana-salazar-alzate.mp4", profiles: ["depresion", "otro"] },
   { name: "Brenda Castillo", city: "Barcelona", exp: "10 años", specialty: "Depresión, terapia sistémica", video: "/videos/welcome/brenda-castillo.mp4", profiles: ["depresion", "relaciones"] },
@@ -820,9 +819,9 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
     const HOME_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
     const heroPsis = [
       { ...PSYCHOLOGISTS[0], video: `${HOME_CDN}/adriana-salas.mp4` },   // Adriana Salas — ansiedad
-      // Giovanna Vago no está en el pool PSYCHOLOGISTS (solo en el home Psychologists.tsx)
+      // Giovanna Vago y Leidy Vicuña no están en el pool PSYCHOLOGISTS (solo en el home Psychologists.tsx)
       { name: "Giovanna Vago", city: "Madrid", exp: "9 años", specialty: "Psicóloga clínica", video: `${HOME_CDN}/giovanna-vago.mp4`, profiles: ["crecimiento", "otro"] },
-      { ...PSYCHOLOGISTS[3], video: `${HOME_CDN}/talia-aguilar.mp4` },   // Talia Aguilar — ansiedad
+      { name: "Leidy Vicuña", city: "Barcelona", exp: "8 años", specialty: "Ansiedad, mindfulness", video: `${HOME_CDN}/leidy-vicuna.mp4`, profiles: ["ansiedad", "crecimiento"] },
     ];
 
     return (
