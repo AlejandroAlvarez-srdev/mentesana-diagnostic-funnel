@@ -82,7 +82,16 @@ const QUESTIONS: Question[] = [
 ];
 
 // ═══ Psychologists pool — rotación determinista por email (ver matchedPsych abajo) ═══
-const PSYCHOLOGISTS = [
+export type PsychologistEntry = {
+  name: string;
+  city: string;
+  exp: string;
+  specialty: string;
+  video: string;
+  profiles: string[];
+};
+
+export const PSYCHOLOGISTS: PsychologistEntry[] = [
   // Ansiedad
   { name: "Adriana Salas", city: "Madrid", exp: "10 años", specialty: "Ansiedad, pánico, TCC", video: "/videos/welcome/adriana-salas.mp4", profiles: ["ansiedad", "estres"] },
   { name: "Carolina Prudencio", city: "Madrid", exp: "9 años", specialty: "Ansiedad generalizada, mindfulness", video: "/videos/welcome/carolina-prudencio.mp4", profiles: ["ansiedad", "otro"] },
@@ -192,6 +201,17 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
   // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
   // Si la API falla o todavía no cargó, se cae al array hardcoded.
   const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null; earliest_iso?: string | null; earliest_day?: string | null; soon?: boolean }[] | null>(null);
+  // Pool base para el fallback (fase 2 del match): antes era el array hardcoded
+  // PSYCHOLOGISTS a pelo. Ahora arrancamos con ese hardcoded (no romper UX
+  // mientras el fetch está en vuelo) y lo reemplazamos por el que devuelve
+  // /api/test-diagnostico/pool — que es el MISMO catálogo filtrado por psicólogas
+  // con status='visible' en Amelia (excluye hidden). Si el fetch falla, seguimos
+  // con el hardcoded (mejor mostrar más que menos).
+  const [dynamicPool, setDynamicPool] = useState<PsychologistEntry[] | null>(null);
+  const effectivePool = useMemo<PsychologistEntry[]>(
+    () => (dynamicPool && dynamicPool.length > 0 ? dynamicPool : PSYCHOLOGISTS),
+    [dynamicPool],
+  );
   const checkoutRef = useRef<HTMLDivElement>(null);
 
   // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
@@ -200,6 +220,21 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.pool) && d.pool.length > 0) setAmeliaPool(d.pool); })
       .catch(() => { /* silencio: fallback al hardcoded */ });
+  }, []);
+
+  // Carga el pool del /test-diagnostico filtrado por visibles en Amelia
+  // (endpoint dinámico). Si falla o llega vacío, dejamos dynamicPool=null y
+  // el `effectivePool` sigue siendo el array hardcoded (fallback seguro).
+  useEffect(() => {
+    let cancelled = false;
+    fetch("/api/test-diagnostico/pool")
+      .then((r) => r.json())
+      .then((d: { pool?: PsychologistEntry[] }) => {
+        if (cancelled) return;
+        if (Array.isArray(d?.pool) && d.pool.length > 0) setDynamicPool(d.pool);
+      })
+      .catch(() => { /* silencio: fallback al hardcoded */ });
+    return () => { cancelled = true; };
   }, []);
 
   // Carga slots reales cuando entramos a la fase "schedule"
@@ -334,7 +369,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
   const matchedPsych = (() => {
     const feeling = answers.feeling || "ansiedad";
 
-    if (typeof window === "undefined") return PSYCHOLOGISTS[0];
+    if (typeof window === "undefined") return effectivePool[0];
 
     // 1) Si tenemos pool real de Amelia → random puro sobre TODAS las que tienen vídeo
     //    (preferimos vídeo para mantener el card visual de la sección "TU MATCH").
@@ -379,9 +414,11 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       };
     }
 
-    // 2) Fallback: array hardcoded mientras carga la API
-    const candidates = PSYCHOLOGISTS.filter((p) => p.profiles.includes(feeling));
-    const pool = candidates.length > 0 ? candidates : PSYCHOLOGISTS;
+    // 2) Fallback: pool dinámico (endpoint /api/test-diagnostico/pool) o
+    //    array hardcoded si el fetch aún no llegó / falló. Antes esto era
+    //    PSYCHOLOGISTS a pelo — ahora respeta status='visible' de Amelia.
+    const candidates = effectivePool.filter((p) => p.profiles.includes(feeling));
+    const pool = candidates.length > 0 ? candidates : effectivePool;
     const storageKey = `ms_match_pick_v2_${feeling}`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
