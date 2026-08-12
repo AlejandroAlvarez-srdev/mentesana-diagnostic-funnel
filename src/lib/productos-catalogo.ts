@@ -21,9 +21,9 @@
 export type ProductoCategoria =
   | "terapia"
   | "acompanamiento"
-  | "vsl"
   | "diagnostico"
-  | "plan";
+  | "plan"
+  | "gratuita";
 
 export interface Producto {
   /** ej 'terapia-para-llorar-por-todo' — lo que llega en metadata.product Stripe */
@@ -51,16 +51,16 @@ export interface Producto {
 // Alineados con la paleta del proyecto (morado corporativo #6A178C). Cada
 // categoría tiene identidad visual propia para escaneo rápido en un listado.
 const COLORS: Record<ProductoCategoria, { bg: string; fg: string; border: string }> = {
-  // Morado — producto emocional core (terapia por dolencia)
+  // Morado — Terapia directa por ángulo (dolencia específica)
   terapia:        { bg: "#F5EBFB", fg: "#6A178C", border: "#D9BFEA" },
-  // Verde — cuidado / red de apoyo familiar
+  // Verde — Acompañamiento familiar / red de apoyo
   acompanamiento: { bg: "#E9F7EF", fg: "#1B7C4A", border: "#B8E0C8" },
-  // Naranja — vídeo (VSL: video sales letter, alto arousal)
-  vsl:            { bg: "#FFF1E4", fg: "#C4470E", border: "#F5C89E" },
-  // Azul — producto entry-level clínico (diagnóstico 9,99€)
+  // Azul — Diagnóstico 9,99€ (incluye las variantes VSL de diagnóstico)
   diagnostico:    { bg: "#E7F0FA", fg: "#1E4E8C", border: "#B8CFEA" },
-  // Rosa — plan digital autoservicio (sin psicóloga)
+  // Rosa — Plan digital autoservicio (sin psicóloga)
   plan:           { bg: "#FDECEF", fg: "#B01E3E", border: "#F4C0CB" },
+  // Turquesa / dorado — Cita gratuita (promos, reactivación, VIP, garantías)
+  gratuita:       { bg: "#FEF9E7", fg: "#8B6B00", border: "#F0D874" },
 };
 
 // ─── Catálogo hardcodeado ──────────────────────────────────────────────────
@@ -71,7 +71,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-no-dormir-pensando",
     categoria: "terapia",
     label: "No dormir pensando",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🌙",
     colors: COLORS.terapia,
     landing: "/terapia-para-no-dormir-pensando",
@@ -84,7 +84,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-sentirme-vacio",
     categoria: "terapia",
     label: "Sentirme vacío/a",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🕳️",
     colors: COLORS.terapia,
     landing: "/terapia-para-sentirme-vacio",
@@ -97,7 +97,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-no-disfrutar-nada",
     categoria: "terapia",
     label: "No disfrutar nada",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🌫️",
     colors: COLORS.terapia,
     landing: "/terapia-para-no-disfrutar-nada",
@@ -110,7 +110,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-llorar-por-todo",
     categoria: "terapia",
     label: "Llorar por todo",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "💧",
     colors: COLORS.terapia,
     landing: "/terapia-para-llorar-por-todo",
@@ -123,7 +123,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-soledad-emocional",
     categoria: "terapia",
     label: "Soledad emocional",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🫥",
     colors: COLORS.terapia,
     landing: "/terapia-para-soledad-emocional",
@@ -136,7 +136,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-superar-ruptura",
     categoria: "terapia",
     label: "Superar ruptura",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "💔",
     colors: COLORS.terapia,
     landing: "/terapia-para-superar-ruptura",
@@ -149,7 +149,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-miedo-a-salir",
     categoria: "terapia",
     label: "Miedo a salir",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🚪",
     colors: COLORS.terapia,
     landing: "/terapia-para-miedo-a-salir",
@@ -162,7 +162,7 @@ const TERAPIA: Producto[] = [
     slug: "terapia-para-irritabilidad-constante",
     categoria: "terapia",
     label: "Irritabilidad constante",
-    labelCategoria: "Terapia · Dolencia",
+    labelCategoria: "Terapia directa · Dolencia",
     emoji: "🔥",
     colors: COLORS.terapia,
     landing: "/terapia-para-irritabilidad-constante",
@@ -197,11 +197,11 @@ const ACOMPANAMIENTO: Producto[] = [
 const VSL: Producto[] = [
   {
     slug: "diagnostico-vsl",
-    categoria: "vsl",
+    categoria: "diagnostico",
     label: "VSL genérica",
-    labelCategoria: "VSL · Diagnóstico 9,99€",
+    labelCategoria: "Diagnóstico 9,99€ · VSL",
     emoji: "🎬",
-    colors: COLORS.vsl,
+    colors: COLORS.diagnostico,
     landing: "/diagnostico-vsl",
     descripcion:
       "Landing de vídeo (VSL) para el diagnóstico clínico 9,99€. Trafico frío Meta con vídeo largo + CTA a checkout. Post-pago crea booking igual que /test-diagnostico.",
@@ -210,11 +210,11 @@ const VSL: Producto[] = [
   },
   {
     slug: "diagnostico-vsl-clinico",
-    categoria: "vsl",
+    categoria: "diagnostico",
     label: "VSL clínico",
-    labelCategoria: "VSL · Diagnóstico 9,99€",
+    labelCategoria: "Diagnóstico 9,99€ · VSL",
     emoji: "🎬",
-    colors: COLORS.vsl,
+    colors: COLORS.diagnostico,
     landing: "/diagnostico-vsl-clinico",
     descripcion:
       "Variante VSL con tono clínico / profesional (más frío, más autoridad). Mismo producto: diagnóstico 9,99€ con psicóloga colegiada.",
@@ -223,11 +223,11 @@ const VSL: Producto[] = [
   },
   {
     slug: "diagnostico-vsl-urgencia",
-    categoria: "vsl",
+    categoria: "diagnostico",
     label: "VSL urgencia",
-    labelCategoria: "VSL · Diagnóstico 9,99€",
+    labelCategoria: "Diagnóstico 9,99€ · VSL",
     emoji: "🎬",
-    colors: COLORS.vsl,
+    colors: COLORS.diagnostico,
     landing: "/diagnostico-vsl-urgencia",
     descripcion:
       "Variante VSL con narrativa de urgencia (cupos limitados ≤15, decrementa en vivo). Mismo producto: diagnóstico 9,99€.",
@@ -312,12 +312,58 @@ const PLANES: Producto[] = [
   },
 ];
 
+// GRATUITAS — citas sin coste (promos, reactivación de exclientes, VIP,
+// cortesía por incidencia, sesión regalada del equipo). Slug se inyecta
+// manualmente en internalNotes cuando soporte crea la cita: [PRODUCT:gratuita-*].
+const GRATUITAS: Producto[] = [
+  {
+    slug: "gratuita",
+    categoria: "gratuita",
+    label: "Cita gratuita",
+    labelCategoria: "Cita gratuita · Cortesía",
+    emoji: "🎁",
+    colors: COLORS.gratuita,
+    landing: "/",
+    descripcion:
+      "Sesión de cortesía sin coste. Se usa para reactivar exclientes, compensar una incidencia, cerrar una venta o probar el servicio. El agente que la creó dejó el motivo en internalNotes.",
+    angulo: "Cortesía · Sin coste",
+    precio: 0,
+  },
+  {
+    slug: "gratuita-reactivacion",
+    categoria: "gratuita",
+    label: "Reactivación",
+    labelCategoria: "Cita gratuita · Reactivación",
+    emoji: "🔄",
+    colors: COLORS.gratuita,
+    landing: "/",
+    descripcion:
+      "Sesión gratuita para reenganchar a un excliente que estaba bien pero se fue. Suele salir de la campaña de reactivación de ventas.",
+    angulo: "Retención · Exclientes",
+    precio: 0,
+  },
+  {
+    slug: "gratuita-compensacion",
+    categoria: "gratuita",
+    label: "Compensación",
+    labelCategoria: "Cita gratuita · Compensación",
+    emoji: "🙏",
+    colors: COLORS.gratuita,
+    landing: "/",
+    descripcion:
+      "Sesión regalada por soporte tras una incidencia (psi que no apareció, error de agenda, doble cobro). Cierra la queja sin coste para el paciente.",
+    angulo: "Soporte · Recuperar confianza",
+    precio: 0,
+  },
+];
+
 export const CATALOGO: Producto[] = [
   ...TERAPIA,
   ...ACOMPANAMIENTO,
   ...VSL,
   ...DIAGNOSTICO,
   ...PLANES,
+  ...GRATUITAS,
 ];
 
 // Index para lookups O(1).
