@@ -22,6 +22,7 @@ export type ProductoCategoria =
   | "terapia"
   | "acompanamiento"
   | "diagnostico"
+  | "recurrente"
   | "plan"
   | "gratuita";
 
@@ -57,9 +58,11 @@ const COLORS: Record<ProductoCategoria, { bg: string; fg: string; border: string
   acompanamiento: { bg: "#E9F7EF", fg: "#1B7C4A", border: "#B8E0C8" },
   // Azul — Diagnóstico 9,99€ (incluye las variantes VSL de diagnóstico)
   diagnostico:    { bg: "#E7F0FA", fg: "#1E4E8C", border: "#B8CFEA" },
+  // Teal — Cita recurrente (paciente con bono/pack activo, continuidad terapéutica)
+  recurrente:     { bg: "#E0F7F5", fg: "#0F766E", border: "#99DEDA" },
   // Rosa — Plan digital autoservicio (sin psicóloga)
   plan:           { bg: "#FDECEF", fg: "#B01E3E", border: "#F4C0CB" },
-  // Turquesa / dorado — Cita gratuita (promos, reactivación, VIP, garantías)
+  // Dorado suave — Cita gratuita (cortesía real, marcada a mano por soporte)
   gratuita:       { bg: "#FEF9E7", fg: "#8B6B00", border: "#F0D874" },
 };
 
@@ -429,51 +432,55 @@ function syntheticProducto(categoria: ProductoCategoria, label: string, emoji: s
 
 /**
  * Infiere el producto de una cita usando (en orden de prioridad):
- *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto del catálogo.
- *   2. price == 0 → categoría 'gratuita' (cortesía/reactivación/compensación).
- *   3. service_id ∈ [8,11] → categoría 'diagnostico' clásico (9,99€).
- *   4. price == 9.99 → probable 'diagnostico' clásico si no hay más info.
- *   5. null → no se puede inferir, no renderizar badge.
+ *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto del catálogo
+ *      (incluye 'gratuita*' que soporte inyecta a mano para cortesías reales).
+ *   2. service_id ∈ [8, 11] → 'diagnostico' (sin importar precio: aunque sea
+ *      reembolsado, sigue siendo diagnóstico por naturaleza).
+ *   3. service_id != null (fuera de diag) → 'recurrente' (viene de bono/pack,
+ *      continuidad terapéutica). Cubre TODOS los serviceIds distintos de 8/11.
+ *   4. price == 9,99 y sin service_id → probable diagnóstico legacy.
+ *   5. null → no se puede inferir.
  *
- * Es lo que deben llamar los paneles (no extractProductoFromNotes directo),
- * para que las citas creadas ANTES del refactor de markers también muestren
- * badge basado en heurística.
+ * IMPORTANTE: la categoría 'gratuita' NO se infiere por price=0. Solo aparece
+ * cuando soporte inyecta explícitamente [PRODUCT:gratuita*] en internalNotes.
+ * Los recurrentes de bono también tienen price=0 (ya se pagó el bono) y
+ * confundirlos como "gratuita" sería un falso positivo grave.
  */
 export function inferProducto(ctx: AppointmentContext): Producto | null {
   // 1. Marker explícito (fuente de verdad)
   const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
   if (marker) return marker;
 
-  // 2. Cita gratuita (precio 0 / null explícito)
-  const price = ctx.price ?? ctx.service_price ?? null;
-  if (price === 0) {
-    return syntheticProducto(
-      "gratuita",
-      "Cita gratuita",
-      "🎁",
-      "Sesión sin coste (cortesía, reactivación de excliente o compensación por incidencia). No tiene marker de producto en internalNotes — inferido por price=0.",
-      0,
-    );
-  }
-
-  // 3. Service IDs conocidos del diagnóstico 9,99€
+  // 2. Diagnóstico por serviceId conocido (DIAG_IDS del proyecto).
   if (ctx.service_id === 8 || ctx.service_id === 11) {
     return syntheticProducto(
       "diagnostico",
-      "Diagnóstico 9,99€",
+      "Diagnóstico",
       "🧠",
-      "Diagnóstico clínico 9,99€ (checkout clásico o VSL). No tiene marker de producto en internalNotes — inferido por service_id.",
+      "Diagnóstico clínico (checkout clásico o VSL). Inferido por service_id 8/11.",
       9.99,
     );
   }
 
-  // 4. Precio 9,99 sin más pistas → probable diagnóstico
+  // 3. Cualquier otro serviceId = cita recurrente (paciente con bono/pack).
+  if (typeof ctx.service_id === "number" && ctx.service_id > 0) {
+    return syntheticProducto(
+      "recurrente",
+      "Recurrente",
+      "🔁",
+      "Cita recurrente de bono/pack (continuidad terapéutica). El paciente ya pagó el bono y va consumiendo sesiones. Inferido por service_id fuera de los DIAG_IDS.",
+      0,
+    );
+  }
+
+  // 4. Fallback por precio (edge: sin service_id).
+  const price = ctx.price ?? ctx.service_price ?? null;
   if (price === 9.99) {
     return syntheticProducto(
       "diagnostico",
-      "Diagnóstico 9,99€",
+      "Diagnóstico",
       "🧠",
-      "Precio 9,99€ sin marker de producto. Probable diagnóstico clásico.",
+      "Precio 9,99€ sin service_id. Probable diagnóstico.",
       9.99,
     );
   }
