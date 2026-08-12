@@ -440,6 +440,12 @@ export async function processCheckoutSessionCompleted(
             scheduledTime: String(utms.scheduled_time),
             providerId,
             stripeSessionId: session.id,
+            // Propaga metadata.product para que quede persistido como
+            // [PRODUCT:<slug>] en internalNotes del appointment. En este brazo
+            // (diagnóstico clásico 9,99€) normalmente es undefined; los flujos
+            // con producto explícito (terapia-*, planes-*) lo pasan también
+            // desde sus helpers dedicados.
+            stripeProduct: product ?? null,
           });
           if (booking.ok) {
             bookingOk = true;
