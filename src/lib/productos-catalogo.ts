@@ -1,22 +1,13 @@
 // Catálogo canónico de productos 9,99€ que se venden desde landings de la web.
 // Fuente de verdad para los paneles de citas (citas-hoy, today, psi, jefe-psi):
-// permite mostrar de dónde viene una reserva (terapia unitaria vs diagnóstico
-// clásico vs plan digital vs acompañamiento familiar vs VSL), con badge visual
-// y descripción para la modal ℹ️.
+// permite mostrar de dónde viene una reserva y GUIAR a la psi sobre cómo
+// abordar la sesión (gancho emocional de la landing + perfil probable +
+// tono sugerido para los primeros minutos).
 //
 // El marker [PRODUCT:<slug>] se persiste en internalNotes del appointment desde
 // amelia-create-booking.ts (bookFirstFree) y terapia/hold-slot.ts (createTerapiaHold),
 // alimentado por session.metadata.product del webhook Stripe. Los paneles llaman a
-// extractProductoFromNotes(internalNotes) para renderizar el badge.
-//
-// Slugs deben coincidir EXACTAMENTE con los que envía cada checkout:
-//   /api/terapia/checkout             → 'terapia-<dolencia-slug>'    (8 productos)
-//   /api/acompanamiento-familiar/checkout → 'acompanamiento-familiar' (1 slug, 6 variantes)
-//   /api/planes/checkout              → 'plan-<plan-slug>'           (4 productos)
-//   /api/create-checkout              → NO envía product              (diagnóstico clásico)
-//   /api/app/terapia-checkout         → NO envía product              (diagnóstico app)
-// Para diagnóstico y VSL usamos slugs sintéticos ('diagnostico' / 'diagnostico-vsl')
-// que sólo aparecen si un panel/backfill los inyecta manualmente en internalNotes.
+// inferProducto({...}) para renderizar el badge (marker exacto o inferencia por señal).
 
 export type ProductoCategoria =
   | "terapia"
@@ -32,7 +23,7 @@ export interface Producto {
   categoria: ProductoCategoria;
   /** Nombre corto para el badge ('Llorar por todo') */
   label: string;
-  /** Sub-etiqueta ('Terapia · Dolencia') para tooltip / modal */
+  /** Sub-etiqueta ('Terapia directa · Dolencia') para tooltip / modal */
   labelCategoria: string;
   /** Emoji del badge */
   emoji: string;
@@ -40,17 +31,15 @@ export interface Producto {
   colors: { bg: string; fg: string; border: string };
   /** Landing URL relativa desde la que se compra */
   landing: string;
-  /** 3-4 líneas para la modal ℹ️ del panel */
+  /** Guía CLÍNICA para la psi: qué vio el paciente + qué esperar + cómo empezar la sesión */
   descripcion: string;
-  /** Ángulo comercial / posicionamiento */
+  /** Perfil emocional resumido para el badge */
   angulo?: string;
-  /** Precio en euros (todos 9,99 en el catálogo actual) */
+  /** Precio en euros */
   precio: number;
 }
 
 // ─── Colores por categoría ─────────────────────────────────────────────────
-// Alineados con la paleta del proyecto (morado corporativo #6A178C). Cada
-// categoría tiene identidad visual propia para escaneo rápido en un listado.
 const COLORS: Record<ProductoCategoria, { bg: string; fg: string; border: string }> = {
   // Morado — Terapia directa por ángulo (dolencia específica)
   terapia:        { bg: "#F5EBFB", fg: "#6A178C", border: "#D9BFEA" },
@@ -66,9 +55,8 @@ const COLORS: Record<ProductoCategoria, { bg: string; fg: string; border: string
   gratuita:       { bg: "#FEF9E7", fg: "#8B6B00", border: "#F0D874" },
 };
 
-// ─── Catálogo hardcodeado ──────────────────────────────────────────────────
-//
-// TERAPIA — 8 landings /terapia-para-* → /api/terapia/checkout → metadata.product='terapia-<slug>'
+// ─── TERAPIA DIRECTA — 8 landings /terapia-para-* ──────────────────────────
+// Descripciones = guía clínica: gancho de la landing + perfil + primer paso.
 const TERAPIA: Producto[] = [
   {
     slug: "terapia-para-no-dormir-pensando",
@@ -79,8 +67,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-no-dormir-pensando",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para trabajar el insomnio por rumiación. Sin diagnóstico previo, directo al problema. Videollamada privada, hoy o mañana.",
-    angulo: "Dolencia emocional específica · Insomnio por rumiación",
+      "El paciente llegó desde una landing con el gancho 'cuando te acuestas y tu mente se enciende'. Perfil: mente hiperactiva, rumia nocturna, no puede desconectar. Sugerencia primeros minutos: NO abrir el problema directamente, primero calmar el sistema (respiración 4-7-8) + explorar rutina de noche y estresores del día. Higiene del sueño + técnica STOP para el bucle. Descartar cafeína/pantallas antes de patologizar.",
+    angulo: "Insomnio por rumiación",
     precio: 9.99,
   },
   {
@@ -92,8 +80,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-sentirme-vacio",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para la sensación de vacío / anhedonia sin nombre. No hace falta que sepas qué te pasa. Videollamada privada.",
-    angulo: "Dolencia emocional específica · Vacío afectivo",
+      "Gancho de la landing: 'estás mal pero no sabes por qué'. Perfil: bajón sin nombre, funcional en apariencia pero se siente hueco. NO forzar diagnóstico ni etiqueta (DEPRE/ANSIEDAD). Explorar cronología: '¿desde cuándo?', '¿hubo algo que se apagara?'. Validar el vacío como señal legítima antes de reencuadrar. Ojo a anhedonia enmascarada + posible duelo no elaborado.",
+    angulo: "Vacío afectivo / anhedonia latente",
     precio: 9.99,
   },
   {
@@ -105,8 +93,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-no-disfrutar-nada",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para la anhedonia (dejar de disfrutar lo que antes te gustaba). Sin diagnóstico, sin cuestionarios largos.",
-    angulo: "Dolencia emocional específica · Anhedonia",
+      "Gancho: 'las cosas que antes te gustaban ya no te llenan'. Perfil: anhedonia explícita, posible cuadro depresivo latente. Evitar reencuadre motivacional ('busca cosas nuevas'). Activación conductual muy pequeña (micro-experimento de placer <10 min). Cribar sueño, alimentación, medicación. Sensibilidad al riesgo suicida — preguntar directo si aparece.",
+    angulo: "Anhedonia explícita",
     precio: 9.99,
   },
   {
@@ -118,8 +106,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-llorar-por-todo",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para la hipersensibilidad emocional (lloras por cualquier cosa). Videollamada privada, sin lista de espera.",
-    angulo: "Dolencia emocional específica · Labilidad emocional",
+      "Gancho: 'cualquier cosa te hace llorar'. Perfil: hipersensibilidad emocional, sistema saturado (no debilidad). PROHIBIDO patologizar como 'PAS' o 'estás dramática'. Validar: 'tu sistema está en carga máxima, llorar es la válvula'. Mapa de disparadores + respiración + descarga corporal. Cribar duelo no cerrado, síndrome premenstrual, sobrecarga cuidadora.",
+    angulo: "Desregulación / labilidad emocional",
     precio: 9.99,
   },
   {
@@ -131,8 +119,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-soledad-emocional",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para la soledad emocional (te sientes solo/a aunque haya gente alrededor). Videollamada privada.",
-    angulo: "Dolencia emocional específica · Soledad emocional",
+      "Gancho: 'te sientes sola aunque haya gente alrededor'. Perfil: vínculos superficiales, aislamiento afectivo. NO sugerir 'conocer más gente' o 'salir más'. Explorar historia vincular (apego, primeras figuras), calidad vs cantidad. Si hay historia de trauma relacional, ir despacio. Posible codependencia inversa (dar sin recibir).",
+    angulo: "Soledad emocional / vínculo",
     precio: 9.99,
   },
   {
@@ -144,8 +132,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-superar-ruptura",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para dejar de pensar en tu ex / ruptura reciente. Herramientas concretas para esta misma semana.",
-    angulo: "Dolencia emocional específica · Duelo por ruptura",
+      "Gancho: 'han pasado meses y sigues pensando en tu ex'. Perfil: rumiación post-ruptura, posible dependencia emocional. Ojo especial: si es <30 días es agudo (validar dolor, sostener SIN técnica); >6 meses hablar de duelo prolongado. Limpieza digital (ex en redes), ritual de cierre, red de apoyo. Cribar posible violencia previa disfrazada de 'era intenso'.",
+    angulo: "Duelo por ruptura",
     precio: 9.99,
   },
   {
@@ -157,8 +145,8 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-miedo-a-salir",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para agorafobia leve / ansiedad social. Sin exposición violenta, ritmo respetuoso, videollamada privada.",
-    angulo: "Dolencia emocional específica · Agorafobia / evitación",
+      "Gancho: 'cancelas planes porque salir da miedo'. Perfil: agorafobia leve, ansiedad social o pánico. NO exposición violenta primera sesión. Jerarquía muy suave. Cribar ataques de pánico (¿el miedo es a la calle o al ataque en la calle?), duelo reciente, cambio vital. Validar sin invalidar ('salir es difícil de verdad, no eres cobarde').",
+    angulo: "Agorafobia / evitación",
     precio: 9.99,
   },
   {
@@ -170,15 +158,13 @@ const TERAPIA: Producto[] = [
     colors: COLORS.terapia,
     landing: "/terapia-para-irritabilidad-constante",
     descripcion:
-      "1 sesión de 50 min con psicóloga colegiada para la irritabilidad crónica (todo te enfada, saltas por nada). Videollamada privada.",
-    angulo: "Dolencia emocional específica · Irritabilidad crónica",
+      "Gancho: 'todo te enfada, saltas por nada'. Perfil: agotamiento emocional, posible burnout somatizado. NO moralizar sobre 'controlar la rabia'. La irritabilidad es SÍNTOMA — buscar la causa (sobrecarga laboral, no dormir, hormonas, resentimiento acumulado en pareja). Cribar horas de sueño y estresores actuales antes de trabajar 'gestión emocional'.",
+    angulo: "Irritabilidad crónica / síntoma",
     precio: 9.99,
   },
 ];
 
-// ACOMPAÑAMIENTO — 6 landings al MISMO endpoint /api/acompanamiento-familiar/checkout
-// → metadata.product='acompanamiento-familiar' (fijo) + metadata.variant=<slug>.
-// Para el catálogo mostramos el slug base (que es lo que llega al webhook).
+// ─── ACOMPAÑAMIENTO — 6 landings acompanamiento-familiar / apoya-a-tu-* ────
 const ACOMPANAMIENTO: Producto[] = [
   {
     slug: "acompanamiento-familiar",
@@ -189,135 +175,125 @@ const ACOMPANAMIENTO: Producto[] = [
     colors: COLORS.acompanamiento,
     landing: "/acompanamiento-familiar",
     descripcion:
-      "1 cita con psicóloga (50 min) + camino guiado de 21 días en la app para acompañar a un familiar en dificultad (hijo, pareja, tío, amigo…). 6 variantes específicas: hijo, pareja, esposo/a, tía/tío, mejor amigo/a, familiar genérico.",
-    angulo: "Red de apoyo · Ayudar a alguien que quiero",
+      "IMPORTANTE: el paciente que viene NO es el 'enfermo', es el FAMILIAR / cuidador que quiere ayudar (a hijo, pareja, esposo, tía, mejor amigo). Perfil: culpa, impotencia, sobrecarga, 'no sé qué hacer con él/ella'. NO dar consejos para el 'otro' hasta trabajar al cuidador. Primero: validar su cansancio + poner el foco en sus propios límites. Luego: qué SÍ está en su mano vs qué no. Riesgo: codependencia. Cribar quién es la persona por la que consulta y desde cuándo cuida.",
+    angulo: "Red de apoyo · Cuidador",
     precio: 9.99,
   },
 ];
 
-// VSL — 3 landings a /api/create-checkout (SIN metadata.product real; slugs sintéticos
-// para que los paneles puedan clasificar si se enriquece a mano el internalNotes).
-const VSL: Producto[] = [
-  {
-    slug: "diagnostico-vsl",
-    categoria: "diagnostico",
-    label: "VSL genérica",
-    labelCategoria: "Diagnóstico 9,99€ · VSL",
-    emoji: "🎬",
-    colors: COLORS.diagnostico,
-    landing: "/diagnostico-vsl",
-    descripcion:
-      "Landing de vídeo (VSL) para el diagnóstico clínico 9,99€. Trafico frío Meta con vídeo largo + CTA a checkout. Post-pago crea booking igual que /test-diagnostico.",
-    angulo: "VSL · Traffic frío escalable",
-    precio: 9.99,
-  },
-  {
-    slug: "diagnostico-vsl-clinico",
-    categoria: "diagnostico",
-    label: "VSL clínico",
-    labelCategoria: "Diagnóstico 9,99€ · VSL",
-    emoji: "🎬",
-    colors: COLORS.diagnostico,
-    landing: "/diagnostico-vsl-clinico",
-    descripcion:
-      "Variante VSL con tono clínico / profesional (más frío, más autoridad). Mismo producto: diagnóstico 9,99€ con psicóloga colegiada.",
-    angulo: "VSL · Autoridad clínica",
-    precio: 9.99,
-  },
-  {
-    slug: "diagnostico-vsl-urgencia",
-    categoria: "diagnostico",
-    label: "VSL urgencia",
-    labelCategoria: "Diagnóstico 9,99€ · VSL",
-    emoji: "🎬",
-    colors: COLORS.diagnostico,
-    landing: "/diagnostico-vsl-urgencia",
-    descripcion:
-      "Variante VSL con narrativa de urgencia (cupos limitados ≤15, decrementa en vivo). Mismo producto: diagnóstico 9,99€.",
-    angulo: "VSL · Urgencia / escasez",
-    precio: 9.99,
-  },
-];
-
-// DIAGNÓSTICO CLÁSICO — 11 landings a /api/create-checkout / /api/app/terapia-checkout
-// (NO envían metadata.product; el webhook lo trata como diagnóstico por descarte).
-// Slug sintético 'diagnostico' para clasificación de paneles.
+// ─── DIAGNÓSTICO 9,99€ (clásico + VSL) ─────────────────────────────────────
 const DIAGNOSTICO: Producto[] = [
   {
     slug: "diagnostico",
     categoria: "diagnostico",
-    label: "Diagnóstico 9,99€",
+    label: "Diagnóstico",
     labelCategoria: "Diagnóstico clínico · 9,99€",
     emoji: "🧠",
     colors: COLORS.diagnostico,
     landing: "/diagnostico",
     descripcion:
-      "Sesión de 50 min con psicóloga colegiada + informe clínico. Producto insignia de captación (11 landings: /diagnostico, /test-diagnostico, /reservar-diagnostico, /por-que-diagnostico[-social-proof], /diagnostico-clinico[-corta/-urgencia], /diagnostico-gratis). Post-pago da +1 mes Premium en la app.",
-    angulo: "Producto insignia · Entrada clínica",
+      "El paciente compró el producto insignia: 50 min + informe clínico. Vino desde una de las 11 landings /diagnostico* /test-diagnostico /reservar-diagnostico /por-que-diagnostico. Espera estructura clínica clara. Sesión sugerida: anamnesis breve → identificar dolor principal → escala/cribado ligero → devolución con recomendaciones → decisión de continuidad. Post-pago recibe +1 mes Premium en la app. Cerrar con próximo paso concreto.",
+    angulo: "Entrada clínica · Producto insignia",
+    precio: 9.99,
+  },
+  {
+    slug: "diagnostico-vsl",
+    categoria: "diagnostico",
+    label: "Diagnóstico (VSL)",
+    labelCategoria: "Diagnóstico clínico · VSL",
+    emoji: "🎬",
+    colors: COLORS.diagnostico,
+    landing: "/diagnostico-vsl",
+    descripcion:
+      "Mismo diagnóstico 9,99€ pero vino desde una landing con vídeo largo (VSL). Perfil probable: viene de tráfico frío Meta, quizá con menos preparación que quien entra por /test-diagnostico. Puede llegar más emocionado o con expectativas específicas del vídeo. Empezar preguntando '¿qué te movió a reservar?' para calibrar.",
+    angulo: "Entrada clínica · Vino de VSL",
+    precio: 9.99,
+  },
+  {
+    slug: "diagnostico-vsl-clinico",
+    categoria: "diagnostico",
+    label: "Diagnóstico (VSL clínico)",
+    labelCategoria: "Diagnóstico clínico · VSL profesional",
+    emoji: "🎬",
+    colors: COLORS.diagnostico,
+    landing: "/diagnostico-vsl-clinico",
+    descripcion:
+      "Diagnóstico 9,99€ desde landing VSL con tono clínico / profesional. Perfil probable: busca autoridad clínica, quizá con historia previa de terapia. Puede pedir informe formal, hablar de colegiatura o preguntar credenciales. Sesión estructurada al estilo consulta.",
+    angulo: "Entrada clínica · VSL autoridad",
+    precio: 9.99,
+  },
+  {
+    slug: "diagnostico-vsl-urgencia",
+    categoria: "diagnostico",
+    label: "Diagnóstico (VSL urgencia)",
+    labelCategoria: "Diagnóstico clínico · VSL urgencia",
+    emoji: "🎬",
+    colors: COLORS.diagnostico,
+    landing: "/diagnostico-vsl-urgencia",
+    descripcion:
+      "Diagnóstico 9,99€ desde landing VSL con narrativa de urgencia (cupos limitados ≤15). Perfil probable: alta ansiedad de decisión, puede estar en fase aguda, necesita sentir que 'llegó justo a tiempo'. Sostener la calma sin restar valor a su urgencia. Primeros minutos importan mucho.",
+    angulo: "Entrada clínica · VSL urgencia",
     precio: 9.99,
   },
 ];
 
-// PLANES — 4 landings /api/planes/checkout → metadata.product='plan-<slug>'.
-// Producto DIGITAL autoservicio: sin psicóloga, sin videollamada. Se activa en la app.
+// ─── PLANES DIGITALES — autoservicio sin psi ───────────────────────────────
 const PLANES: Producto[] = [
   {
     slug: "plan-3-dias-dormir-mejor",
     categoria: "plan",
-    label: "Dormir mejor · 3 días",
+    label: "Plan Dormir 3d",
     labelCategoria: "Plan digital · 3 días",
     emoji: "😴",
     colors: COLORS.plan,
     landing: "/plan-3-dias-dormir-mejor",
     descripcion:
-      "Plan digital autoservicio de 3 días para dormir mejor. Se activa en la app al momento del pago. Sin psicóloga, sin videollamadas — sólo audios + ejercicios diarios.",
+      "Producto DIGITAL autoservicio (sin psi). 3 días de ejercicios de sueño en la app. Si esta cita salió por error o por seguimiento post-plan, la psi puede aprovechar para preguntar cómo fue el plan y detectar si necesita apoyo humano.",
     angulo: "Plan digital · Sueño",
     precio: 9.99,
   },
   {
     slug: "plan-7-dias-dejar-sobrepensar",
     categoria: "plan",
-    label: "Dejar de sobrepensar · 7 días",
+    label: "Plan Sobrepensar 7d",
     labelCategoria: "Plan digital · 7 días",
     emoji: "🌀",
     colors: COLORS.plan,
     landing: "/plan-7-dias-dejar-sobrepensar",
     descripcion:
-      "Plan digital autoservicio de 7 días para cortar el bucle de rumiación (técnica STOP, cita con la preocupación, 3 preguntas). Se activa en la app.",
+      "Producto DIGITAL 7 días para reducir rumiación (STOP, cita con la preocupación, defusión). Si esta cita existe, probable seguimiento o venta cruzada — preguntar cómo fue el plan.",
     angulo: "Plan digital · Rumiación",
     precio: 9.99,
   },
   {
     slug: "plan-10-dias-foco-tdah",
     categoria: "plan",
-    label: "Foco TDAH · 10 días",
+    label: "Plan TDAH 10d",
     labelCategoria: "Plan digital · 10 días",
-    emoji: "🎯",
+    emoji: "⚡",
     colors: COLORS.plan,
     landing: "/plan-10-dias-foco-tdah",
     descripcion:
-      "Plan digital autoservicio de 10 días de foco para TDAH (batching por energía, timer visual, dopamina inteligente). Diseñado para cerebros TDAH, no neurotípicos.",
+      "Producto DIGITAL 10 días para foco con TDAH adulto (batching, dopamina inteligente, timeboxing). El paciente se identifica como neurodivergente — ajustar la sesión con pausas cortas, estructura clara.",
     angulo: "Plan digital · TDAH",
     precio: 9.99,
   },
   {
     slug: "plan-5-dias-organizarte",
     categoria: "plan",
-    label: "Organizarte mejor · 5 días",
+    label: "Plan Organizar 5d",
     labelCategoria: "Plan digital · 5 días",
-    emoji: "🗂️",
+    emoji: "📋",
     colors: COLORS.plan,
     landing: "/plan-5-dias-organizarte",
     descripcion:
-      "Plan digital autoservicio de 5 días de organización personal (vaciado mental, matriz Eisenhower, libreta simple). Se activa en la app.",
+      "Producto DIGITAL 5 días de organización personal (vaciado mental, Eisenhower, sistema simple). Puede indicar sobrecarga cognitiva o rasgo TDAH sin diagnosticar.",
     angulo: "Plan digital · Organización",
     precio: 9.99,
   },
 ];
 
-// GRATUITAS — citas sin coste (promos, reactivación de exclientes, VIP,
-// cortesía por incidencia, sesión regalada del equipo). Slug se inyecta
-// manualmente en internalNotes cuando soporte crea la cita: [PRODUCT:gratuita-*].
+// ─── GRATUITAS — cortesías reales (soporte inyecta marker a mano) ──────────
 const GRATUITAS: Producto[] = [
   {
     slug: "gratuita",
@@ -328,7 +304,7 @@ const GRATUITAS: Producto[] = [
     colors: COLORS.gratuita,
     landing: "/",
     descripcion:
-      "Sesión de cortesía sin coste. Se usa para reactivar exclientes, compensar una incidencia, cerrar una venta o probar el servicio. El agente que la creó dejó el motivo en internalNotes.",
+      "Sesión sin coste concedida por soporte. Motivo específico en internalNotes (leerlo antes). Perfil variable — puede ser paciente enfadado que compensamos, VIP invitado, o prueba de servicio. Sensibilidad ALTA: la persona sabe que es gratis y puede llegar con expectativas polarizadas (o muy agradecida o muy exigente).",
     angulo: "Cortesía · Sin coste",
     precio: 0,
   },
@@ -336,25 +312,25 @@ const GRATUITAS: Producto[] = [
     slug: "gratuita-reactivacion",
     categoria: "gratuita",
     label: "Reactivación",
-    labelCategoria: "Cita gratuita · Reactivación",
+    labelCategoria: "Cita gratuita · Reactivación excliente",
     emoji: "🔄",
     colors: COLORS.gratuita,
     landing: "/",
     descripcion:
-      "Sesión gratuita para reenganchar a un excliente que estaba bien pero se fue. Suele salir de la campaña de reactivación de ventas.",
-    angulo: "Retención · Exclientes",
+      "Sesión gratuita para reenganchar a un excliente que se fue. Es paciente CONOCIDO — revisar su HC antes. Objetivo velado: volver al bono. NO forzar la venta en sesión, sí dejar puerta abierta. Preguntar qué pasó desde la última vez y si el motivo por el que se fue sigue activo.",
+    angulo: "Retención · Excliente",
     precio: 0,
   },
   {
     slug: "gratuita-compensacion",
     categoria: "gratuita",
     label: "Compensación",
-    labelCategoria: "Cita gratuita · Compensación",
+    labelCategoria: "Cita gratuita · Compensación incidencia",
     emoji: "🙏",
     colors: COLORS.gratuita,
     landing: "/",
     descripcion:
-      "Sesión regalada por soporte tras una incidencia (psi que no apareció, error de agenda, doble cobro). Cierra la queja sin coste para el paciente.",
+      "Sesión regalada tras una incidencia (psi que no apareció, error de agenda, cobro no autorizado, etc). El paciente PUEDE llegar molesto — abrir con 'sabemos que hubo un fallo, gracias por darnos otra oportunidad'. Ir con calma, no defender la marca, escuchar la queja completa antes de trabajar clínicamente.",
     angulo: "Soporte · Recuperar confianza",
     precio: 0,
   },
@@ -363,7 +339,6 @@ const GRATUITAS: Producto[] = [
 export const CATALOGO: Producto[] = [
   ...TERAPIA,
   ...ACOMPANAMIENTO,
-  ...VSL,
   ...DIAGNOSTICO,
   ...PLANES,
   ...GRATUITAS,
@@ -373,8 +348,7 @@ export const CATALOGO: Producto[] = [
 const BY_SLUG: Map<string, Producto> = new Map(CATALOGO.map((p) => [p.slug, p]));
 
 /**
- * Devuelve el producto del catálogo por slug exacto. Devuelve null si no existe
- * (no lanza). Útil para renderizar badges desde el slug persistido.
+ * Devuelve el producto del catálogo por slug exacto. Devuelve null si no existe.
  */
 export function getProductoBySlug(slug: string): Producto | null {
   if (!slug) return null;
@@ -382,113 +356,92 @@ export function getProductoBySlug(slug: string): Producto | null {
 }
 
 /**
- * Parse internalNotes de un appointment Amelia buscando el marker [PRODUCT:slug].
- * El marker lo inyectan amelia-create-booking.ts y terapia/hold-slot.ts al INSERT.
- * Devuelve el Producto del catálogo o null si no hay marker / slug desconocido.
+ * Parse internalNotes buscando el marker [PRODUCT:slug].
  */
 export function extractProductoFromNotes(internalNotes: string | null): Producto | null {
   if (!internalNotes) return null;
-  // [PRODUCT:<slug>] — slug es [a-z0-9-]{1,60}. Case-insensitive por robustez.
   const m = /\[PRODUCT:([a-z0-9-]{1,60})\]/i.exec(internalNotes);
   if (!m) return null;
   return getProductoBySlug(m[1].toLowerCase());
 }
 
 /**
- * Devuelve todos los productos de una categoría (útil para filtros / dashboards).
- */
-export function getProductosByCategoria(categoria: ProductoCategoria): Producto[] {
-  return CATALOGO.filter((p) => p.categoria === categoria);
-}
-
-/**
- * Contexto de la cita para inferir producto cuando NO hay marker en internalNotes.
- * Todos los campos son opcionales — se usa lo que haya disponible en el panel.
+ * Contexto de la cita para inferir producto cuando NO hay marker.
  */
 export interface AppointmentContext {
   internal_notes?: string | null;
   service_id?: number | null;
   service_name?: string | null;
-  price?: number | null;   // en euros
+  price?: number | null;
   service_price?: number | null;
 }
 
-/** Producto sintético que se usa cuando la cita no coincide con nada del catálogo
- *  pero se puede inferir la categoría por price/service. */
-function syntheticProducto(categoria: ProductoCategoria, label: string, emoji: string, descripcion: string, precio: number): Producto {
+/**
+ * Producto sintético para el fallback por señal. Reusa las descripciones
+ * canónicas del catálogo (misma guía clínica para la psi), no dice "inferido".
+ */
+function syntheticProducto(base: Producto): Producto {
   return {
-    slug: `inferido-${categoria}`,
-    categoria,
-    label,
-    labelCategoria: label,
-    emoji,
-    colors: COLORS[categoria],
-    landing: "/",
-    descripcion,
-    angulo: "Inferido por señal de la cita (sin marker [PRODUCT:...] en internalNotes)",
-    precio,
+    ...base,
+    slug: `${base.categoria}-generico`,
+    angulo: base.angulo,
   };
 }
 
+const DIAGNOSTICO_CANONICO = DIAGNOSTICO[0];
+const RECURRENTE_CANONICO: Producto = {
+  slug: "recurrente-generico",
+  categoria: "recurrente",
+  label: "Recurrente",
+  labelCategoria: "Sesión recurrente · Bono/Pack",
+  emoji: "🔁",
+  colors: COLORS.recurrente,
+  landing: "/",
+  descripcion:
+    "Sesión de continuidad del bono/pack del paciente (ya pagó el paquete, va consumiendo sesiones). Es un paciente CONOCIDO — abrir su HC para ver la última sesión, tareas asignadas, temas abiertos. Preguntar por la evolución de lo que trabajaron la última vez antes de meter tema nuevo. Continuidad = confianza acumulada, aprovechar.",
+  angulo: "Continuidad terapéutica · Bono",
+  precio: 0,
+};
+
 /**
  * Infiere el producto de una cita usando (en orden de prioridad):
- *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto del catálogo
- *      (incluye 'gratuita*' que soporte inyecta a mano para cortesías reales).
- *   2. service_id ∈ [8, 11] → 'diagnostico' (sin importar precio: aunque sea
- *      reembolsado, sigue siendo diagnóstico por naturaleza).
- *   3. service_id != null (fuera de diag) → 'recurrente' (viene de bono/pack,
- *      continuidad terapéutica). Cubre TODOS los serviceIds distintos de 8/11.
- *   4. price == 9,99 y sin service_id → probable diagnóstico legacy.
+ *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto (guía completa).
+ *   2. service_id ∈ [8, 11] → Diagnóstico (guía clínica del diagnóstico).
+ *   3. service_id ≠ 8/11 → Recurrente (guía de continuidad de bono).
+ *   4. price == 9,99 sin service_id → probable diagnóstico.
  *   5. null → no se puede inferir.
  *
- * IMPORTANTE: la categoría 'gratuita' NO se infiere por price=0. Solo aparece
- * cuando soporte inyecta explícitamente [PRODUCT:gratuita*] en internalNotes.
- * Los recurrentes de bono también tienen price=0 (ya se pagó el bono) y
- * confundirlos como "gratuita" sería un falso positivo grave.
+ * La categoría 'gratuita' NO se infiere por price=0 (recurrentes también son 0).
+ * Solo aparece con marker explícito [PRODUCT:gratuita*].
  */
 export function inferProducto(ctx: AppointmentContext): Producto | null {
-  // 1. Marker explícito (fuente de verdad)
   const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
   if (marker) return marker;
 
-  // 2. Diagnóstico por serviceId conocido (DIAG_IDS del proyecto).
   if (ctx.service_id === 8 || ctx.service_id === 11) {
-    return syntheticProducto(
-      "diagnostico",
-      "Diagnóstico",
-      "🧠",
-      "Diagnóstico clínico (checkout clásico o VSL). Inferido por service_id 8/11.",
-      9.99,
-    );
+    return syntheticProducto(DIAGNOSTICO_CANONICO);
   }
 
-  // 3. Cualquier otro serviceId = cita recurrente (paciente con bono/pack).
   if (typeof ctx.service_id === "number" && ctx.service_id > 0) {
-    return syntheticProducto(
-      "recurrente",
-      "Recurrente",
-      "🔁",
-      "Cita recurrente de bono/pack (continuidad terapéutica). El paciente ya pagó el bono y va consumiendo sesiones. Inferido por service_id fuera de los DIAG_IDS.",
-      0,
-    );
+    return RECURRENTE_CANONICO;
   }
 
-  // 4. Fallback por precio (edge: sin service_id).
   const price = ctx.price ?? ctx.service_price ?? null;
   if (price === 9.99) {
-    return syntheticProducto(
-      "diagnostico",
-      "Diagnóstico",
-      "🧠",
-      "Precio 9,99€ sin service_id. Probable diagnóstico.",
-      9.99,
-    );
+    return syntheticProducto(DIAGNOSTICO_CANONICO);
   }
 
   return null;
 }
 
-/** Devuelve los colores canónicos de una categoría (para chips / filtros). */
+/**
+ * Devuelve todos los productos de una categoría.
+ */
+export function getProductosByCategoria(categoria: ProductoCategoria): Producto[] {
+  return CATALOGO.filter((p) => p.categoria === categoria);
+}
+
+/** Devuelve los colores canónicos de una categoría. */
 export function getColorsForCategoria(categoria: ProductoCategoria): { bg: string; fg: string; border: string } {
   return COLORS[categoria];
 }
