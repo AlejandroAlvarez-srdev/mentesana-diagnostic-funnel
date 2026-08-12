@@ -398,6 +398,89 @@ export function getProductosByCategoria(categoria: ProductoCategoria): Producto[
   return CATALOGO.filter((p) => p.categoria === categoria);
 }
 
+/**
+ * Contexto de la cita para inferir producto cuando NO hay marker en internalNotes.
+ * Todos los campos son opcionales — se usa lo que haya disponible en el panel.
+ */
+export interface AppointmentContext {
+  internal_notes?: string | null;
+  service_id?: number | null;
+  service_name?: string | null;
+  price?: number | null;   // en euros
+  service_price?: number | null;
+}
+
+/** Producto sintético que se usa cuando la cita no coincide con nada del catálogo
+ *  pero se puede inferir la categoría por price/service. */
+function syntheticProducto(categoria: ProductoCategoria, label: string, emoji: string, descripcion: string, precio: number): Producto {
+  return {
+    slug: `inferido-${categoria}`,
+    categoria,
+    label,
+    labelCategoria: label,
+    emoji,
+    colors: COLORS[categoria],
+    landing: "/",
+    descripcion,
+    angulo: "Inferido por señal de la cita (sin marker [PRODUCT:...] en internalNotes)",
+    precio,
+  };
+}
+
+/**
+ * Infiere el producto de una cita usando (en orden de prioridad):
+ *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto del catálogo.
+ *   2. price == 0 → categoría 'gratuita' (cortesía/reactivación/compensación).
+ *   3. service_id ∈ [8,11] → categoría 'diagnostico' clásico (9,99€).
+ *   4. price == 9.99 → probable 'diagnostico' clásico si no hay más info.
+ *   5. null → no se puede inferir, no renderizar badge.
+ *
+ * Es lo que deben llamar los paneles (no extractProductoFromNotes directo),
+ * para que las citas creadas ANTES del refactor de markers también muestren
+ * badge basado en heurística.
+ */
+export function inferProducto(ctx: AppointmentContext): Producto | null {
+  // 1. Marker explícito (fuente de verdad)
+  const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
+  if (marker) return marker;
+
+  // 2. Cita gratuita (precio 0 / null explícito)
+  const price = ctx.price ?? ctx.service_price ?? null;
+  if (price === 0) {
+    return syntheticProducto(
+      "gratuita",
+      "Cita gratuita",
+      "🎁",
+      "Sesión sin coste (cortesía, reactivación de excliente o compensación por incidencia). No tiene marker de producto en internalNotes — inferido por price=0.",
+      0,
+    );
+  }
+
+  // 3. Service IDs conocidos del diagnóstico 9,99€
+  if (ctx.service_id === 8 || ctx.service_id === 11) {
+    return syntheticProducto(
+      "diagnostico",
+      "Diagnóstico 9,99€",
+      "🧠",
+      "Diagnóstico clínico 9,99€ (checkout clásico o VSL). No tiene marker de producto en internalNotes — inferido por service_id.",
+      9.99,
+    );
+  }
+
+  // 4. Precio 9,99 sin más pistas → probable diagnóstico
+  if (price === 9.99) {
+    return syntheticProducto(
+      "diagnostico",
+      "Diagnóstico 9,99€",
+      "🧠",
+      "Precio 9,99€ sin marker de producto. Probable diagnóstico clásico.",
+      9.99,
+    );
+  }
+
+  return null;
+}
+
 /** Devuelve los colores canónicos de una categoría (para chips / filtros). */
 export function getColorsForCategoria(categoria: ProductoCategoria): { bg: string; fg: string; border: string } {
   return COLORS[categoria];
