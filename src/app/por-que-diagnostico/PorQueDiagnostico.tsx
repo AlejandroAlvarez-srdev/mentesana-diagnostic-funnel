@@ -44,7 +44,7 @@ function PsychVideo({ src }: { src: string }) {
     return () => io.disconnect();
   }, [src]);
   return (
-    <video ref={ref} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+    <video ref={ref} muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
   );
 }
 
@@ -73,7 +73,7 @@ function AvatarVideo({ src, size = "md", className = "" }: { src: string; size?:
     : "w-20 h-20 md:w-24 md:h-24";
   return (
     <div className={`relative ${sizeCls} rounded-full overflow-hidden ${className}`}>
-      <video ref={ref} muted loop playsInline preload="none" className="absolute inset-0 w-full h-full object-cover" />
+      <video ref={ref} muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
     </div>
   );
 }
