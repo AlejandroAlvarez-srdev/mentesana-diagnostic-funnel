@@ -406,17 +406,26 @@ const RECURRENTE_CANONICO: Producto = {
 /**
  * Infiere el producto de una cita usando (en orden de prioridad):
  *   1. Marker [PRODUCT:slug] en internalNotes → producto exacto (guía completa).
- *   2. service_id ∈ [8, 11] → Diagnóstico (guía clínica del diagnóstico).
- *   3. service_id ≠ 8/11 → Recurrente (guía de continuidad de bono).
- *   4. price == 9,99 sin service_id → probable diagnóstico.
- *   5. null → no se puede inferir.
+ *   2. service_id === 18 → Cita de Bienvenida (flow /bienvenida-<angulo>).
+ *   3. service_id ∈ [8, 11] → Diagnóstico (guía clínica del diagnóstico).
+ *   4. service_id ≠ 8/11/18 → Recurrente (guía de continuidad de bono).
+ *   5. price == 9,99 sin service_id → probable diagnóstico.
+ *   6. null → no se puede inferir.
  *
  * La categoría 'gratuita' NO se infiere por price=0 (recurrentes también son 0).
- * Solo aparece con marker explícito [PRODUCT:gratuita*].
+ * Solo aparece con marker explícito [PRODUCT:gratuita*] o service_id=18.
  */
 export function inferProducto(ctx: AppointmentContext): Producto | null {
   const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
   if (marker) return marker;
+
+  // Service específico "Cita de Bienvenida" (Amelia id=18, creado 14-ago).
+  // Todas las citas creadas desde /api/bienvenida/reserve usan este ID.
+  // Devolvemos el producto canónico gratuita si algún día se rompe el marker.
+  if (ctx.service_id === 18) {
+    const bienvenidaGeneric = CATALOGO.find((p) => p.slug === "gratuita");
+    if (bienvenidaGeneric) return bienvenidaGeneric;
+  }
 
   if (ctx.service_id === 8 || ctx.service_id === 11) {
     return syntheticProducto(DIAGNOSTICO_CANONICO);
