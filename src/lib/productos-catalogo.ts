@@ -336,12 +336,37 @@ const GRATUITAS: Producto[] = [
   },
 ];
 
+// ─── BIENVENIDA — primera cita del programa Mente Sana (5 ángulos) ────────
+// Todas usan el mismo label "Cita de bienvenida" (sin "gratis"). El ángulo
+// del test se codifica en el slug para trazabilidad clínica en la HC.
+// Aparecen con badge morado 🎁 "Cita de bienvenida" en /psicologo y /agent.
+const BIENVENIDA_PRODUCTOS: Producto[] = [
+  ["burnout",    "Burnout laboral"],
+  ["autoestima", "Autoestima y vínculos"],
+  ["duelo",      "Duelo y pérdidas"],
+  ["limites",    "Límites y relaciones"],
+  ["ansiedad",   "Ansiedad y estrés"],
+].map(([slugAngulo, anguloLabel]) => ({
+  slug: `bienvenida-${slugAngulo}`,
+  categoria: "gratuita" as const,
+  label: "Cita de bienvenida",
+  labelCategoria: `Cita de bienvenida · ${anguloLabel}`,
+  emoji: "🎁",
+  colors: COLORS.gratuita,
+  landing: `/bienvenida-${slugAngulo}`,
+  descripcion:
+    `Primera sesión del programa Mente Sana. La paciente hizo el test de bienvenida y eligió el ángulo "${anguloLabel}". Es primer contacto clínico: leer sus respuestas en la HC (motivo + expectativa que rellenó al confirmar en la app) antes de abrir. Objetivo: escuchar, devolver un primer plan concreto, dejar la puerta abierta a bono. NO forzar venta.`,
+  angulo: `Primera cita · ${anguloLabel}`,
+  precio: 0,
+}));
+
 export const CATALOGO: Producto[] = [
   ...TERAPIA,
   ...ACOMPANAMIENTO,
   ...DIAGNOSTICO,
   ...PLANES,
   ...GRATUITAS,
+  ...BIENVENIDA_PRODUCTOS,
 ];
 
 // Index para lookups O(1).
@@ -419,11 +444,12 @@ export function inferProducto(ctx: AppointmentContext): Producto | null {
   const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
   if (marker) return marker;
 
-  // Service específico "Cita de Bienvenida" (Amelia id=18, creado 14-ago).
-  // Todas las citas creadas desde /api/bienvenida/reserve usan este ID.
-  // Devolvemos el producto canónico gratuita si algún día se rompe el marker.
+  // Service específico "Cita de Bienvenida" (Amelia id=18). Fallback si el
+  // marker se pierde: devuelve el producto genérico bienvenida-ansiedad
+  // (label "Cita de bienvenida", no "gratuita").
   if (ctx.service_id === 18) {
-    const bienvenidaGeneric = CATALOGO.find((p) => p.slug === "gratuita");
+    const bienvenidaGeneric = CATALOGO.find((p) => p.slug === "bienvenida-ansiedad")
+      ?? CATALOGO.find((p) => p.slug === "gratuita");
     if (bienvenidaGeneric) return bienvenidaGeneric;
   }
 
