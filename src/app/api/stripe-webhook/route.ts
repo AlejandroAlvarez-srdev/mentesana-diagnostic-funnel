@@ -108,12 +108,28 @@ export async function POST(req: NextRequest) {
     // fbc: el de la metadata, o reconstruido desde el fbclid crudo (formato oficial
     // fb.1.{ts}.{fbclid}) si por lo que sea no se guardó el fbc derivado.
     const fbc = md.fbc || (md.fbclid ? `fb.1.${Date.now()}.${md.fbclid}` : undefined);
+    // Clasificación de producto por importe para que Meta SEGMENTE (diagnóstico
+    // 9,99€ vs bono) y podamos optimizar por VALOR (buscar compradores de bono,
+    // no de tripwire). El bono ya dispara este CAPI con su valor real; aquí solo
+    // lo etiquetamos bien. content_category alimenta el reporting/value optimization.
+    const cents = session.amount_total ?? 0;
+    let prodName = "Diagnóstico psicológico";
+    let prodCategory = "diagnostico";
+    if (md.product === "ebook") { prodName = "Ebook Sanando desde adentro"; prodCategory = "ebook"; }
+    else if (cents >= 4000) {
+      prodCategory = "bono";
+      if ([14999, 12000].includes(cents)) prodName = "Bono Compañía";
+      else if ([22999, 18500].includes(cents)) prodName = "Bono Felicidad";
+      else if (cents === 17900) prodName = "Bono Amor";
+      else if ([5000, 4500].includes(cents)) { prodName = "Sesión individual"; prodCategory = "sesion"; }
+      else prodName = `Bono ${Math.round(cents / 100)}€`;
+    }
     const out = await sendCAPIPurchase({
       event_id: eventId,
       event_source_url: landing,
       value,
       currency: (session.currency || "EUR").toUpperCase(),
-      content_name: md.product === "ebook" ? "Ebook Sanando desde adentro" : "Diagnóstico psicológico",
+      content_name: prodName,
       user_data: {
         email: email || undefined,
         phone: md.patient_phone || undefined,
@@ -128,12 +144,14 @@ export async function POST(req: NextRequest) {
       },
       custom_data: {
         stripe_session_id: session.id,
+        content_category: prodCategory,
+        product_type: prodName,
         utm_source: md.utm_source || undefined,
         utm_campaign: md.utm_campaign || undefined,
         utm_content: md.utm_content || undefined,
       },
     });
-    console.log("[webhook] CAPI Purchase:", out.ok ? "ok" : `FAIL ${out.error}`, "session=" + session.id, "fbc?", !!fbc, "fbclid?", !!md.fbclid, "value=" + value);
+    console.log("[webhook] CAPI Purchase:", out.ok ? "ok" : `FAIL ${out.error}`, "session=" + session.id, "cat=" + prodCategory, "value=" + value, "fbc?", !!fbc);
   }
 
   async function runProcessing(session: Stripe.Checkout.Session) {
