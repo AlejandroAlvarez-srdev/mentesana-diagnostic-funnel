@@ -309,6 +309,28 @@ export async function processCheckoutSessionCompleted(
     // No return: dejamos que siga el ebook_purchases upsert como bookkeeping.
   }
 
+  // 2a-bis. ACOMPAÑAMIENTO branch (/acompanamiento-familiar + /apoya-a-tu-*).
+  // El producto incluye 1 cita 50 min con psicóloga que ahora se AGENDA antes
+  // del pago (hold Amelia pre-Stripe, misma infra que terapia). Aquí aprobamos
+  // ese hold para confirmar la cita. Si no viene hold_id (compras antiguas sin
+  // selector), no hacemos nada aquí y la cita se agenda post-compra como antes.
+  if (session.metadata?.product === "acompanamiento-familiar") {
+    const holdId = Number(session.metadata?.acompanamiento_hold_id ?? "");
+    if (Number.isFinite(holdId) && holdId > 0) {
+      try {
+        const { approveTerapiaHold } = await import("@/lib/terapia/hold-slot");
+        const hr = await approveTerapiaHold(holdId, session.id);
+        console.log("[webhook][acompanamiento] hold approve", JSON.stringify(hr));
+        if (!hr.ok) result.errors.push(`acompanamiento-hold: ${hr.error}${hr.detail ? ` (${hr.detail})` : ""}`);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : String(e);
+        console.error("[webhook][acompanamiento] hold approve fatal:", msg);
+        result.errors.push(`acompanamiento-hold-fatal: ${msg}`);
+      }
+    }
+    // No return: sigue el ebook_purchases upsert como registro contable.
+  }
+
   // 2. ebook purchase branch
   if (product) {
     const ebookRes = await deps.supabase.from("ebook_purchases").upsert(
