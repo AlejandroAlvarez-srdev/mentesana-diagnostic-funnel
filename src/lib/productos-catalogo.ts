@@ -337,9 +337,11 @@ const GRATUITAS: Producto[] = [
 ];
 
 // ─── BIENVENIDA — primera cita del programa Mente Sana (5 ángulos) ────────
-// Todas usan el mismo label "Cita de bienvenida" (sin "gratis"). El ángulo
+// Todas usan el mismo label "Cita de bienvenida" (NUNCA "gratis"). El ángulo
 // del test se codifica en el slug para trazabilidad clínica en la HC.
-// Aparecen con badge morado 🎁 "Cita de bienvenida" en /psicologo y /agent.
+// Aparecen con badge 🌱 "Cita de bienvenida" en /psicologo y /agent.
+// Es el momento CLAVE de conversión a bono: la ficha lo deja explícito para
+// que la psicóloga entre a cerrar, no a "escuchar y ya".
 const BIENVENIDA_PRODUCTOS: Producto[] = [
   ["burnout",    "Burnout laboral"],
   ["autoestima", "Autoestima y vínculos"],
@@ -351,12 +353,12 @@ const BIENVENIDA_PRODUCTOS: Producto[] = [
   categoria: "gratuita" as const,
   label: "Cita de bienvenida",
   labelCategoria: `Cita de bienvenida · ${anguloLabel}`,
-  emoji: "🎁",
+  emoji: "🌱",
   colors: COLORS.gratuita,
   landing: `/bienvenida-${slugAngulo}`,
   descripcion:
-    `Primera sesión del programa Mente Sana. La paciente hizo el test de bienvenida y eligió el ángulo "${anguloLabel}". Es primer contacto clínico: leer sus respuestas en la HC (motivo + expectativa que rellenó al confirmar en la app) antes de abrir. Objetivo: escuchar, devolver un primer plan concreto, dejar la puerta abierta a bono. NO forzar venta.`,
-  angulo: `Primera cita · ${anguloLabel}`,
+    `Primera cita del programa Mente Sana (ángulo "${anguloLabel}"). La paciente ya hizo el test y viene con intención: este es el momento de conversión. Lee sus respuestas en la HC (motivo + expectativa que rellenó al confirmar en la app) antes de abrir. Objetivo: conectar, demostrar valor con un primer plan concreto y CERRAR el bono en esta misma sesión. No es una cita de cortesía — aquí se decide si sigue con nosotros, así que lleva la conversación al bono con seguridad.`,
+  angulo: `Captación → cerrar bono · ${anguloLabel}`,
   precio: 0,
 }));
 
