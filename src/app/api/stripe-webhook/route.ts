@@ -194,7 +194,10 @@ export async function POST(req: NextRequest) {
     await runProcessing(session);
     // Dispara Purchase a Meta CAPI server-side (recupera atribución que el pixel
     // client-side se pierde si el usuario cierra el browser antes del TYP page).
-    fireCapiPurchase(session).catch((e) => console.error("[webhook] CAPI fire fail:", e));
+    // ⚠️ AWAIT obligatorio: sin él, la función devolvía el 200 a Stripe y el
+    // serverless mataba la promesa antes de que el fetch a Meta completara
+    // (mismo bug fire-and-forget que tenía AsistioSesion). +400ms es asumible.
+    await fireCapiPurchase(session).catch((e) => console.error("[webhook] CAPI fire fail:", e));
   }
 
   else if (event.type === "checkout.session.expired") {
