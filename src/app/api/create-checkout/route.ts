@@ -13,7 +13,7 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag, variante_precio: bodyVariantePrecio } = await req.json();
+  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag, variante_precio: bodyVariantePrecio, ms_visitor_id: bodyVisitorId, ms_session_id: bodySessionId } = await req.json();
   // Prueba de precio 9,99 vs 29,99 (25-ago). Del cliente llega un TOKEN, nunca
   // un importe: el importe sale de la tabla del servidor. Cualquier valor raro
   // cae en 'estandar', que es el precio de siempre.
@@ -166,6 +166,11 @@ export async function POST(req: NextRequest) {
         ab_warming: abWarming,
         ab_diag: abDiag,
         variante_precio: precio.variante, // estandar=9,99€ · premium=29,99€
+        // Ids del navegador: el webhook los devuelve al escribir la compra en
+        // analytics_events, y asi el embudo interno llega hasta el pago en vez
+        // de cortarse en initiate_checkout.
+        ms_visitor_id: String(bodyVisitorId ?? "").slice(0, 64),
+        ms_session_id: String(bodySessionId ?? "").slice(0, 64),
         ab_diagnostico_v2: abV2, // A=card only · B=Apple/Google Pay + wallets
         ab_diagnostico_v2_wallet: abV2 === "B" ? "auto" : "card",
         // === Partners attribution ===

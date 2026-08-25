@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
-import { track } from "@/lib/tracking";
+import { track, getVisitorId as getAnalyticsVisitorId, getSessionId } from "@/lib/tracking";
 import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
 import { PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
 
@@ -1216,6 +1216,9 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             // Token de variante de precio, NO el importe: el servidor lo
             // resuelve contra su tabla. Ver src/lib/diagnostico-precio.ts.
             variante_precio: precio.variante,
+            // Para poder unir la compra con el resto del embudo en analytics.
+            ms_visitor_id: getAnalyticsVisitorId(),
+            ms_session_id: getSessionId(),
           }),
         });
 

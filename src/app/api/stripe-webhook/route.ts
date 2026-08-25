@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
+import { registrarCompraEnAnalytics } from "@/lib/analytics-purchase";
 import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
@@ -198,6 +199,16 @@ export async function POST(req: NextRequest) {
     // serverless mataba la promesa antes de que el fetch a Meta completara
     // (mismo bug fire-and-forget que tenía AsistioSesion). +400ms es asumible.
     await fireCapiPurchase(session).catch((e) => console.error("[webhook] CAPI fire fail:", e));
+    // Cierra el embudo interno: sin esto analytics_events se corta en
+    // initiate_checkout y no hay forma de medir test -> pago con datos propios.
+    // Best-effort y con await (mismo motivo que el CAPI: el serverless mata las
+    // promesas sueltas al devolver el 200 a Stripe).
+    await registrarCompraEnAnalytics({
+      sessionId: session.id,
+      amountCents: session.amount_total ?? 0,
+      currency: session.currency || "eur",
+      metadata: (session.metadata ?? {}) as Record<string, string | undefined>,
+    }).catch((e) => console.error("[webhook] analytics purchase fail:", e));
   }
 
   else if (event.type === "checkout.session.expired") {
