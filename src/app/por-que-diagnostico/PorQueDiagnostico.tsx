@@ -5,6 +5,8 @@ import Link from "next/link";
 import Footer from "@/components/Footer";
 import AppFeatureBanner from "@/components/AppFeatureBanner";
 import { track } from "@/lib/tracking";
+import { PARAM_VARIANTE, PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
+import JustificacionPrecio from "@/components/JustificacionPrecio";
 
 const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
 
@@ -16,11 +18,11 @@ const PSICOLOGAS = [
   { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4` },
 ];
 
-const PASOS = [
+const PASOS = (precio: PrecioDiagnostico) => [
   { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas." },
   { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para tu caso." },
   { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad y reservas tu cita." },
-  { n: "4", icon: "💳", title: "Pagas 9,99€", desc: "Pago único." },
+  { n: "4", icon: "💳", title: `Pagas ${precio.texto}`, desc: "Pago único." },
   { n: "5", icon: "📧", title: "Test en tu correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5). 10-15 min." },
   { n: "6", icon: "💬", title: "Asistes y recibes tu diagnóstico", desc: "50 min. Tu psicóloga llega con tu informe leído." },
 ];
@@ -113,8 +115,8 @@ const FAQ = [
   },
 ];
 
-const COMPARATIVA = [
-  { label: "Coste inicial", diag: "9,99€", gratis: "0€" },
+const COMPARATIVA = (precio: PrecioDiagnostico) => [
+  { label: "Coste inicial", diag: `${precio.texto}`, gratis: "0€" },
   { label: "Matching", diag: "Algorítmico clínico", gratis: "Al azar" },
   { label: "Informe clínico", diag: "✓ 5-7 páginas", gratis: "✗" },
   { label: "Duración de la sesión", diag: "50 min", gratis: "15-25 min" },
@@ -124,7 +126,7 @@ const COMPARATIVA = [
   { label: "Cambio de psicóloga", diag: "✓ Gratis", gratis: "Vuelves a empezar" },
 ];
 
-export default function PorQueDiagnostico() {
+export default function PorQueDiagnostico({ precio = PRECIO_ESTANDAR }: { precio?: PrecioDiagnostico } = {}) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
 
@@ -155,10 +157,14 @@ export default function PorQueDiagnostico() {
   }, []);
 
   function ctaHref(base: string) {
-    if (typeof window === "undefined") return base;
+    // La variante de precio se arrastra tambien en SSR: si solo se anadiera tras
+    // hidratar, quien pincha rapido acabaria en el checkout de 9,99 desde una
+    // landing de 29,99.
+    const pv = precio.variante === "estandar" ? "" : `${PARAM_VARIANTE}=${precio.variante}`;
+    if (typeof window === "undefined") return pv ? `${base}?${pv}` : base;
     const params = new URLSearchParams(window.location.search);
     const keep = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
-    const qs = keep.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`).join("&");
+    const qs = [...keep.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`), pv].filter(Boolean).join("&");
     return qs ? `${base}?${qs}` : base;
   }
 
@@ -190,10 +196,10 @@ export default function PorQueDiagnostico() {
             <h1 className="font-serif text-[2rem] md:text-5xl lg:text-6xl leading-[1.12] max-w-4xl mx-auto">
               Cómo funciona el<br />
               diagnóstico psicológico<br />
-              de <em className="italic text-[#E8D4F0]">9,99€</em>, paso a <em className="italic text-[#C9A9D1]">paso</em>.
+              de <em className="italic text-[#E8D4F0]">{precio.texto}</em>, paso a <em className="italic text-[#C9A9D1]">paso</em>.
             </h1>
             <p className="mt-6 md:mt-8 text-base md:text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
-              La mayoría de psicólogos online te ofrecen una primera sesión gratis. Nosotros cobramos 9,99€ para darte algo que ellos no pueden: un diagnóstico real antes de que empieces.
+              La mayoría de psicólogos online te ofrecen una primera sesión gratis. Nosotros cobramos {precio.texto} para darte algo que ellos no pueden: un diagnóstico real antes de que empieces.
             </p>
 
             <div className="mt-10 flex flex-col items-center gap-3">
@@ -246,7 +252,7 @@ export default function PorQueDiagnostico() {
 
             <div className="relative">
               <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#6A178C]/30 via-[#6A178C]/20 to-[#6A178C]/10" />
-              {PASOS.map((step) => (
+              {PASOS(precio).map((step) => (
                 <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
                   <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] text-white flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/25">
                     {step.icon}
@@ -263,7 +269,7 @@ export default function PorQueDiagnostico() {
           </div>
         </section>
 
-        {/* ═══════════ COMPARATIVA ═══════════ */}
+        {/* ═══════════ COMPARATIVA(precio) ═══════════ */}
         <section className="py-20 md:py-24 bg-gradient-to-br from-[#2A0F47] via-[#4A2368] to-[#6E3F88] text-white">
           <div className="max-w-5xl mx-auto px-4">
             <p className="inline-flex items-center gap-1.5 bg-white/[0.08] border border-white/[0.18] text-[#F5F0F7] px-3 py-1.5 rounded-full text-xs w-fit mx-auto">
@@ -280,7 +286,7 @@ export default function PorQueDiagnostico() {
                     <th className="text-left py-3 px-3 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-white/50"></th>
                     <th className="text-center py-3 px-2 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-[#D7B8E3] font-bold">
                       Mente Sana<br />
-                      <span className="text-white/60 font-normal normal-case tracking-normal text-[10px]">9,99€</span>
+                      <span className="text-white/60 font-normal normal-case tracking-normal text-[10px]">{precio.texto}</span>
                     </th>
                     <th className="text-center py-3 px-2 md:px-4 text-[10px] md:text-xs uppercase tracking-wider text-white/40">
                       Sesión gratis<br />
@@ -289,7 +295,7 @@ export default function PorQueDiagnostico() {
                   </tr>
                 </thead>
                 <tbody>
-                  {COMPARATIVA.map((r) => (
+                  {COMPARATIVA(precio).map((r) => (
                     <tr key={r.label} className="border-b border-white/5 last:border-b-0">
                       <td className="py-3 px-3 md:px-4 text-white/70 font-medium text-[12px] md:text-[13px]">{r.label}</td>
                       <td className="py-3 px-2 md:px-4 text-center text-[#D7B8E3] font-bold text-[12px] md:text-[13px]">{r.diag}</td>
@@ -306,14 +312,14 @@ export default function PorQueDiagnostico() {
         <section className="py-16 md:py-20 px-4 bg-[#FAF7F2]">
           <div className="max-w-6xl mx-auto">
             <div className="text-center mb-12">
-              <p className="font-handwriting text-xl text-[#6A178C] mb-2">por qué 9,99€ y no gratis</p>
+              <p className="font-handwriting text-xl text-[#6A178C] mb-2">por qué {precio.texto} y no gratis</p>
               <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black">Tres razones honestas</h2>
             </div>
             <div className="grid md:grid-cols-3 gap-5 md:gap-6">
               <div className="bg-white rounded-3xl p-7 md:p-8 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)]">
                 <div className="w-12 h-12 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-[#6A178C] font-serif text-xl font-bold mb-5">1</div>
                 <h3 className="font-serif text-2xl text-black mb-3">Es un filtro</h3>
-                <p className="text-sm text-black/70 leading-relaxed">Quien paga 9,99€ es quien quiere empezar de verdad. No un clic de curiosidad. Nuestras psicólogas trabajan con personas comprometidas, no con tráfico.</p>
+                <p className="text-sm text-black/70 leading-relaxed">Quien paga {precio.texto} es quien quiere empezar de verdad. No un clic de curiosidad. Nuestras psicólogas trabajan con personas comprometidas, no con tráfico.</p>
               </div>
               <div className="bg-white rounded-3xl p-7 md:p-8 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)]">
                 <div className="w-12 h-12 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-[#6A178C] font-serif text-xl font-bold mb-5">2</div>
@@ -370,9 +376,9 @@ export default function PorQueDiagnostico() {
         <section className="py-16 md:py-20 px-4">
           <div className="max-w-3xl mx-auto text-center">
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">una pregunta razonable</p>
-            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-6">¿Por qué solo 9,99€?</h2>
+            <h2 className="font-serif text-[1.75rem] md:text-[2.75rem] leading-[1.15] text-black mb-6">¿Por qué solo {precio.texto}?</h2>
             <p className="text-base md:text-lg text-black/75 leading-relaxed mb-4">
-              En consulta privada, un informe firmado + sesión de 50 min cuesta <strong>60-120€</strong>. Nosotros lo damos por 9,99€ como precio de entrada.
+              En consulta privada, un informe firmado + sesión de 50 min cuesta <strong>60-120€</strong>. Nosotros lo damos por {precio.texto} como precio de entrada.
             </p>
             <p className="text-base md:text-lg text-black/75 leading-relaxed">
               Si decides seguir, bonos desde <strong>28,75€/sesión</strong>. Si no, el informe ya es tuyo.
@@ -508,7 +514,7 @@ export default function PorQueDiagnostico() {
           <div className="max-w-3xl mx-auto text-center relative">
             <p className="font-handwriting text-xl text-[#E8D4F0] mb-3">ya lo entiendes</p>
             <h2 className="font-serif text-[2rem] md:text-[3rem] lg:text-[3.25rem] leading-[1.15] mb-6">
-              9,99€ para empezar con<br />
+              {precio.texto} para empezar con<br />
               <em className="italic text-[#E8D4F0]">claridad</em>.
             </h2>
             <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-10">
@@ -516,11 +522,13 @@ export default function PorQueDiagnostico() {
             </p>
             <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-              Comenzar (9,99€) →
+              Comenzar ({precio.texto}) →
             </Link>
             <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
           </div>
         </section>
+
+        <JustificacionPrecio precio={precio} />
 
         <Footer />
       </main>
@@ -532,7 +540,7 @@ export default function PorQueDiagnostico() {
       >
         <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("sticky_mobile")}
           className="flex items-center justify-center bg-[#6A178C] text-white font-bold rounded-full px-6 py-3.5 text-sm shadow-[0_8px_24px_rgba(106,23,140,.3)]">
-          Comenzar · 9,99€
+          Comenzar · {precio.texto}
         </Link>
       </div>
     </>

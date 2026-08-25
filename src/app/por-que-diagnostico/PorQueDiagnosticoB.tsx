@@ -4,6 +4,8 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { track } from "@/lib/tracking";
+import { PARAM_VARIANTE, PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
+import JustificacionPrecio from "@/components/JustificacionPrecio";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // VARIANTE B (challenger) del A/B test ms_ab_landing en /por-que-diagnostico.
@@ -27,11 +29,11 @@ const PSICOLOGAS = [
   { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4` },
 ];
 
-const PASOS = [
+const PASOS = (precio: PrecioDiagnostico) => [
   { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas." },
   { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para tu caso." },
   { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad y reservas tu cita." },
-  { n: "4", icon: "💳", title: "Reservas tu plaza por 9,99€", desc: "Pago único. Sin suscripción." },
+  { n: "4", icon: "💳", title: `Reservas tu plaza por ${precio.texto}`, desc: "Pago único. Sin suscripción." },
   { n: "5", icon: "📧", title: "Test en tu correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5). 10-15 min." },
   { n: "6", icon: "💬", title: "Asistes y recibes tu diagnóstico", desc: "50 min. Tu psicóloga llega con tu informe leído." },
 ];
@@ -83,7 +85,7 @@ function AvatarVideo({ src }: { src: string }) {
   );
 }
 
-export default function PorQueDiagnosticoB() {
+export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { precio?: PrecioDiagnostico } = {}) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
 
@@ -115,10 +117,14 @@ export default function PorQueDiagnosticoB() {
   }, []);
 
   function ctaHref(base: string) {
-    if (typeof window === "undefined") return base;
+    // La variante de precio se arrastra tambien en SSR: si solo se anadiera tras
+    // hidratar, quien pincha rapido acabaria en el checkout de 9,99 desde una
+    // landing de 29,99.
+    const pv = precio.variante === "estandar" ? "" : `${PARAM_VARIANTE}=${precio.variante}`;
+    if (typeof window === "undefined") return pv ? `${base}?${pv}` : base;
     const params = new URLSearchParams(window.location.search);
     const keep = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
-    const qs = keep.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`).join("&");
+    const qs = [...keep.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`), pv].filter(Boolean).join("&");
     return qs ? `${base}?${qs}` : base;
   }
 
@@ -149,7 +155,7 @@ export default function PorQueDiagnosticoB() {
               <em className="italic text-[#E8D4F0]">qué te pasa</em>.
             </h1>
             <p className="mt-5 md:mt-6 text-base md:text-xl text-white/85 leading-relaxed max-w-xl mx-auto">
-              Un diagnóstico psicológico real — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">9,99€</strong>.
+              Un diagnóstico psicológico real — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">{precio.texto}</strong>.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3">
@@ -212,7 +218,7 @@ export default function PorQueDiagnosticoB() {
         <section className="py-12 md:py-16 px-4">
           <div className="max-w-5xl mx-auto">
             <div className="text-center mb-9">
-              <p className="font-handwriting text-xl text-[#6A178C] mb-2">qué te llevas por 9,99€</p>
+              <p className="font-handwriting text-xl text-[#6A178C] mb-2">qué te llevas por {precio.texto}</p>
               <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">No es una sesión más. Es claridad.</h2>
             </div>
             <div className="grid md:grid-cols-3 gap-4 md:gap-6">
@@ -240,7 +246,7 @@ export default function PorQueDiagnosticoB() {
             </div>
             <div className="relative">
               <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#6A178C]/30 via-[#6A178C]/20 to-[#6A178C]/10" />
-              {PASOS.map((step) => (
+              {PASOS(precio).map((step) => (
                 <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
                   <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] text-white flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/25">{step.icon}</div>
                   <div className="pt-1.5">
@@ -312,16 +318,18 @@ export default function PorQueDiagnosticoB() {
           <div className="max-w-3xl mx-auto text-center relative">
             <p className="font-handwriting text-xl text-[#E8D4F0] mb-3">empieza hoy</p>
             <h2 className="font-serif text-[2rem] md:text-[3rem] leading-[1.15] mb-5">
-              9,99€ para entender<br /><em className="italic text-[#E8D4F0]">qué te pasa</em>.
+              {precio.texto} para entender<br /><em className="italic text-[#E8D4F0]">qué te pasa</em>.
             </h2>
             <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-9">Informe + matching + 50 min con tu psicóloga.</p>
             <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
               className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-              Empezar ahora (9,99€) →
+              Empezar ahora ({precio.texto}) →
             </Link>
             <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
           </div>
         </section>
+
+        <JustificacionPrecio precio={precio} />
 
         <Footer />
       </main>
@@ -333,12 +341,12 @@ export default function PorQueDiagnosticoB() {
       >
         <div className="max-w-2xl mx-auto flex items-center justify-between gap-3">
           <div className="hidden sm:block">
-            <p className="text-sm font-semibold text-black leading-tight">Tu diagnóstico por 9,99€</p>
+            <p className="text-sm font-semibold text-black leading-tight">Tu diagnóstico por {precio.texto}</p>
             <p className="text-[11px] text-black/50">2 min</p>
           </div>
           <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("sticky")}
             className="flex-1 sm:flex-none flex items-center justify-center bg-[#6A178C] text-white font-bold rounded-full px-6 py-3.5 text-sm shadow-[0_8px_24px_rgba(106,23,140,.3)] hover:-translate-y-0.5 transition-all">
-            Empezar ahora · 9,99€
+            Empezar ahora · {precio.texto}
           </Link>
         </div>
       </div>

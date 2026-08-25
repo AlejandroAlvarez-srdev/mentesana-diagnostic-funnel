@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import Image from "next/image";
 import { track } from "@/lib/tracking";
 import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
+import { PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
 
 // ═══ Questions config ═══
 interface Option {
@@ -152,7 +153,7 @@ function TeamVideosStrip() {
   );
 }
 
-export default function DiagnosticoMatching({ variant = "web" }: { variant?: "web" | "app" } = {}) {
+export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_ESTANDAR }: { variant?: "web" | "app"; precio?: PrecioDiagnostico } = {}) {
   const isApp = variant === "app";
 
   // A/B test "diagnostico-v2" — 50/50 split determinista por visitor_id.
@@ -173,7 +174,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
       kicker: isApp ? "Bienvenida desde la app" : "Así funciona tu diagnóstico",
       titleLine1: isApp ? "Tu premium, tu diagnóstico" : "6 pasos para entender qué te pasa",
       titleLine2: isApp ? "y tu 1ª cita psicológica." : "y tener un plan real.",
-      step4Title: isApp ? "Pagas 9,99€ (incluye todo)" : "Pagas 9,99€",
+      step4Title: isApp ? `Pagas ${precio.texto} (incluye todo)` : `Pagas ${precio.texto}`,
       step4Desc: isApp ? "Pago único que incluye premium de la app + diagnóstico + cita psicológica. Sin suscripción." : "Pago único. Sin suscripción.",
     },
     contact: {
@@ -538,7 +539,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
         } catch {}
       }
 
-      track("initiate_checkout", { amount: "9.99", ab });
+      track("initiate_checkout", { amount: precio.decimal, ab });
       setSaving(false);
       setPhase("payment");
     };
@@ -651,7 +652,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
               {/* QW2 (variante B): precio arriba, antes del calendario — evita price surprise al final. */}
               {ab === "B" && (
                 <div className="mt-3 flex items-center justify-center gap-2 rounded-full bg-purple/5 border border-purple/15 px-3 py-1.5">
-                  <span className="text-[13px] font-bold text-purple">9,99€</span>
+                  <span className="text-[13px] font-bold text-purple">{precio.texto}</span>
                   <span className="text-[10px] text-foreground/60">· pago único · sin suscripción · devolución si no encaja</span>
                 </div>
               )}
@@ -779,7 +780,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                     <p className="text-xs text-purple font-medium mt-0.5">Con {matchedPsych.name}</p>
                   </div>
                   <div className="text-right">
-                    <p className="font-serif text-2xl font-bold text-purple">9,99€</p>
+                    <p className="font-serif text-2xl font-bold text-purple">{precio.texto}</p>
                     <p className="text-[10px] text-foreground/40">pago único</p>
                   </div>
                 </div>
@@ -796,8 +797,8 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                 {saving
                   ? "Procesando..."
                   : ab === "B"
-                    ? `Reservar mi sesión con ${matchedPsych.name.split(" ")[0]} · 9,99€ →`
-                    : "Confirmar y pagar 9,99€ →"}
+                    ? `Reservar mi sesión con ${matchedPsych.name.split(" ")[0]} · ${precio.texto} →`
+                    : `Confirmar y pagar ${precio.texto} →`}
               </button>
               {/* QW7 (variante B): social proof + garantía dividida en 2 líneas para el fold final. */}
               {ab === "B" ? (
@@ -806,7 +807,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   <p className="mt-1 text-center text-[10.5px] text-foreground/50">+8.000 personas han empezado su proceso con nosotras · ★ 4,9</p>
                 </>
               ) : (
-                <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de 9,99€ · Sin suscripción ni renovación automática</p>
+                <p className="mt-2 text-center text-[11px] text-foreground/40">🔒 Pago único de {precio.texto} · Sin suscripción ni renovación automática</p>
               )}
               {/* QW6 (variante B): CTA secundario para reroll de psicóloga (recupera dropouts por mismatch de fit). */}
               {ab === "B" && (
@@ -835,6 +836,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
   // ═══ PAYMENT PHASE — Stripe Embedded Checkout ═══
   if (phase === "payment") {
     return <PaymentPhase
+      precio={precio}
       email=""
       name=""
       phone=""
@@ -849,7 +851,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
   // ═══ INTRO PHASE — paso a paso creativo ═══
   if (phase === "intro") {
     // QW1 (variante B): rediseño del hero con promesa arriba, 3 caras de psicólogas
-    // reales sobre el fold, CTA con precio 9,99€ visible, y timeline colapsado por
+    // reales sobre el fold, CTA con precio {precio.texto} visible, y timeline colapsado por
     // defecto en un <details> "¿Cómo funciona?".
     // Los 3 del hero usan las tomas del home (CDN Supabase, versión curada) — son
     // los mismos videos que se ven en Psychologists.tsx en la home.
@@ -882,7 +884,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                     Entiende qué te pasa y sal con un <em className="text-purple italic font-normal not-italic font-bold">plan real</em>
                   </h1>
                   <p className="text-[13.5px] text-foreground/75 leading-snug px-2">
-                    Una sesión de 50 min con tu psicóloga colegiada. Hoy, por 9,99€.
+                    Una sesión de 50 min con tu psicóloga colegiada. Hoy, por {precio.texto}.
                   </p>
                 </div>
 
@@ -909,7 +911,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                     onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
                     className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg shadow-purple/30 transition-colors"
                   >
-                    Reservar mi diagnóstico · 9,99€ →
+                    Reservar mi diagnóstico · {precio.texto} →
                   </button>
                   <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Sin suscripción</p>
                   <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
@@ -923,7 +925,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                   <p className="text-center text-[10.5px] font-bold uppercase tracking-wider text-purple/70 mb-3">Lo que cuentan quienes ya lo hicieron</p>
                   <div className="grid grid-cols-1 gap-2.5">
                     {[
-                      { q: "Salí con un plan claro de qué hacer esta semana, no con más dudas. Por 9,99€, vale mucho más.", a: "Marina, 34", tag: "ansiedad" },
+                      { q: `Salí con un plan claro de qué hacer esta semana, no con más dudas. Por ${precio.texto}, vale mucho más.`, a: "Marina, 34", tag: "ansiedad" },
                       { q: "Pensé que era otra app impersonal. Mi psicóloga había leído mi test antes de la sesión. Se notó.", a: "Carla, 29", tag: "estado de ánimo" },
                       { q: "Nunca había hablado con una psicóloga. Fue más fácil de lo que pensaba, y no me sentí juzgada ni un segundo.", a: "Laura, 41", tag: "primera vez" },
                     ].map((t) => (
@@ -949,7 +951,7 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
                       { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas.", active: true },
                       { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga colegiada más idónea para tu caso." },
                       { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad real y reservas." },
-                      { n: "4", icon: "💳", title: "Reservas tu diagnóstico — 9,99€ únicos", desc: "Pago único, sin suscripción." },
+                      { n: "4", icon: "💳", title: `Reservas tu diagnóstico — ${precio.texto} únicos`, desc: "Pago único, sin suscripción." },
                       { n: "5", icon: "📧", title: "Recibes tu test clínico por email", desc: "PHQ-9, GAD-7, DSM-5. Para que tu psicóloga prepare tu sesión." },
                       { n: "6", icon: "💬", title: "Sesión de 50 min + tu diagnóstico", desc: "Tu psicóloga llega con tu informe leído. Plan de acción concreto." },
                     ].map((step) => (
@@ -1165,10 +1167,11 @@ export default function DiagnosticoMatching({ variant = "web" }: { variant?: "we
 }
 
 // ═══ PAYMENT COMPONENT — Stripe Embedded Checkout ═══
-function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef, ab }: {
+function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef, ab, precio }: {
   email: string; name: string; phone: string; psychologistName: string;
   selectedDay: string; selectedSlot: string; checkoutRef: React.RefObject<HTMLDivElement | null>;
   ab: "A" | "B";
+  precio: PrecioDiagnostico;
 }) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
@@ -1210,6 +1213,9 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             source: "test-diagnostico",
             utms: { ...utms, scheduled_date: selectedDay, scheduled_time: selectedSlot },
             ab_diagnostico: ab, // QW5: A=card-only · B=Apple/Google Pay + wallets
+            // Token de variante de precio, NO el importe: el servidor lo
+            // resuelve contra su tabla. Ver src/lib/diagnostico-precio.ts.
+            variante_precio: precio.variante,
           }),
         });
 
@@ -1272,7 +1278,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
                 <p className="text-xs text-foreground/50 mt-0.5">{email}</p>
               </div>
               <div className="text-right">
-                <p className="font-serif text-2xl font-bold text-purple">9,99€</p>
+                <p className="font-serif text-2xl font-bold text-purple">{precio.texto}</p>
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-black/5 grid grid-cols-3 gap-2 text-center">
@@ -1289,7 +1295,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
 
           {/* Reasegurador anti-objeción #1 del RAG */}
           <div className="mb-6">
-            <NoSurprisesBox />
+            <NoSurprisesBox precio={precio} />
           </div>
 
           {/* Stripe Checkout */}
@@ -1541,9 +1547,9 @@ function NextStepsCard() {
 // Reasegurador anti-objeción #1 del cerebro Voyage: 96 menciones de confusión con
 // renovación automática / suscripción. Se muestra ANTES del botón de pago y encima
 // del checkout Stripe para neutralizar la objeción en el momento exacto de la fricción.
-function NoSurprisesBox() {
+function NoSurprisesBox({ precio }: { precio: PrecioDiagnostico }) {
   const items = [
-    "Es un pago único de 9,99€. No te cobramos nada más automáticamente.",
+    `Es un pago único de ${precio.texto}. No te cobramos nada más automáticamente.`,
     "No archivamos tu tarjeta para futuros cargos.",
     "Si después quieres seguir, tú eliges cuándo y qué bono (desde 28,75€/sesión). Pagas al usarlo.",
   ];

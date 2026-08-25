@@ -4,6 +4,7 @@ import { cookies } from "next/headers";
 import { getPartnersDb } from "@/lib/partners/supabase";
 import { ATTRIBUTION_COOKIE_NAME } from "@/lib/partners/config";
 import { holdDiagnosticoSlot } from "@/lib/diagnostico-hold";
+import { precioDe } from "@/lib/diagnostico-precio";
 
 export const runtime = "nodejs";
 
@@ -12,7 +13,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag } = await req.json();
+  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag, variante_precio: bodyVariantePrecio } = await req.json();
+  // Prueba de precio 9,99 vs 29,99 (25-ago). Del cliente llega un TOKEN, nunca
+  // un importe: el importe sale de la tabla del servidor. Cualquier valor raro
+  // cae en 'estandar', que es el precio de siempre.
+  const precio = precioDe(bodyVariantePrecio);
   // A/B test "diagnostico-v2" (viene del cliente): en variante 'B' habilitamos
   // Apple Pay / Google Pay / Bizum / Link vía automatic_payment_methods. Control 'A'
   // mantiene solo tarjeta (el flujo actual, sin regresión).
@@ -61,7 +66,7 @@ export async function POST(req: NextRequest) {
 
   // Si viene coupon_code: valida que esté activo y aplica descuento total (0€ = primera sesión gratis para el paciente)
   let coupon_code = "";
-  let unit_amount = 999;
+  let unit_amount = precio.centimos;
   let coupon_partner_id = "";
   if (typeof bodyCoupon === "string" && bodyCoupon.trim()) {
     const candidate = bodyCoupon.trim().toUpperCase();
@@ -160,6 +165,7 @@ export async function POST(req: NextRequest) {
         ab_landing: abLanding,
         ab_warming: abWarming,
         ab_diag: abDiag,
+        variante_precio: precio.variante, // estandar=9,99€ · premium=29,99€
         ab_diagnostico_v2: abV2, // A=card only · B=Apple/Google Pay + wallets
         ab_diagnostico_v2_wallet: abV2 === "B" ? "auto" : "card",
         // === Partners attribution ===
