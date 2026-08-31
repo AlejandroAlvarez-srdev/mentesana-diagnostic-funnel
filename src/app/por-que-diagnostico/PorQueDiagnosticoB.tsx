@@ -377,10 +377,10 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
               <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-3xl">🎁</div>
               <div className="relative text-center sm:text-left flex-1">
                 <p className="font-handwriting text-lg text-[#E8D4F0]">y además, de regalo</p>
-                <h3 className="font-serif text-xl md:text-2xl leading-tight">Acceso a la app de Mente Sana</h3>
-                <p className="mt-1.5 text-sm text-white/80 leading-relaxed">Tu informe siempre a mano, ejercicios entre sesiones y seguimiento con tu psicóloga. Incluido con tu diagnóstico.</p>
+                <h3 className="font-serif text-xl md:text-2xl leading-tight">1 mes de Premium en la app de Mente Sana</h3>
+                <p className="mt-1.5 text-sm text-white/80 leading-relaxed">Acceso completo a todo: tu informe siempre a mano, ejercicios, meditaciones y seguimiento con tu psicóloga. Incluido con tu diagnóstico.</p>
               </div>
-              <span className="relative shrink-0 inline-flex items-center gap-1.5 bg-white text-[#4A2368] text-xs font-bold px-4 py-2 rounded-full">✓ Incluido</span>
+              <span className="relative shrink-0 inline-flex items-center gap-1.5 bg-white text-[#4A2368] text-xs font-bold px-4 py-2 rounded-full">🎁 1 mes incluido</span>
             </div>
           </div>
         </section>
@@ -497,7 +497,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                     "Informe clínico de 5-7 páginas",
                     "Psicóloga seleccionada para ti",
                     "50 min de videollamada",
-                    "Acceso a la app de regalo",
+                    "1 mes de Premium en la app (acceso a todo)",
                     "Pago único · Sin suscripción",
                   ].map((x) => (
                     <li key={x} className="flex items-start gap-3">
