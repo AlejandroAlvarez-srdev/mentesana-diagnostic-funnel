@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
-import { registrarCompraEnAnalytics } from "@/lib/analytics-purchase";
+import { registrarCompraEnAnalytics, registrarEventoEnAnalytics } from "@/lib/analytics-purchase";
 import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
@@ -225,6 +225,58 @@ export async function POST(req: NextRequest) {
       },
       { onConflict: "stripe_session_id" },
     );
+  }
+
+  // Pago FALLIDO (métodos async: Bizum/SEPA). El objeto es la Checkout Session, con metadata.
+  else if (event.type === "checkout.session.async_payment_failed") {
+    const session = event.data.object as Stripe.Checkout.Session;
+    console.log("[webhook] async_payment_failed", { id: session.id, source: session.metadata?.source });
+    await supabase.from("payments").upsert(
+      {
+        stripe_session_id: session.id,
+        amount_cents: session.amount_total || 999,
+        currency: session.currency || "eur",
+        status: "failed",
+        patient_name: session.metadata?.patient_name || null,
+        patient_email: session.customer_email || null,
+        source: session.metadata?.source || "unknown",
+      },
+      { onConflict: "stripe_session_id" },
+    );
+    await registrarEventoEnAnalytics("payment_failed", {
+      sessionId: session.id,
+      amountCents: session.amount_total ?? 0,
+      currency: session.currency || "eur",
+      metadata: (session.metadata ?? {}) as Record<string, string | undefined>,
+      extraProps: { reason: "async_payment_failed" },
+    }).catch((e) => console.error("[webhook] analytics payment_failed fail:", e));
+  }
+
+  // Pago FALLIDO (tarjeta rechazada). El objeto es un PaymentIntent; la metadata
+  // del checkout solo viaja si se pasó payment_intent_data.metadata al crear la sesión.
+  else if (event.type === "payment_intent.payment_failed") {
+    const pi = event.data.object as Stripe.PaymentIntent;
+    const md = (pi.metadata ?? {}) as Record<string, string | undefined>;
+    const reason = pi.last_payment_error?.code || pi.last_payment_error?.decline_code || pi.last_payment_error?.message || "card_declined";
+    console.log("[webhook] payment_intent.payment_failed", { id: pi.id, reason });
+    await supabase.from("payments").upsert(
+      {
+        stripe_session_id: pi.id,
+        amount_cents: pi.amount || 999,
+        currency: pi.currency || "eur",
+        status: "failed",
+        patient_email: pi.receipt_email || null,
+        source: md.source || "payment_intent",
+      },
+      { onConflict: "stripe_session_id" },
+    );
+    await registrarEventoEnAnalytics("payment_failed", {
+      sessionId: pi.id,
+      amountCents: pi.amount ?? 0,
+      currency: pi.currency || "eur",
+      metadata: md,
+      extraProps: { reason },
+    }).catch((e) => console.error("[webhook] analytics payment_failed fail:", e));
   }
 
   else {
