@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import Footer from "@/components/Footer";
 import { track } from "@/lib/tracking";
@@ -22,11 +22,36 @@ import JustificacionPrecio from "@/components/JustificacionPrecio";
 const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
 
 const PSICOLOGAS = [
-  { name: "Adriana Salas", video: `${PSY_CDN}/adriana-salas.mp4` },
-  { name: "Alejandra Elías", video: `${PSY_CDN}/alejandra-elias.mp4` },
-  { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4` },
-  { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4` },
-  { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4` },
+  { name: "Adriana Salas", video: `${PSY_CDN}/adriana-salas.mp4`, focos: "Ansiedad · Autoestima" },
+  { name: "Alejandra Elías", video: `${PSY_CDN}/alejandra-elias.mp4`, focos: "Relaciones · Duelo" },
+  { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4`, focos: "Trauma · Estrés" },
+  { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4`, focos: "Depresión · Ansiedad" },
+  { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4`, focos: "Autoestima · Pareja" },
+];
+
+// Prueba social: varios testimonios en carrusel (uno solo no aporta confianza).
+const TESTIMONIOS = [
+  {
+    name: "Laura M., 29 años",
+    img: "/images/por-que-diagnostico/laura.webp",
+    context: "tras 5 sesiones con su psicóloga asignada",
+    quote: "Por primera vez sentí que estaba empezando desde algún sitio, no desde cero otra vez.",
+    body: "Probó dos plataformas y lo dejó en ambas. Con el Diagnóstico recibió un informe de 6 páginas y una psicóloga que llegó a la sesión con un plan concreto.",
+  },
+  {
+    name: "Marta R., 34 años",
+    img: null,
+    context: "diagnóstico + bono de 8 sesiones",
+    quote: "Salí de la sesión con un plan escrito, no con más dudas.",
+    body: "Llevaba meses posponiéndolo. El informe le puso nombre a lo que le pasaba y su psicóloga ya lo había leído antes de la videollamada.",
+  },
+  {
+    name: "Carlos D., 41 años",
+    img: null,
+    context: "primera vez en terapia",
+    quote: "Nunca había ido al psicólogo. Empezar por aquí me quitó el miedo.",
+    body: "Las 5 preguntas fueron fáciles. El informe le explicó qué le pasaba sin etiquetas dramáticas y con un camino claro para seguir.",
+  },
 ];
 
 const PASOS = (precio: PrecioDiagnostico) => [
@@ -81,6 +106,80 @@ function AvatarVideo({ src }: { src: string }) {
   return (
     <div className="relative w-11 h-11 rounded-full overflow-hidden">
       <video ref={ref} muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />
+    </div>
+  );
+}
+
+// Reveal on-scroll: aparece con fade + slide sutil la primera vez que entra en viewport.
+function Reveal({ children, delay = 0, className = "" }: { children: ReactNode; delay?: number; className?: string }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [shown, setShown] = useState(false);
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const io = new IntersectionObserver((entries) => {
+      entries.forEach((e) => { if (e.isIntersecting) { setShown(true); io.disconnect(); } });
+    }, { threshold: 0.25, rootMargin: "0px 0px -8% 0px" });
+    io.observe(el);
+    return () => io.disconnect();
+  }, []);
+  return (
+    <div
+      ref={ref}
+      className={className}
+      style={{
+        transitionProperty: "opacity, transform",
+        transitionDuration: "600ms",
+        transitionTimingFunction: "cubic-bezier(.16,1,.3,1)",
+        transitionDelay: `${delay}ms`,
+        opacity: shown ? 1 : 0,
+        transform: shown ? "none" : "translateY(18px)",
+      }}
+    >
+      {children}
+    </div>
+  );
+}
+
+// Mockup real del informe (asset del VSL) con portada + páginas asomando detrás.
+function InformeMockup({ className = "" }: { className?: string }) {
+  return (
+    <div className={`relative mx-auto w-full max-w-[260px] ${className}`}>
+      {/* páginas asomando detrás para dar sensación de documento de 5-7 págs */}
+      <div className="absolute -right-3 top-3 bottom-3 w-[88%] rounded-xl bg-white shadow-[0_10px_30px_rgba(106,23,140,.10)] rotate-[3deg]" />
+      <div className="absolute -right-1.5 top-1.5 bottom-1.5 w-[92%] rounded-xl bg-white shadow-[0_10px_30px_rgba(106,23,140,.10)] rotate-[1.5deg]" />
+      {/* eslint-disable-next-line @next/next/no-img-element */}
+      <img
+        src="/images/diagnostico-vsl/informe-mockup.png"
+        alt="Ejemplo de informe clínico de diagnóstico psicológico"
+        className="relative w-full rounded-xl shadow-[0_20px_50px_rgba(106,23,140,.18)] ring-1 ring-black/5"
+      />
+      <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap bg-[#6A178C] text-white text-[10px] font-bold px-3 py-1 rounded-full shadow-lg">
+        5-7 páginas · firmado por colegiada
+      </span>
+    </div>
+  );
+}
+
+// Tarjeta de testimonio para el carrusel.
+function TestimonioCard({ t }: { t: (typeof TESTIMONIOS)[number] }) {
+  return (
+    <div className="snap-center shrink-0 w-[85%] sm:w-[70%] md:w-auto bg-white rounded-3xl p-6 md:p-7 border border-[#6A178C]/10 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex flex-col">
+      <div className="flex items-center gap-3 mb-4">
+        {t.img ? (
+          // eslint-disable-next-line @next/next/no-img-element
+          <img src={t.img} alt={t.name} className="w-12 h-12 rounded-full object-cover ring-2 ring-[#6A178C]/15" />
+        ) : (
+          <div className="w-12 h-12 rounded-full bg-[#6A178C]/10 ring-2 ring-[#6A178C]/15 flex items-center justify-center font-serif text-lg text-[#6A178C]">{t.name.charAt(0)}</div>
+        )}
+        <div>
+          <p className="text-sm font-semibold text-black">{t.name}</p>
+          <p className="text-[11px] text-black/45">{t.context}</p>
+        </div>
+        <span className="ml-auto text-[#E8B400] text-sm">★★★★★</span>
+      </div>
+      <p className="font-serif text-lg md:text-xl text-[#6A178C] italic leading-snug">&ldquo;{t.quote}&rdquo;</p>
+      <p className="mt-3 text-sm text-black/65 leading-relaxed">{t.body}</p>
     </div>
   );
 }
@@ -155,7 +254,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
               <em className="italic text-[#E8D4F0]">qué te pasa</em>.
             </h1>
             <p className="mt-5 md:mt-6 text-base md:text-xl text-white/85 leading-relaxed max-w-xl mx-auto">
-              Un diagnóstico psicológico real — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">{precio.texto}</strong>.
+              Un diagnóstico psicológico serio — informe clínico + 50 min con tu psicóloga — por <strong className="text-white">{precio.texto}</strong>.
             </p>
 
             <div className="mt-8 flex flex-col items-center gap-3">
@@ -191,48 +290,97 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
           </div>
         </section>
 
-        {/* ═══════════ TESTIMONIO RÁPIDO (prueba social fuerte arriba) ═══════════ */}
+        {/* ═══════════ PRUEBA SOCIAL — rating destacado + carrusel de testimonios ═══════════ */}
         <section className="py-10 md:py-14 px-4 bg-[#FAF7F2]">
-          <div className="max-w-2xl mx-auto">
-            <div className="bg-white rounded-3xl p-6 md:p-8 border border-[#6A178C]/10 shadow-[0_10px_40px_rgba(106,23,140,.06)]">
-              <div className="flex items-center gap-3 mb-4">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img src="/images/por-que-diagnostico/laura.webp" alt="Laura" className="w-12 h-12 rounded-full object-cover ring-2 ring-[#6A178C]/15" />
-                <div>
-                  <p className="text-sm font-semibold text-black">Laura M., 29 años</p>
-                  <p className="text-[11px] text-black/45">tras 5 sesiones con su psicóloga asignada</p>
+          <div className="max-w-5xl mx-auto">
+            {/* Rating grande y protagonista */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 sm:gap-8 mb-8 md:mb-10">
+              <div className="text-center">
+                <div className="flex items-baseline justify-center gap-1">
+                  <span className="font-serif text-5xl md:text-6xl text-[#6A178C] leading-none">4,9</span>
+                  <span className="font-serif text-2xl md:text-3xl text-[#6A178C]/50">/5</span>
                 </div>
-                <span className="ml-auto text-[#E8B400] text-sm">★★★★★</span>
+                <div className="mt-1.5 text-[#E8B400] text-lg tracking-wide">★★★★★</div>
+                <p className="mt-1 text-sm font-semibold text-black/70">750 reseñas verificadas</p>
               </div>
-              <p className="font-serif text-lg md:text-xl text-[#6A178C] italic leading-snug">
-                &ldquo;Por primera vez sentí que estaba empezando desde algún sitio, no desde cero otra vez.&rdquo;
-              </p>
-              <p className="mt-3 text-sm text-black/65 leading-relaxed">
-                Probó dos plataformas con primera sesión gratis y lo dejó en ambas. Con el Diagnóstico recibió un informe de 6 páginas y una psicóloga que llegó a la sesión con un plan concreto.
-              </p>
+              <div className="hidden sm:block w-px h-16 bg-black/10" />
+              <div className="flex flex-col gap-2 text-sm text-black/70">
+                <span className="inline-flex items-center gap-2">🏛️ <span>Informes <strong className="text-black">firmados por colegiada</strong></span></span>
+                <span className="inline-flex items-center gap-2">👩‍⚕️ <span><strong className="text-black">+150 psicólogas</strong> colegiadas reales</span></span>
+                <span className="inline-flex items-center gap-2">🔁 <span>El <strong className="text-black">73%</strong> sigue en terapia después</span></span>
+              </div>
             </div>
+
+            {/* Carrusel de testimonios (scroll horizontal en móvil, grid en desktop) */}
+            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {TESTIMONIOS.map((t) => (
+                <TestimonioCard key={t.name} t={t} />
+              ))}
+            </div>
+            <p className="md:hidden text-center text-[11px] text-black/35 mt-2">desliza para ver más →</p>
           </div>
         </section>
 
         {/* ═══════════ QUÉ TE LLEVAS (valor antes que precio) ═══════════ */}
         <section className="py-12 md:py-16 px-4">
-          <div className="max-w-5xl mx-auto">
+          <div className="max-w-6xl mx-auto">
             <div className="text-center mb-9">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">qué te llevas por {precio.texto}</p>
-              <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">No es una sesión más. Es claridad.</h2>
+              <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">No es una sesión más.<br />Es claridad.</h2>
+              {/* Badge de los 3 entregables (mismo estilo persuasivo que el hero) */}
+              <span className="mt-4 inline-flex flex-wrap items-center justify-center gap-x-2 gap-y-1 bg-[#6A178C]/8 border border-[#6A178C]/15 text-[#6A178C] text-xs md:text-sm font-semibold px-4 py-2 rounded-full">
+                📄 Informe <span className="opacity-40">·</span> 👥 Psicóloga adecuada <span className="opacity-40">·</span> 💬 50 min de sesión
+              </span>
             </div>
-            <div className="grid md:grid-cols-3 gap-4 md:gap-6">
-              {[
-                { icon: "📄", t: "Informe clínico de 5-7 páginas", d: "Firmado por tu psicóloga colegiada. Es tuyo, lo relees cuando quieras, hagas lo que hagas después." },
-                { icon: "🎯", t: "Matching con tu psicóloga", d: "Algorítmico clínico, no la primera disponible. Por eso el 73% sigue en terapia después." },
-                { icon: "💬", t: "50 min de videollamada", d: "Tu psicóloga llega con tu informe leído y un plan. No empiezas desde cero." },
-              ].map((c) => (
-                <div key={c.t} className="bg-white rounded-3xl p-6 md:p-7 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)]">
-                  <div className="w-12 h-12 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-2xl mb-4">{c.icon}</div>
-                  <h3 className="font-serif text-xl text-black mb-2">{c.t}</h3>
-                  <p className="text-sm text-black/70 leading-relaxed">{c.d}</p>
-                </div>
-              ))}
+
+            <div className="grid md:grid-cols-2 gap-8 md:gap-12 items-center">
+              {/* Mockup real del informe — hace tangible el entregable principal */}
+              <Reveal className="order-1 md:order-none">
+                <InformeMockup className="md:max-w-[300px]" />
+              </Reveal>
+
+              {/* 3 entregables destacados */}
+              <div className="grid gap-4">
+                {[
+                  { kind: "emoji", icon: "📄", t: "Informe clínico de 5-7 páginas", d: "Firmado por tu psicóloga colegiada. Es tuyo, lo relees cuando quieras, hagas lo que hagas después." },
+                  { kind: "avatars", icon: "", t: "Matching con tu psicóloga", d: "Algorítmico clínico, no la primera disponible. Por eso el 73% sigue en terapia después." },
+                  { kind: "emoji", icon: "💬", t: "50 min de videollamada", d: "Tu psicóloga llega con tu informe leído y un plan. No empiezas desde cero." },
+                ].map((c) => (
+                  <div key={c.t} className="bg-white rounded-3xl p-6 md:p-7 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex items-start gap-4">
+                    {c.kind === "avatars" ? (
+                      <div className="flex -space-x-4 shrink-0 pt-0.5">
+                        {PSICOLOGAS.slice(0, 3).map((p) => (
+                          <div key={p.name} className="ring-2 ring-white rounded-full">
+                            <AvatarVideo src={p.video} />
+                          </div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="w-12 h-12 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-2xl shrink-0">{c.icon}</div>
+                    )}
+                    <div>
+                      <h3 className="font-serif text-xl text-black mb-1">{c.t}</h3>
+                      <p className="text-sm text-black/70 leading-relaxed">{c.d}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+        </section>
+
+        {/* ═══════════ REGALO: ACCESO A LA APP ═══════════ */}
+        <section className="px-4 pb-4 md:pb-8">
+          <div className="max-w-5xl mx-auto">
+            <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-[#6A178C] to-[#4A2368] text-white p-6 md:p-8 flex flex-col sm:flex-row items-center gap-5 shadow-[0_14px_40px_rgba(106,23,140,.18)]">
+              <div className="absolute -top-16 -right-10 w-56 h-56 rounded-full bg-white/10 blur-2xl pointer-events-none" />
+              <div className="shrink-0 w-14 h-14 rounded-2xl bg-white/15 backdrop-blur flex items-center justify-center text-3xl">🎁</div>
+              <div className="relative text-center sm:text-left flex-1">
+                <p className="font-handwriting text-lg text-[#E8D4F0]">y además, de regalo</p>
+                <h3 className="font-serif text-xl md:text-2xl leading-tight">Acceso a la app de Mente Sana</h3>
+                <p className="mt-1.5 text-sm text-white/80 leading-relaxed">Tu informe siempre a mano, ejercicios entre sesiones y seguimiento con tu psicóloga. Incluido con tu diagnóstico.</p>
+              </div>
+              <span className="relative shrink-0 inline-flex items-center gap-1.5 bg-white text-[#4A2368] text-xs font-bold px-4 py-2 rounded-full">✓ Incluido</span>
             </div>
           </div>
         </section>
@@ -245,18 +393,30 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
               <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">Cómo funciona, paso a paso</h2>
             </div>
             <div className="relative">
-              <div className="absolute left-[22px] top-6 bottom-6 w-0.5 bg-gradient-to-b from-[#6A178C]/30 via-[#6A178C]/20 to-[#6A178C]/10" />
-              {PASOS(precio).map((step) => (
-                <div key={step.n} className="flex items-start gap-4 py-2.5 relative">
-                  <div className="relative z-10 w-11 h-11 rounded-full bg-[#6A178C] text-white flex items-center justify-center text-lg shrink-0 shadow-lg shadow-[#6A178C]/25">{step.icon}</div>
-                  <div className="pt-1.5">
-                    <p className="font-serif text-base md:text-lg text-black leading-tight">
-                      <span className="text-black/40 mr-1.5 font-sans text-sm">{step.n}.</span>{step.title}
-                    </p>
-                    <p className="text-[13px] text-black/65 mt-1 leading-relaxed">{step.desc}</p>
-                  </div>
-                </div>
-              ))}
+              {/* línea vertical que conecta los pasos */}
+              <div className="absolute left-7 md:left-8 top-5 bottom-5 w-0.5 bg-gradient-to-b from-[#6A178C]/40 via-[#6A178C]/20 to-[#6A178C]/5" />
+              <div className="space-y-7 md:space-y-8">
+                {PASOS(precio).map((step, i) => {
+                  const nn = String(step.n).padStart(2, "0");
+                  return (
+                    <Reveal key={step.n} delay={i * 60}>
+                      <div className="flex items-start gap-4 md:gap-6 relative">
+                        {/* número grande protagonista + icono secundario; el fondo tapa la línea detrás */}
+                        <div className="relative z-10 shrink-0 w-14 md:w-16 flex justify-center">
+                          <div className="relative bg-[#FFFAF2] px-1">
+                            <span className="font-serif font-bold text-4xl md:text-5xl text-[#6A178C] leading-none tabular-nums">{nn}</span>
+                            <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center text-[13px] ring-1 ring-[#6A178C]/10">{step.icon}</span>
+                          </div>
+                        </div>
+                        <div className="pt-1.5 md:pt-2.5">
+                          <h3 className="font-serif text-lg md:text-xl text-black leading-tight">{step.title}</h3>
+                          <p className="text-sm text-black/65 mt-1 leading-relaxed">{step.desc}</p>
+                        </div>
+                      </div>
+                    </Reveal>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </section>
@@ -269,9 +429,10 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
               <h2 className="font-serif text-[1.6rem] md:text-[2.5rem] leading-[1.15] text-black">Psicólogas que te atenderán</h2>
               <p className="mt-2 text-sm text-black/60">Todas colegiadas. Media de <strong>10 años</strong> de experiencia.</p>
             </div>
-            <div className="grid grid-cols-3 md:grid-cols-5 gap-3 md:gap-4 max-w-4xl mx-auto">
+            {/* flex + justify-center: las dos últimas quedan centradas (grid equilibrado) */}
+            <div className="flex flex-wrap justify-center gap-3 md:gap-4 max-w-4xl mx-auto">
               {PSICOLOGAS.map((p) => (
-                <div key={p.name} className="bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04]">
+                <div key={p.name} className="w-[calc(33.333%-0.5rem)] md:w-[calc(20%-0.8rem)] bg-white rounded-2xl overflow-hidden shadow-[0_4px_20px_rgba(106,23,140,.04)] border border-black/[0.04]">
                   <div className="relative aspect-square overflow-hidden bg-[#6A178C]/5">
                     <PsychVideo src={p.video} />
                     <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/40 via-transparent to-transparent" />
@@ -279,6 +440,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                   </div>
                   <div className="p-2 text-center">
                     <p className="font-serif text-[12px] md:text-sm text-black leading-tight">{p.name}</p>
+                    <p className="text-[9px] md:text-[10px] text-black/45 mt-0.5">Psicóloga colegiada</p>
                   </div>
                 </div>
               ))}
@@ -315,17 +477,49 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
         {/* ═══════════ CTA FINAL ═══════════ */}
         <section id="cta-final" className="py-14 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#6A178C] opacity-15 blur-3xl pointer-events-none" />
-          <div className="max-w-3xl mx-auto text-center relative">
-            <p className="font-handwriting text-xl text-[#E8D4F0] mb-3">empieza hoy</p>
-            <h2 className="font-serif text-[2rem] md:text-[3rem] leading-[1.15] mb-5">
-              {precio.texto} para entender<br /><em className="italic text-[#E8D4F0]">qué te pasa</em>.
-            </h2>
-            <p className="text-base md:text-lg text-white/75 max-w-lg mx-auto mb-9">Informe + matching + 50 min con tu psicóloga.</p>
-            <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
-              className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
-              Empezar ahora ({precio.texto}) →
-            </Link>
-            <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
+          <div className="max-w-4xl mx-auto relative">
+
+            {/* Resumen de valor antes del CTA: mockup del informe + checklist */}
+            <div className="grid md:grid-cols-2 gap-8 md:gap-10 items-center mb-11 md:mb-14">
+              <Reveal className="order-1 md:order-2">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src="/images/diagnostico-vsl/bodegon-informe.png"
+                  alt="Informe de diagnóstico psicológico junto a la videollamada con tu psicóloga"
+                  className="w-full max-w-[360px] mx-auto rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,.35)] ring-1 ring-white/10"
+                />
+              </Reveal>
+              <div className="order-2 md:order-1 text-center md:text-left">
+                <p className="font-handwriting text-lg text-[#E8D4F0] mb-2">esto es lo que te llevas</p>
+                <p className="font-serif text-2xl md:text-[2rem] leading-tight mb-5">Por {precio.texto} recibes:</p>
+                <ul className="space-y-3 max-w-sm mx-auto md:mx-0 text-left">
+                  {[
+                    "Informe clínico de 5-7 páginas",
+                    "Psicóloga seleccionada para ti",
+                    "50 min de videollamada",
+                    "Acceso a la app de regalo",
+                    "Pago único · Sin suscripción",
+                  ].map((x) => (
+                    <li key={x} className="flex items-start gap-3">
+                      <span className="shrink-0 w-6 h-6 rounded-full bg-white/15 flex items-center justify-center text-[13px] text-[#E8D4F0]">✓</span>
+                      <span className="text-sm md:text-base text-white/90 leading-snug">{x}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+
+            {/* CTA */}
+            <div className="text-center">
+              <h2 className="font-serif text-[2rem] md:text-[3rem] leading-[1.15] mb-6">
+                {precio.texto} para entender<br /><em className="italic text-[#E8D4F0]">qué te pasa</em>.
+              </h2>
+              <Link href={ctaHref(CTA_HREF)} onClick={() => handleCTA("final")}
+                className="inline-block bg-white text-[#4A2368] font-bold rounded-full px-10 py-4 text-base md:text-lg hover:-translate-y-0.5 transition-all shadow-[0_10px_40px_rgba(255,255,255,.25)]">
+                Empezar ahora ({precio.texto}) →
+              </Link>
+              <p className="mt-4 text-xs text-white/55">Pago único · Sin suscripción</p>
+            </div>
           </div>
         </section>
 
