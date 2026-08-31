@@ -21,12 +21,13 @@ import JustificacionPrecio from "@/components/JustificacionPrecio";
 
 const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
 
+// Focos reales tomados de psychologists_mentesana (misma fuente que /psicologas).
 const PSICOLOGAS = [
-  { name: "Adriana Salas", video: `${PSY_CDN}/adriana-salas.mp4`, focos: "Ansiedad · Autoestima" },
-  { name: "Alejandra Elías", video: `${PSY_CDN}/alejandra-elias.mp4`, focos: "Relaciones · Duelo" },
-  { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4`, focos: "Trauma · Estrés" },
-  { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4`, focos: "Depresión · Ansiedad" },
-  { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4`, focos: "Autoestima · Pareja" },
+  { name: "Adriana Salas", video: `${PSY_CDN}/adriana-salas.mp4`, focos: "Ansiedad · Pareja · Estrés laboral" },
+  { name: "Alejandra Elías", video: `${PSY_CDN}/alejandra-elias.mp4`, focos: "Ansiedad · Depresión · Autoestima" },
+  { name: "Giovanna Vago", video: `${PSY_CDN}/giovanna-vago.mp4`, focos: "Ansiedad · Depresión · Duelo" },
+  { name: "Juliana Urioste", video: `${PSY_CDN}/juliana-urioste.mp4`, focos: "Trauma · Apego · Estrés" },
+  { name: "Leidy Vicuña", video: `${PSY_CDN}/leidy-vicuna.mp4`, focos: "Pareja · Terapia general" },
 ];
 
 // Prueba social: varios testimonios en carrusel (uno solo no aporta confianza).
@@ -441,6 +442,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                   <div className="p-2 text-center">
                     <p className="font-serif text-[12px] md:text-sm text-black leading-tight">{p.name}</p>
                     <p className="text-[9px] md:text-[10px] text-black/45 mt-0.5">Psicóloga colegiada</p>
+                    <p className="text-[9px] md:text-[10px] font-semibold text-[#6A178C] mt-1 leading-tight">{p.focos}</p>
                   </div>
                 </div>
               ))}
