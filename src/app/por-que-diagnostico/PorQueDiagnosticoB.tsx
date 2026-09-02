@@ -53,6 +53,27 @@ const TESTIMONIOS = [
     quote: "Nunca había ido al psicólogo. Empezar por aquí me quitó el miedo.",
     body: "Las 5 preguntas fueron fáciles. El informe le explicó qué le pasaba sin etiquetas dramáticas y con un camino claro para seguir.",
   },
+  {
+    name: "Sara P., 26 años",
+    img: null,
+    context: "ansiedad · 3 sesiones",
+    quote: "Llegué sin saber ni cómo explicar lo que sentía. Salí con un nombre y un plan.",
+    body: "El informe le ordenó lo que llevaba meses dando vueltas. Su psicóloga ya lo había leído antes de la primera videollamada.",
+  },
+  {
+    name: "David L., 38 años",
+    img: null,
+    context: "diagnóstico + bono de 4 sesiones",
+    quote: "Me daba pereza otra plataforma más. Esta fue distinta desde el primer día.",
+    body: "Valoró que no fuese la primera psicóloga libre, sino una elegida para su caso. Sigue en terapia tres meses después.",
+  },
+  {
+    name: "Nuria G., 31 años",
+    img: null,
+    context: "primera vez en terapia",
+    quote: "Tener el informe por escrito me dio la seguridad que necesitaba para empezar.",
+    body: "Las 5 preguntas le costaron 2 minutos. El diagnóstico le explicó qué le pasaba sin dramatismos y con pasos concretos.",
+  },
 ];
 
 const PASOS = (precio: PrecioDiagnostico) => [
@@ -162,10 +183,32 @@ function InformeMockup({ className = "" }: { className?: string }) {
   );
 }
 
+// Mockup de videollamada dentro de un portátil (hace tangible los "50 min de sesión").
+function LaptopVideollamada({ src }: { src: string }) {
+  return (
+    <div className="w-full max-w-[230px] mx-auto select-none">
+      {/* pantalla */}
+      <div className="relative rounded-t-xl border-[7px] border-b-0 border-[#141018] bg-black overflow-hidden aspect-video shadow-[0_14px_40px_rgba(106,23,140,.18)]">
+        <PsychVideo src={src} />
+        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+        {/* badge "en llamada" */}
+        <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/45 backdrop-blur text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
+          <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> En sesión · 50 min
+        </div>
+        {/* auto-vista (PIP) */}
+        <div className="absolute bottom-2 right-2 w-9 h-11 rounded-md overflow-hidden ring-1 ring-white/40 bg-gradient-to-br from-[#8B2FB5]/70 to-[#4A2368]/70 backdrop-blur flex items-center justify-center text-white/70 text-[10px]">tú</div>
+      </div>
+      {/* base del portátil */}
+      <div className="mx-auto h-2 rounded-b-[10px] bg-gradient-to-b from-[#2a2530] to-[#141018]" />
+      <div className="mx-auto h-1 w-[62%] rounded-b-lg bg-[#0d0b10]" />
+    </div>
+  );
+}
+
 // Tarjeta de testimonio para el carrusel.
 function TestimonioCard({ t }: { t: (typeof TESTIMONIOS)[number] }) {
   return (
-    <div className="snap-center shrink-0 w-[85%] sm:w-[70%] md:w-auto bg-white rounded-3xl p-6 md:p-7 border border-[#6A178C]/10 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex flex-col">
+    <div className="snap-center shrink-0 w-[85%] sm:w-[55%] md:w-[calc(33.333%-0.75rem)] bg-white rounded-3xl p-6 md:p-7 border border-[#6A178C]/10 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex flex-col">
       <div className="flex items-center gap-3 mb-4">
         {t.img ? (
           // eslint-disable-next-line @next/next/no-img-element
@@ -188,6 +231,8 @@ function TestimonioCard({ t }: { t: (typeof TESTIMONIOS)[number] }) {
 export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { precio?: PrecioDiagnostico } = {}) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
+  const carRef = useRef<HTMLDivElement>(null);
+  const scrollCar = (dir: number) => carRef.current?.scrollBy({ left: dir * carRef.current.clientWidth * 0.85, behavior: "smooth" });
 
   useEffect(() => {
     track("view_intermediate_landing", {
@@ -312,13 +357,20 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
               </div>
             </div>
 
-            {/* Carrusel de testimonios (scroll horizontal en móvil, grid en desktop) */}
-            <div className="flex gap-4 overflow-x-auto snap-x snap-mandatory md:grid md:grid-cols-3 md:overflow-visible pb-2 -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {TESTIMONIOS.map((t) => (
-                <TestimonioCard key={t.name} t={t} />
-              ))}
+            {/* Carrusel de testimonios (6): scroll horizontal + flechas para ver el resto */}
+            <div className="relative">
+              <div ref={carRef} className="flex gap-4 overflow-x-auto snap-x snap-mandatory pb-2 -mx-4 px-4 md:mx-0 md:px-0 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                {TESTIMONIOS.map((t) => (
+                  <TestimonioCard key={t.name} t={t} />
+                ))}
+              </div>
+              {/* Flechas (desktop) para recorrer los 6 testimonios */}
+              <button type="button" aria-label="Ver testimonios anteriores" onClick={() => scrollCar(-1)}
+                className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white shadow-[0_6px_20px_rgba(106,23,140,.15)] border border-[#6A178C]/10 items-center justify-center text-[#6A178C] text-xl hover:-translate-y-[calc(50%+2px)] transition-transform z-10">‹</button>
+              <button type="button" aria-label="Ver más testimonios" onClick={() => scrollCar(1)}
+                className="hidden md:flex absolute -right-4 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white shadow-[0_6px_20px_rgba(106,23,140,.15)] border border-[#6A178C]/10 items-center justify-center text-[#6A178C] text-xl hover:-translate-y-[calc(50%+2px)] transition-transform z-10">›</button>
             </div>
-            <p className="md:hidden text-center text-[11px] text-black/35 mt-2">desliza para ver más →</p>
+            <p className="text-center text-[11px] text-black/35 mt-2"><span className="md:hidden">desliza para ver más →</span><span className="hidden md:inline">usa las flechas para ver los 6 testimonios →</span></p>
           </div>
         </section>
 
@@ -340,24 +392,28 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                 <InformeMockup className="md:max-w-[300px]" />
               </Reveal>
 
-              {/* 3 entregables destacados */}
+              {/* 3 entregables destacados — imagen ENCIMA (más estético), texto debajo */}
               <div className="grid gap-4">
                 {[
                   { kind: "emoji", icon: "📄", t: "Informe clínico de 5-7 páginas", d: "Firmado por tu psicóloga colegiada. Es tuyo, lo relees cuando quieras, hagas lo que hagas después." },
                   { kind: "avatars", icon: "", t: "Matching con tu psicóloga", d: "Algorítmico clínico, no la primera disponible. Por eso el 73% sigue en terapia después." },
-                  { kind: "emoji", icon: "💬", t: "50 min de videollamada", d: "Tu psicóloga llega con tu informe leído y un plan. No empiezas desde cero." },
+                  { kind: "laptop", icon: "💬", t: "50 min de videollamada", d: "Tu psicóloga llega con tu informe leído y un plan. No empiezas desde cero." },
                 ].map((c) => (
-                  <div key={c.t} className="bg-white rounded-3xl p-6 md:p-7 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex items-start gap-4">
+                  <div key={c.t} className="bg-white rounded-3xl p-6 md:p-7 border border-black/5 shadow-[0_10px_40px_rgba(106,23,140,.06)] flex flex-col items-center text-center gap-4">
+                    {/* visual encima */}
                     {c.kind === "avatars" ? (
-                      <div className="flex -space-x-4 shrink-0 pt-0.5">
-                        {PSICOLOGAS.slice(0, 3).map((p) => (
-                          <div key={p.name} className="ring-2 ring-white rounded-full">
+                      <div className="flex -space-x-4">
+                        {PSICOLOGAS.slice(0, 4).map((p) => (
+                          <div key={p.name} className="ring-2 ring-white rounded-full scale-110">
                             <AvatarVideo src={p.video} />
                           </div>
                         ))}
+                        <div className="w-11 h-11 rounded-full bg-[#6A178C]/10 ring-2 ring-white flex items-center justify-center text-[10px] font-bold text-[#6A178C]">+150</div>
                       </div>
+                    ) : c.kind === "laptop" ? (
+                      <LaptopVideollamada src={PSICOLOGAS[2].video} />
                     ) : (
-                      <div className="w-12 h-12 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-2xl shrink-0">{c.icon}</div>
+                      <div className="w-16 h-16 rounded-2xl bg-[#6A178C]/10 flex items-center justify-center text-3xl">{c.icon}</div>
                     )}
                     <div>
                       <h3 className="font-serif text-xl text-black mb-1">{c.t}</h3>
@@ -386,8 +442,8 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
           </div>
         </section>
 
-        {/* ═══════════ CÓMO FUNCIONA (baja; precio reencuadrado) ═══════════ */}
-        <section className="py-12 md:py-16 px-4">
+        {/* ═══════════ CÓMO FUNCIONA (baja; precio reencuadrado) — fondo lila para separarla ═══════════ */}
+        <section className="py-12 md:py-16 px-4 bg-[#F3ECF9]">
           <div className="max-w-3xl mx-auto">
             <div className="text-center mb-9">
               <p className="font-handwriting text-xl text-[#6A178C] mb-2">así de fácil</p>
@@ -402,15 +458,15 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                   return (
                     <Reveal key={step.n} delay={i * 60}>
                       <div className="flex items-start gap-4 md:gap-6 relative">
-                        {/* número grande protagonista + icono secundario; el fondo tapa la línea detrás */}
+                        {/* número protagonista; el fondo tapa la línea detrás */}
                         <div className="relative z-10 shrink-0 w-14 md:w-16 flex justify-center">
-                          <div className="relative bg-[#FFFAF2] px-1">
+                          <div className="relative bg-[#F3ECF9] px-1">
                             <span className="font-serif font-bold text-4xl md:text-5xl text-[#6A178C] leading-none tabular-nums">{nn}</span>
-                            <span className="absolute -bottom-1.5 -right-1.5 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center text-[13px] ring-1 ring-[#6A178C]/10">{step.icon}</span>
                           </div>
                         </div>
                         <div className="pt-1.5 md:pt-2.5">
-                          <h3 className="font-serif text-lg md:text-xl text-black leading-tight">{step.title}</h3>
+                          {/* icono a la izquierda del título para que cada paso se lea de un vistazo */}
+                          <h3 className="font-serif text-lg md:text-xl text-black leading-tight"><span className="mr-2" aria-hidden>{step.icon}</span>{step.title}</h3>
                           <p className="text-sm text-black/65 mt-1 leading-relaxed">{step.desc}</p>
                         </div>
                       </div>
@@ -477,7 +533,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
         </section>
 
         {/* ═══════════ CTA FINAL ═══════════ */}
-        <section id="cta-final" className="py-14 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
+        <section id="cta-final" className="py-14 md:py-20 px-4 bg-gradient-to-br from-[#08030c] via-[#170625] to-[#301049] text-white relative overflow-hidden">
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#6A178C] opacity-15 blur-3xl pointer-events-none" />
           <div className="max-w-4xl mx-auto relative">
 
