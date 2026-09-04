@@ -93,7 +93,7 @@ const FAQ = [
   { q: "¿Quién firma el informe? ¿Es generado por IA?", a: "Lo firma una psicóloga senior del equipo, colegiada y habilitada. El sistema estructura la información desde tus respuestas, pero la firma y la validación final son humanas — siempre." },
 ];
 
-function PsychVideo({ src }: { src: string }) {
+function PsychVideo({ src, objectPosition = "center" }: { src: string; objectPosition?: string }) {
   const ref = useRef<HTMLVideoElement>(null);
   useEffect(() => {
     const el = ref.current;
@@ -107,7 +107,7 @@ function PsychVideo({ src }: { src: string }) {
     io.observe(el);
     return () => io.disconnect();
   }, [src]);
-  return <video ref={ref} muted loop playsInline preload="metadata" className="absolute inset-0 w-full h-full object-cover" />;
+  return <video ref={ref} muted loop playsInline preload="metadata" style={{ objectPosition }} className="absolute inset-0 w-full h-full object-cover" />;
 }
 
 function AvatarVideo({ src }: { src: string }) {
@@ -186,10 +186,13 @@ function InformeMockup({ className = "" }: { className?: string }) {
 function LaptopVideollamada({ src }: { src: string }) {
   return (
     <div className="w-full max-w-[230px] mx-auto select-none">
-      {/* pantalla */}
-      <div className="relative rounded-t-xl border-[7px] border-b-0 border-[#141018] bg-black overflow-hidden aspect-video shadow-[0_14px_40px_rgba(106,23,140,.18)]">
-        <PsychVideo src={src} />
-        <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/30 via-transparent to-transparent" />
+      {/* pantalla (UI de videollamada) */}
+      <div className="relative rounded-t-xl border-[7px] border-b-0 border-[#141018] bg-[#0d0b12] overflow-hidden aspect-video shadow-[0_14px_40px_rgba(106,23,140,.18)] flex items-center justify-center">
+        {/* tile de la psicóloga en retrato, encuadrado a la cara (no selfie recortado) */}
+        <div className="relative h-[86%] aspect-[3/4] rounded-lg overflow-hidden ring-1 ring-white/10">
+          <PsychVideo src={src} objectPosition="center 22%" />
+          <div className="absolute inset-0 pointer-events-none bg-gradient-to-t from-black/25 via-transparent to-transparent" />
+        </div>
         {/* badge "en llamada" */}
         <div className="absolute top-2 left-2 inline-flex items-center gap-1 bg-black/45 backdrop-blur text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-full">
           <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" /> En sesión · 50 min
