@@ -328,7 +328,7 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
                 <p className="text-sm text-white/80 text-left leading-tight">Psicólogas<br /><span className="text-xs text-white/55">colegiadas reales</span></p>
               </div>
               <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-2 text-sm">
-                <span className="text-[#E8D4F0] font-semibold">★ 4,9/5 <span className="text-white/55 font-normal">· 750 reseñas</span></span>
+                <span className="text-[#E8D4F0] font-semibold">★ 4,9/5 <span className="text-white/55 font-normal">· +8.000 pacientes hacen terapia con nosotros</span></span>
                 <span className="text-white/70">🏛️ Firmado por colegiada</span>
               </div>
             </div>
