@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
-import Footer from "@/components/Footer";
 import { track } from "@/lib/tracking";
 import { PARAM_VARIANTE, PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
 import JustificacionPrecio from "@/components/JustificacionPrecio";
@@ -582,8 +581,6 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
         </section>
 
         <JustificacionPrecio precio={precio} />
-
-        <Footer />
       </main>
 
       {/* ═══════════ STICKY CTA PERSISTENTE (móvil + desktop) ═══════════ */}
