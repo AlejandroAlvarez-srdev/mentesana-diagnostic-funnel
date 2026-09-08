@@ -238,6 +238,19 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     return () => { cancelled = true; };
   }, []);
 
+  // A/B "flujo directo": si la landing envía ?directo=1 (o ?paso=test) saltamos la
+  // intro (paso 2) y entramos directo a las 5 preguntas (paso 3). OPT-IN — sin el
+  // parámetro el comportamiento por defecto (phase="intro") NO cambia nada.
+  useEffect(() => {
+    try {
+      const p = new URLSearchParams(window.location.search);
+      if (p.get("directo") === "1" || p.get("paso") === "test") {
+        setPhase("questions");
+        track("start_matching", { source: "landing_directo" });
+      }
+    } catch { /* noop */ }
+  }, []);
+
   // Carga slots reales cuando entramos a la fase "schedule"
   useEffect(() => {
     if (phase !== "schedule") return;

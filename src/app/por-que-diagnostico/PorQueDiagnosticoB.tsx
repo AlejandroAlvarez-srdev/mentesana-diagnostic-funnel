@@ -230,7 +230,7 @@ function TestimonioCard({ t }: { t: (typeof TESTIMONIOS)[number] }) {
   );
 }
 
-export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { precio?: PrecioDiagnostico } = {}) {
+export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR, ctaBase, flow }: { precio?: PrecioDiagnostico; ctaBase?: string; flow?: string } = {}) {
   const [openFaq, setOpenFaq] = useState<number | null>(null);
   const [showStickyCTA, setShowStickyCTA] = useState(false);
   const carRef = useRef<HTMLDivElement>(null);
@@ -268,21 +268,22 @@ export default function PorQueDiagnosticoB({ precio = PRECIO_ESTANDAR }: { preci
     // hidratar, quien pincha rapido acabaria en el checkout de 9,99 desde una
     // landing de 29,99.
     const pv = precio.variante === "estandar" ? "" : `${PARAM_VARIANTE}=${precio.variante}`;
-    if (typeof window === "undefined") return pv ? `${base}?${pv}` : base;
+    const sep = base.includes("?") ? "&" : "?"; // el base puede ya traer query (?directo=1)
+    if (typeof window === "undefined") return pv ? `${base}${sep}${pv}` : base;
     const params = new URLSearchParams(window.location.search);
     const keep = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
     const qs = [...keep.filter((k) => params.get(k)).map((k) => `${k}=${encodeURIComponent(params.get(k)!)}`), pv].filter(Boolean).join("&");
-    return qs ? `${base}?${qs}` : base;
+    return qs ? `${base}${sep}${qs}` : base;
   }
 
-  const handleCTA = (position: string) => track("click_cta_intermediate", { position });
+  const handleCTA = (position: string) => track("click_cta_intermediate", { position, ...(flow ? { flow } : {}) });
   const toggleFaq = (i: number) => {
     const next = openFaq === i ? null : i;
     setOpenFaq(next);
     if (next !== null) track("faq_expand", { index: i, question: FAQ[i].q });
   };
 
-  const CTA_HREF = "/test-diagnostico";
+  const CTA_HREF = ctaBase ?? "/test-diagnostico";
 
   return (
     <>
