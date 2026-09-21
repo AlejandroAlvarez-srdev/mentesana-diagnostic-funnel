@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { sendCAPILead, sendCAPISchedule, sendCAPIContact, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
+import { sendCAPILead, sendCAPISchedule, sendCAPIContact, sendCAPICustom, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -139,43 +139,22 @@ export async function POST(req: NextRequest) {
       client_ip_address: ip || undefined,
       client_user_agent: ua,
     };
-    // Lead: dejó el email.
-    try {
-      capi.lead = await sendCAPILead({
-        event_id: `lead_${emailHash}`,
-        event_source_url: srcUrl,
-        content_name: "Diagnóstico 9,99 — email gate",
-        value: 0,
-        user_data: ud,
-        test_event_code: testCode,
-      });
-    } catch (e) { capi.lead = { ok: false, error: (e as Error).message }; }
-    // Contact: dejó el email. NO es evento restringido → Meta lo DEJA PASAR aunque el dataset
-    // sea de salud (donde Lead se suprime). Es la conversión utilizable del 9,99. Mismo
-    // event_id contact_<emailHash> que el navegador (email_capturado→Contact) → dedup.
-    try {
-      capi.contact = await sendCAPIContact({
-        event_id: `contact_${emailHash}`,
-        event_source_url: srcUrl,
-        content_name: "Diagnóstico 9,99 — dejó el email",
-        value: 0,
-        user_data: ud,
-        test_event_code: testCode,
-      });
-    } catch (e) { capi.contact = { ok: false, error: (e as Error).message }; }
+    // Disparamos todos los eventos EN PARALELO (no bloquear el guardado del email con varios
+    // fetches secuenciales a Meta). Lead/Schedule/Contact van por si el CEO quita la restricción
+    // de salud del dataset; el CUSTOM email_capturado es el que SIEMPRE pasa (los custom no se
+    // suprimen) → es la conversión utilizable hoy. Mismos event_id que el navegador → dedup.
+    // OJO custom_data: sin datos de salud (perfil/scores) ni PII, o Meta suprime el evento.
+    const capture = (k: string) => (r: unknown) => { capi[k] = r; };
+    const jobs: Promise<unknown>[] = [
+      sendCAPILead({ event_id: `lead_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — email gate", value: 0, user_data: ud, test_event_code: testCode }).then(capture("lead")),
+      sendCAPIContact({ event_id: `contact_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — dejó el email", value: 0, user_data: ud, test_event_code: testCode }).then(capture("contact")),
+      sendCAPICustom("email_capturado", { event_id: `email_${emailHash}`, event_source_url: srcUrl, value: 0, user_data: ud, test_event_code: testCode }).then(capture("email_capturado")),
+    ];
     // Schedule: eligió hueco (fecha + hora). Mismo event_id que el booking → sin doble conteo.
     if (scheduledDate && scheduledTime) {
-      try {
-        capi.schedule = await sendCAPISchedule({
-          event_id: `schedule_${emailHash}`,
-          event_source_url: srcUrl,
-          content_name: "Diagnóstico 9,99 — slot elegido",
-          value: 9.99,
-          user_data: ud,
-          test_event_code: testCode,
-        });
-      } catch (e) { capi.schedule = { ok: false, error: (e as Error).message }; }
+      jobs.push(sendCAPISchedule({ event_id: `schedule_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — slot elegido", value: 9.99, user_data: ud, test_event_code: testCode }).then(capture("schedule")));
     }
+    await Promise.allSettled(jobs);
   }
 
   // lead_event_id: el navegador puede reusar el MISMO id para su pixel Lead → dedup total.
