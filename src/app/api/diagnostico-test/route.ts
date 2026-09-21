@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { sendCAPILead } from "@/lib/meta-capi-server";
+import { sendCAPILead, sendCAPISchedule, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -109,38 +109,62 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  // ── Meta CAPI: Lead SERVER-SIDE ─────────────────────────────────────────────
-  // El pixel client-side (view_email_gate→Lead) solo dispara con consentimiento
-  // marketing y se pierde >50% (Consent Mode default-denied + ITP/iOS). Aquí mandamos
-  // el Lead server-side cuando la persona DEJA EL EMAIL en el embudo del 9,99 → llega a
-  // Meta aunque el navegador bloquee el pixel. Matching por email + fbc/fbp (cookies del
-  // mismo dominio) + IP/UA. event_id determinista por email → Meta deduplica los reintentos.
+  // ── Meta CAPI SERVER-SIDE: Lead (deja email) + Schedule (elige slot) ─────────
+  // El pixel client-side solo dispara con consentimiento marketing y se pierde >50%
+  // (Consent Mode default-denied + ITP/iOS). Aquí mandamos Lead y Schedule server-side
+  // → llegan a Meta aunque el navegador bloquee el pixel. Matching por email + fbc/fbp
+  // (cookies del mismo dominio) + IP/UA. event_id determinista por email → dedup con el
+  // Schedule del booking (amelia-create-booking usa el MISMO id).
+  const capi: Record<string, unknown> = {};
+  let leadEventId: string | undefined;
   if (isTestDiagnostico && email && !userEmail.startsWith("anon-")) {
+    const c = req.cookies;
+    const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+    const ua = req.headers.get("user-agent") || undefined;
+    const srcUrl = req.headers.get("referer") || "https://www.mentesanapsicologia.com/test-diagnostico";
+    const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
+    const emailHash = createHash("sha256").update(userEmail).digest("hex").slice(0, 24);
+    leadEventId = `lead_${emailHash}`;
+    const testCode = metaTestCodeFromCookie(req.headers.get("cookie"));
+    const ud = {
+      email: userEmail,
+      phone: phone || undefined,
+      fn: fn || undefined,
+      ln: lnParts.join(" ") || undefined,
+      country: "ES",
+      fbc: c.get("_fbc")?.value,
+      fbp: c.get("_fbp")?.value,
+      client_ip_address: ip || undefined,
+      client_user_agent: ua,
+    };
+    // Lead: dejó el email.
     try {
-      const c = req.cookies;
-      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
-      const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
-      await sendCAPILead({
-        event_id: `lead_${createHash("sha256").update(userEmail).digest("hex").slice(0, 24)}`,
-        event_source_url: req.headers.get("referer") || "https://www.mentesanapsicologia.com/test-diagnostico",
+      capi.lead = await sendCAPILead({
+        event_id: `lead_${emailHash}`,
+        event_source_url: srcUrl,
         content_name: "Diagnóstico 9,99 — email gate",
         value: 0,
-        user_data: {
-          email: userEmail,
-          phone: phone || undefined,
-          fn: fn || undefined,
-          ln: lnParts.join(" ") || undefined,
-          country: "ES",
-          fbc: c.get("_fbc")?.value,
-          fbp: c.get("_fbp")?.value,
-          client_ip_address: ip || undefined,
-          client_user_agent: req.headers.get("user-agent") || undefined,
-        },
+        user_data: ud,
+        test_event_code: testCode,
       });
-    } catch (e) {
-      console.warn("[diagnostico-test] sendCAPILead falló (no bloqueante):", (e as Error).message);
+    } catch (e) { capi.lead = { ok: false, error: (e as Error).message }; }
+    // Schedule: eligió hueco (fecha + hora). Mismo event_id que el booking → sin doble conteo.
+    if (scheduledDate && scheduledTime) {
+      try {
+        capi.schedule = await sendCAPISchedule({
+          event_id: `schedule_${emailHash}`,
+          event_source_url: srcUrl,
+          content_name: "Diagnóstico 9,99 — slot elegido",
+          value: 9.99,
+          user_data: ud,
+          test_event_code: testCode,
+        });
+      } catch (e) { capi.schedule = { ok: false, error: (e as Error).message }; }
     }
   }
 
-  return NextResponse.json({ success: true });
+  // lead_event_id: el navegador puede reusar el MISMO id para su pixel Lead → dedup total.
+  // ?debug=capi además devuelve el resultado real del CAPI (para verificar sin mirar logs).
+  const debug = new URL(req.url).searchParams.get("debug") === "capi";
+  return NextResponse.json({ success: true, lead_event_id: leadEventId, ...(debug ? { capi } : {}) });
 }
