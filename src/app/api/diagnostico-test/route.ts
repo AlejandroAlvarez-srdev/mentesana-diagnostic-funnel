@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
-import { sendCAPILead, sendCAPISchedule, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
+import { sendCAPILead, sendCAPISchedule, sendCAPIContact, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -123,7 +123,9 @@ export async function POST(req: NextRequest) {
     const ua = req.headers.get("user-agent") || undefined;
     const srcUrl = req.headers.get("referer") || "https://www.mentesanapsicologia.com/test-diagnostico";
     const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
-    const emailHash = createHash("sha256").update(userEmail).digest("hex").slice(0, 24);
+    // .trim() ANTES de hashear: el navegador usa sha256(email.trim().toLowerCase()); si el
+    // usuario mete espacios al final y aquí no trimáramos, Lead/Contact NO deduplicarían.
+    const emailHash = createHash("sha256").update(userEmail.trim()).digest("hex").slice(0, 24);
     leadEventId = `lead_${emailHash}`;
     const testCode = metaTestCodeFromCookie(req.headers.get("cookie"));
     const ud = {
@@ -148,6 +150,19 @@ export async function POST(req: NextRequest) {
         test_event_code: testCode,
       });
     } catch (e) { capi.lead = { ok: false, error: (e as Error).message }; }
+    // Contact: dejó el email. NO es evento restringido → Meta lo DEJA PASAR aunque el dataset
+    // sea de salud (donde Lead se suprime). Es la conversión utilizable del 9,99. Mismo
+    // event_id contact_<emailHash> que el navegador (email_capturado→Contact) → dedup.
+    try {
+      capi.contact = await sendCAPIContact({
+        event_id: `contact_${emailHash}`,
+        event_source_url: srcUrl,
+        content_name: "Diagnóstico 9,99 — dejó el email",
+        value: 0,
+        user_data: ud,
+        test_event_code: testCode,
+      });
+    } catch (e) { capi.contact = { ok: false, error: (e as Error).message }; }
     // Schedule: eligió hueco (fecha + hora). Mismo event_id que el booking → sin doble conteo.
     if (scheduledDate && scheduledTime) {
       try {
