@@ -1,5 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
+import { createHash } from "crypto";
+import { sendCAPILead } from "@/lib/meta-capi-server";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -104,6 +106,39 @@ export async function POST(req: NextRequest) {
         perfil_nombre: typeof profile === "object" ? profile?.nombre : null,
         perfil_nivel_urgencia: urgency_level || null,
       });
+    }
+  }
+
+  // ── Meta CAPI: Lead SERVER-SIDE ─────────────────────────────────────────────
+  // El pixel client-side (view_email_gate→Lead) solo dispara con consentimiento
+  // marketing y se pierde >50% (Consent Mode default-denied + ITP/iOS). Aquí mandamos
+  // el Lead server-side cuando la persona DEJA EL EMAIL en el embudo del 9,99 → llega a
+  // Meta aunque el navegador bloquee el pixel. Matching por email + fbc/fbp (cookies del
+  // mismo dominio) + IP/UA. event_id determinista por email → Meta deduplica los reintentos.
+  if (isTestDiagnostico && email && !userEmail.startsWith("anon-")) {
+    try {
+      const c = req.cookies;
+      const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
+      const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
+      await sendCAPILead({
+        event_id: `lead_${createHash("sha256").update(userEmail).digest("hex").slice(0, 24)}`,
+        event_source_url: req.headers.get("referer") || "https://www.mentesanapsicologia.com/test-diagnostico",
+        content_name: "Diagnóstico 9,99 — email gate",
+        value: 0,
+        user_data: {
+          email: userEmail,
+          phone: phone || undefined,
+          fn: fn || undefined,
+          ln: lnParts.join(" ") || undefined,
+          country: "ES",
+          fbc: c.get("_fbc")?.value,
+          fbp: c.get("_fbp")?.value,
+          client_ip_address: ip || undefined,
+          client_user_agent: req.headers.get("user-agent") || undefined,
+        },
+      });
+    } catch (e) {
+      console.warn("[diagnostico-test] sendCAPILead falló (no bloqueante):", (e as Error).message);
     }
   }
 
