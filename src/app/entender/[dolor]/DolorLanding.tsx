@@ -15,6 +15,10 @@ const PRECIO = PRECIO_ESTANDAR.texto;
 const PSY_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
 // Dato de marca de la base (/por-que-diagnostico): adherencia post-diagnóstico.
 const PCT_SIGUE_TERAPIA = "73%";
+// Capturas reales de reseñas publicadas en Trustpilot (public/images/reviews). Se muestran
+// como selección, sin atribuir una media global de Trustpilot.
+const TRUSTPILOT_URL = "https://es.trustpilot.com/review/mentesanapsicologia.com";
+const TRUSTPILOT_CAPTURAS = Array.from({ length: 11 }, (_, i) => i + 1);
 
 function PsychVideo({ src }: { src: string }) {
   const ref = useRef<HTMLVideoElement>(null);
@@ -177,6 +181,26 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
                 </figure>
               ))}
             </div>
+          </div>
+
+          {/* Reseñas reales: capturas de Trustpilot en pista continua (misma pieza que /siguiente-paso) */}
+          <div className="mt-14 overflow-hidden">
+            <div className="max-w-5xl mx-auto text-center mb-6">
+              <p className="font-handwriting text-xl text-[#6A178C] mb-2">Reseñas reales</p>
+              <h3 className="font-serif text-[1.5rem] md:text-[2rem] leading-[1.15]">Lo que cuentan <em className="italic text-[#6A178C]">en Trustpilot</em></h3>
+            </div>
+            <div aria-label="Capturas de reseñas publicadas en Trustpilot" className="marquee-track flex gap-5 w-max" style={{ animation: "marquee 75s linear infinite" }}>
+              {[0, 1].flatMap((dup) => TRUSTPILOT_CAPTURAS.map((n) => (
+                <div key={`${dup}-${n}`} aria-hidden={dup === 1} className="shrink-0 rounded-2xl overflow-hidden bg-white border border-black/[0.06]" style={{ width: "clamp(260px, 32vw, 340px)", boxShadow: "0 10px 30px rgba(106,23,140,0.06)" }}>
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={`/images/reviews/review-${n}.webp`} alt={dup === 0 ? `Reseña ${n} publicada en Trustpilot` : ""} loading="lazy" className="block w-full h-auto" />
+                </div>
+              )))}
+            </div>
+            <p className="text-center text-xs text-black/45 mt-5 px-4">
+              Capturas sin editar ·{" "}
+              <a href={TRUSTPILOT_URL} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2 text-[#6A178C]">ver el perfil en Trustpilot ↗</a>
+            </p>
           </div>
         </section>
 
