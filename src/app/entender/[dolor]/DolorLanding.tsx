@@ -9,7 +9,6 @@ import Link from "next/link";
 import AppFeatureBanner from "@/components/AppFeatureBanner";
 import { track } from "@/lib/tracking";
 import { PRECIO_ESTANDAR } from "@/lib/diagnostico-precio";
-import { TESTIMONIOS, VALORACION_LABEL, RESEÑAS_COUNT_LABEL, type Testimonio } from "@/data/testimonios";
 import { FAQ_FIJA, PASOS, PSICOLOGAS_DOLOR, type DolorConfig } from "../_data/dolores";
 
 const PRECIO = PRECIO_ESTANDAR.texto;
@@ -57,7 +56,6 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
   const [showSticky, setShowSticky] = useState(false);
   const page = `dolor_${cfg.slug}`;
   const psicologas = cfg.psicologas.map((k) => PSICOLOGAS_DOLOR[k]).filter(Boolean);
-  const testimonios = cfg.testimonios.map((n) => TESTIMONIOS.find((t) => t.name === n)).filter((t): t is Testimonio => Boolean(t));
   const faq = [...cfg.faq, ...FAQ_FIJA];
 
   useEffect(() => {
@@ -121,20 +119,9 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
               </div>
               <p className="text-sm text-white/80 text-left leading-tight">psicólogas<br /><span className="text-xs text-white/55">colegiadas reales</span></p>
             </div>
-            <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-3 max-w-3xl mx-auto">
-              <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
-                <span className="font-serif text-3xl text-[#E8D4F0]">4,9<span className="text-base">/5</span></span>
-                <span className="text-xs text-white/70 text-left leading-snug">valoración media · {RESEÑAS_COUNT_LABEL}</span>
-              </div>
-              <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
-                <span className="font-serif text-3xl text-[#E8D4F0]">+8.000</span>
-                <span className="text-xs text-white/70 text-left leading-snug">pacientes hacen terapia con nosotros</span>
-              </div>
-              <div className="bg-white/[0.07] border border-white/[0.12] rounded-2xl px-5 py-4 flex items-center gap-3">
-                <span className="text-2xl" aria-hidden>🏛️</span>
-                <span className="text-xs text-white/70 text-left leading-snug">Informe firmado por psicóloga colegiada</span>
-              </div>
-            </div>
+            <p className="mt-6 text-sm text-white/75 max-w-3xl mx-auto leading-relaxed">
+              <strong className="text-white">+150</strong> psicólogas colegiadas reales <span className="text-white/35">·</span> <strong className="text-white">★ 4,9/5</strong> <span className="text-white/35">·</span> <strong className="text-white">+8.000</strong> pacientes hacen terapia con nosotros <span className="text-white/35">·</span> Firmado por colegiada
+            </p>
           </div>
         </section>
 
@@ -178,21 +165,18 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
         {/* ═══════════ 04 · PRUEBA SOCIAL ═══════════ */}
         <section className="py-16 md:py-20 px-4">
           <div className="max-w-5xl mx-auto">
-            <div className="flex flex-wrap justify-center gap-x-5 gap-y-2 text-sm text-black/60 mb-10">
-              <span><strong className="text-black">★ 4,9/5</strong> · {RESEÑAS_COUNT_LABEL}</span>
-              <span>Informes firmados por colegiada</span>
-              <span><strong className="text-black">+150</strong> psicólogas colegiadas reales</span>
-              <span>El <strong className="text-black">{PCT_SIGUE_TERAPIA}</strong> sigue en terapia después</span>
-            </div>
+            <p className="text-center text-sm text-black/60 mb-10 leading-relaxed">
+              <strong className="text-black">★ 4,9/5</strong> · +750 reseñas verificadas · Informes firmados por colegiada · <strong className="text-black">+150</strong> psicólogas colegiadas reales · El <strong className="text-black">{PCT_SIGUE_TERAPIA}</strong> sigue en terapia después
+            </p>
             <div className="grid sm:grid-cols-2 gap-4 md:gap-5">
-              {testimonios.map((t, i) => (
-                <figure key={t.name} className={`bg-white rounded-2xl p-6 border border-black/[0.05] shadow-[0_4px_20px_rgba(106,23,140,.05)] ${i === 0 ? "sm:col-span-2" : ""}`}>
-                  <blockquote className={`font-serif leading-snug text-black ${i === 0 ? "text-xl md:text-2xl" : "text-[17px]"}`}>«{t.text}»</blockquote>
-                  <figcaption className="mt-4 text-sm text-black/55"><strong className="text-[#6A178C]">{t.name}</strong> · {t.detail}</figcaption>
+              {cfg.testimonios.map((t, i) => (
+                <figure key={t.quien} className={`bg-white rounded-2xl p-6 border border-black/[0.05] shadow-[0_4px_20px_rgba(106,23,140,.05)] ${i === 0 ? "sm:col-span-2" : ""}`}>
+                  <figcaption className="text-sm text-black/55"><strong className="text-[#6A178C]">{t.quien}</strong> · {t.contexto}</figcaption>
+                  <blockquote className={`font-serif leading-snug text-black mt-3 ${i === 0 ? "text-xl md:text-2xl" : "text-[17px]"}`}>«{t.cita}»</blockquote>
+                  <p className="mt-3 text-[15px] text-black/65 leading-relaxed">{t.detalle}</p>
                 </figure>
               ))}
             </div>
-            <p className="text-center text-xs text-black/45 mt-5">{VALORACION_LABEL} · nombres abreviados por confidencialidad clínica</p>
           </div>
         </section>
 
@@ -298,6 +282,7 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
           </div>
         </section>
 
+        {/* App Mente Sana (iconografía de la base: el brief la mantiene; el mes Premium va en "Qué te llevas") */}
         <div className="py-10 md:py-14"><AppFeatureBanner variant="asistente" tone="dark" /></div>
 
         {/* ═══════════ 09 · CIERRE ═══════════ */}

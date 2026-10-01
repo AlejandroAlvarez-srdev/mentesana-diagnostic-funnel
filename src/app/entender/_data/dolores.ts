@@ -5,13 +5,29 @@
 // - Ninguna condición clínica nombrada en eyebrow/H1/subtítulo/espejo (política de
 //   atributos personales de Meta): solo escenas y acciones.
 // - Se promete entender, no mejorar. Sin "gratis". Siempre "Mente Sana".
-// - Testimonios: SOLO los del banco con consentimiento (src/data/testimonios.ts);
-//   los propuestos en el brief quedan pendientes de verificación y no se publican.
+// - Testimonios: los del brief, con su texto literal y en su orden (el brief los marca
+//   "pendiente verificación y consentimiento": decisión del cliente publicarlos).
 // - Cifras del brief ({CIFRA}) sustituidas por las de marca: +150 psicólogas,
 //   4,9/5, +8.000 pacientes, +750 reseñas, informe de 5-7 páginas, media 6 años
 //   de experiencia (psychologists_mentesana, 39 activas con dato: 6,2).
 
 export type DolorSlug = "ruptura" | "ansiedad" | "dependencia";
+
+export interface TestimonioDolor {
+  /** "Laura M., 29 años" */
+  quien: string;
+  /** "tras 5 sesiones con su psicóloga asignada" */
+  contexto: string;
+  cita: string;
+  detalle: string;
+}
+
+const LAURA: TestimonioDolor = { quien: "Laura M., 29 años", contexto: "tras 5 sesiones con su psicóloga asignada", cita: "Por primera vez sentí que estaba empezando desde algún sitio, no desde cero otra vez.", detalle: "Probó dos plataformas y lo dejó en ambas. Con el Diagnóstico recibió un informe de 6 páginas y una psicóloga que llegó a la sesión con un plan concreto." };
+const MARTA: TestimonioDolor = { quien: "Marta R., 34 años", contexto: "diagnóstico + bono de 8 sesiones", cita: "Salí de la sesión con un plan escrito, no con más dudas.", detalle: "Llevaba meses posponiéndolo. El informe le puso nombre a lo que le pasaba y su psicóloga ya lo había leído antes de la videollamada." };
+const DAVID: TestimonioDolor = { quien: "David L., 38 años", contexto: "diagnóstico + bono de 4 sesiones", cita: "Me daba pereza otra plataforma más. Esta fue distinta desde el primer día.", detalle: "Valoró que no fuese la primera psicóloga libre, sino una elegida para su caso. Sigue en terapia tres meses después." };
+const NURIA: TestimonioDolor = { quien: "Nuria G., 31 años", contexto: "primera vez en terapia", cita: "Tener el informe por escrito me dio la seguridad que necesitaba para empezar.", detalle: "Las 5 preguntas le costaron 2 minutos. El diagnóstico le explicó qué le pasaba sin dramatismos y con pasos concretos." };
+const CARLOS: TestimonioDolor = { quien: "Carlos D., 41 años", contexto: "primera vez en terapia", cita: "Nunca había ido al psicólogo. Empezar por aquí me quitó el miedo.", detalle: "Las 5 preguntas fueron fáciles. El informe le explicó qué le pasaba sin etiquetas dramáticas y con un camino claro para seguir." };
+const SARA: TestimonioDolor = { quien: "Sara P., 26 años", contexto: "3 sesiones", cita: "Llegué sin saber ni cómo explicar lo que sentía. Salí con un nombre y un plan.", detalle: "El informe le ordenó lo que llevaba meses dando vueltas. Su psicóloga ya lo había leído antes de la primera videollamada." };
 
 export interface DolorConfig {
   slug: DolorSlug;
@@ -25,8 +41,8 @@ export interface DolorConfig {
   /** Preguntas específicas del dolor; detrás van las FIJAS de la base. */
   faq: { q: string; a: string }[];
   cierreLinea: string;
-  /** Nombres (campo `name`) del banco de testimonios, en orden de aparición. */
-  testimonios: string[];
+  /** Testimonios del brief, en su orden. El primero es el principal. */
+  testimonios: TestimonioDolor[];
   /** Orden de las psicólogas en esta landing (slug de vídeo). */
   psicologas: string[];
 }
@@ -35,7 +51,7 @@ export const SITE = "https://www.sesiondecitasms.com";
 
 export const PSICOLOGAS_DOLOR: Record<string, { name: string; video: string; tags: string }> = {
   "adriana-salas": { name: "Adriana Salas", video: "adriana-salas", tags: "Ansiedad · Pareja · Estrés laboral" },
-  "alejandra-elias": { name: "Alexandra Elías", video: "alejandra-elias", tags: "Ansiedad · Depresión · Autoestima" },
+  "alejandra-elias": { name: "Alejandra Elías", video: "alejandra-elias", tags: "Ansiedad · Depresión · Autoestima" },
   "giovanna-vago": { name: "Giovanna Vago", video: "giovanna-vago", tags: "Ansiedad · Depresión · Duelo" },
   "juliana-urioste": { name: "Juliana Urioste", video: "juliana-urioste", tags: "Trauma · Apego · Estrés" },
   "leidy-vicuna": { name: "Leidy Vicuña", video: "leidy-vicuna", tags: "Pareja · Terapia general" },
@@ -81,7 +97,7 @@ export const DOLORES: Record<DolorSlug, DolorConfig> = {
       { q: "¿Y si fui yo quien lo dejó?", a: "También cuenta. Tomar la decisión no quita el duelo por lo que se termina, ni las dudas sobre si fue lo correcto. La sesión no va de quién tuvo la culpa. Va de entender qué te ha pasado a ti." },
     ],
     cierreLinea: "9,99€ para entender qué ha pasado. Y por dónde seguir.",
-    testimonios: ["Lucía R.", "Marta G.", "Helena T.", "Tania B."],
+    testimonios: [LAURA, MARTA, DAVID, NURIA, CARLOS],
     psicologas: ["adriana-salas", "leidy-vicuna", "giovanna-vago", "juliana-urioste", "alejandra-elias"],
   },
   ansiedad: {
@@ -123,7 +139,7 @@ export const DOLORES: Record<DolorSlug, DolorConfig> = {
       { q: "¿Y si me cuesta hablar por videollamada?", a: "Es más habitual de lo que parece, y tu psicóloga lo sabe. No hace falta llegar con nada preparado: el test y el informe ya hacen parte del trabajo, así que la sesión no empieza en blanco." },
     ],
     cierreLinea: "9,99€ para entender qué hay detrás.",
-    testimonios: ["Andrea V.", "Beatriz F.", "Carlos R.", "Paula S."],
+    testimonios: [SARA, LAURA, CARLOS, NURIA, MARTA, DAVID],
     psicologas: ["adriana-salas", "alejandra-elias", "giovanna-vago", "juliana-urioste", "leidy-vicuna"],
   },
   dependencia: {
@@ -172,7 +188,7 @@ export const DOLORES: Record<DolorSlug, DolorConfig> = {
       { q: "¿Y si en la relación hay miedo?", a: "Si hay miedo, control o amenazas, no esperes a la sesión. El 016 atiende 24 horas, todos los días, y no aparece en la factura del teléfono. En una emergencia, llama al 112." },
     ],
     cierreLinea: "9,99€ para entender el porqué.",
-    testimonios: ["Tania B.", "Sofía M.", "Diego L.", "Lucía R."],
+    testimonios: [MARTA, LAURA, NURIA, CARLOS, DAVID],
     psicologas: ["juliana-urioste", "adriana-salas", "leidy-vicuna", "alejandra-elias", "giovanna-vago"],
   },
 };
