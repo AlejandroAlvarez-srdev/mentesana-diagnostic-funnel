@@ -67,7 +67,7 @@ export const DOLORES: Record<DolorSlug, DolorConfig> = {
     },
     eyebrow: "Pasar página no es olvidar",
     hero: {
-      h1: "No va a entender a la otra persona. Va a entender qué te ha pasado a ti.",
+      h1: "No va de entender a la otra persona. Va de entender qué te ha pasado a ti.",
       sub: "Un informe firmado por una psicóloga colegiada y 50 minutos con ella para ordenar qué ha pasado y por dónde seguir. 9,99€, pago único.",
     },
     espejo: {
