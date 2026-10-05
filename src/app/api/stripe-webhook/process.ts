@@ -309,6 +309,28 @@ export async function processCheckoutSessionCompleted(
     // No return: dejamos que siga el ebook_purchases upsert como bookkeeping.
   }
 
+  // 2a-ter. JUSTIFICANTE DE ASISTENCIA (tienda, 8,99 €, Payment Link con metadata
+  // {catalog:"upsells", key:"justificante"}). Antes se cobraba y nadie generaba ni enviaba
+  // el documento. Ahora: fila en justificantes_asistencia → PDF + email si ya hay sesión
+  // asistida en Amelia; si no, queda pendiente con tarea a soporte y se cumple al marcar
+  // la asistencia o por cron. Awaited: en serverless una promesa suelta muere.
+  const esJustificante = meta.key === "justificante" || ((session.amount_total ?? 0) === 899 && !product);
+  if (esJustificante) {
+    try {
+      const { registrarJustificantePagado } = await import("@/lib/justificante/fulfil");
+      const jr = await registrarJustificantePagado({
+        stripeSessionId: session.id, email: patientEmail, phone: patientPhone, name: patientName || null,
+        paidAt: new Date((session.created ?? Math.floor(Date.now() / 1000)) * 1000), amountCents: session.amount_total ?? 899,
+      });
+      console.log("[webhook][justificante]", JSON.stringify(jr), "session=" + session.id);
+      if (!jr.sent && !jr.pending) result.errors.push(`justificante: ${jr.reason ?? "no_enviado"}`);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : String(e);
+      console.error("[webhook][justificante] fatal:", msg);
+      result.errors.push(`justificante-fatal: ${msg.slice(0, 120)}`);
+    }
+  }
+
   // 2a-bis. ACOMPAÑAMIENTO branch (/acompanamiento-familiar + /apoya-a-tu-*).
   // El producto incluye 1 cita 50 min con psicóloga que ahora se AGENDA antes
   // del pago (hold Amelia pre-Stripe, misma infra que terapia). Aquí aprobamos
