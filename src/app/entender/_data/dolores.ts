@@ -35,7 +35,7 @@ export interface DolorConfig {
   eyebrow: string;
   hero: { h1: string; sub: string };
   espejo: { kicker: string; title: string; scenes: string[]; scenes2?: { intro: string; items: string[] }; closing: string };
-  reencuadre: { kicker: string; title: string; paragraphs: string[] };
+  reencuadre: { kicker: string; title: string; paragraphs: string[]; highlight?: string };
   /** Qué resume el informe en esta landing. */
   informe: string;
   /** Preguntas específicas del dolor; detrás van las FIJAS de la base. */
@@ -87,9 +87,10 @@ export const DOLORES: Record<DolorSlug, DolorConfig> = {
       kicker: "Tiene un porqué",
       title: "Una ruptura no se lleva solo a una persona.",
       paragraphs: [
-        "Se lleva rutinas, planes y una versión del futuro que ya estaba en marcha. Eso no se ordena solo con tiempo.",
+        "Se lleva rutinas, planes y una versión del futuro que ya estaba en marcha.",
         "El informe pone por escrito qué ha pasado, por qué cuesta cerrarlo y por dónde seguir. Sin repasar quién tuvo la culpa.",
       ],
+      highlight: "Eso no se ordena solo con tiempo.",
     },
     informe: "Qué ha pasado, por qué cuesta cerrarlo y por dónde seguir.",
     faq: [

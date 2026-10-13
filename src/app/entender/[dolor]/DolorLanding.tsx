@@ -176,6 +176,7 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
             <p className="font-handwriting text-xl text-[#6A178C] mb-2">{cfg.reencuadre.kicker}</p>
             <h2 className="font-serif text-[1.9rem] md:text-[2.75rem] leading-[1.12]">{cfg.reencuadre.title}</h2>
             {cfg.reencuadre.paragraphs.slice(0, -1).map((p) => <p key={p} className="mt-5 text-[17px] md:text-[19px] leading-relaxed text-black/75">{p}</p>)}
+            {cfg.reencuadre.highlight && <p className="mt-6 font-serif italic text-2xl md:text-[2rem] leading-tight text-[#6A178C]">{cfg.reencuadre.highlight}</p>}
             {cfg.reencuadre.paragraphs.length > 0 && (
               <div className="mt-7 rounded-2xl p-5 md:p-6 border" style={{ background: "linear-gradient(135deg, #FBF4E8 0%, #F0E3F7 100%)", borderColor: "rgba(106,23,140,0.15)" }}>
                 <p className="text-[16px] md:text-[17px] leading-relaxed text-black/80">{cfg.reencuadre.paragraphs[cfg.reencuadre.paragraphs.length - 1]}</p>
