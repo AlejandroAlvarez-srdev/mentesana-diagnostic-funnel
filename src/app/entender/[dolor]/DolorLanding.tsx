@@ -6,7 +6,6 @@
 // ../_data/dolores.ts; aquí solo hay maqueta (heredada de /por-que-diagnostico).
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import AppFeatureBanner from "@/components/AppFeatureBanner";
 import { track } from "@/lib/tracking";
 import { PRECIO_ESTANDAR } from "@/lib/diagnostico-precio";
 import { FAQ_FIJA, PASOS, PSICOLOGAS_DOLOR, type DolorConfig } from "../_data/dolores";
@@ -305,9 +304,6 @@ export default function DolorLanding({ cfg }: { cfg: DolorConfig }) {
             </div>
           </div>
         </section>
-
-        {/* App Mente Sana (iconografía de la base: el brief la mantiene; el mes Premium va en "Qué te llevas") */}
-        <div className="py-10 md:py-14"><AppFeatureBanner variant="asistente" tone="dark" /></div>
 
         {/* ═══════════ 09 · CIERRE ═══════════ */}
         <section id="cta-final" className="py-16 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">

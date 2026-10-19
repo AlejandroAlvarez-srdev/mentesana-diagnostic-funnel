@@ -502,11 +502,6 @@ export default function PorQueDiagnostico({ precio = PRECIO_ESTANDAR }: { precio
           </div>
         </section>
 
-        {/* ═══════════ APP BANNER ═══════════ */}
-        <div className="py-12 md:py-16">
-          <AppFeatureBanner variant="asistente" tone="dark" />
-        </div>
-
         {/* ═══════════ CTA FINAL ═══════════ */}
         <section id="cta-final" className="py-16 md:py-20 px-4 bg-gradient-to-br from-[#1a0a1f] via-[#2d0d3f] to-[#4A2368] text-white relative overflow-hidden">
           <div className="absolute -top-32 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-[#6A178C] opacity-15 blur-3xl pointer-events-none" />
