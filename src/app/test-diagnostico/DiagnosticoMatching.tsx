@@ -191,6 +191,9 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
   const [phase, setPhase] = useState<"intro" | "questions" | "analyzing" | "contact" | "schedule" | "payment">("intro");
+  // true si se entró con ?directo=1: quien salta la portada no ha visto qué es esto
+  // ni cuánto cuesta → en la pregunta 1 se le muestra precio + prueba social.
+  const [directEntry, setDirectEntry] = useState(false);
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -246,6 +249,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       const p = new URLSearchParams(window.location.search);
       if (p.get("directo") === "1" || p.get("paso") === "test") {
         setPhase("questions");
+        setDirectEntry(true);
         track("start_matching", { source: "landing_directo" });
       }
     } catch { /* noop */ }
@@ -1134,6 +1138,21 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               { icon: "🎯", text: <>Última pregunta — en segundos verás <strong>quién será tu psicóloga</strong>.</> },
             ];
             const b = bubbles[Math.min(currentQ, bubbles.length - 1)];
+            // Entrada directa (A/B "directo"): en la pregunta 1 sustituimos la burbuja por
+            // qué es, cuánto cuesta y quién lo avala — lo que la portada contaba y aquí se
+            // ha saltado. Evita la sorpresa del precio al llegar al pago.
+            if (directEntry && currentQ === 0) {
+              return (
+                <div className="mb-6 rounded-2xl border border-purple/15 bg-white px-4 py-3 text-center shadow-[0_4px_20px_rgba(106,23,140,.05)]">
+                  <p className="text-[13px] font-semibold text-foreground/85">
+                    Diagnóstico psicológico online · <span className="text-purple">{precio.texto}</span>, pago único
+                  </p>
+                  <p className="mt-1 text-[11.5px] leading-snug text-foreground/55">
+                    Informe clínico + sesión de 50 min con tu psicóloga colegiada · ★ 4,9 · +8.000 personas
+                  </p>
+                </div>
+              );
+            }
             return (
               <div className="mb-6 flex justify-center">
                 <div className="inline-flex items-center gap-2 bg-purple/8 border border-purple/15 rounded-full px-4 py-2 text-[12px] text-purple/90 max-w-full">

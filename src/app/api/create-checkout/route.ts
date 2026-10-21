@@ -28,7 +28,7 @@ export async function POST(req: NextRequest) {
   let fbpFromCookie = "";
   // Variantes A/B (las fija proxy.ts). Persisten landing→test→checkout, así la
   // conversión a PAGO queda segmentada por variante en el metadata de Stripe / webhook.
-  let abLanding = "", abWarming = "", abDiag = "";
+  let abLanding = "", abWarming = "", abDiag = "", abDirecto = "";
   try {
     const jar = await cookies();
     fbcFromCookie = jar.get("_fbc")?.value ?? "";
@@ -36,6 +36,7 @@ export async function POST(req: NextRequest) {
     abLanding = jar.get("ms_ab_landing")?.value ?? "";
     abWarming = jar.get("ms_ab_warming")?.value ?? "";
     abDiag = jar.get("ms_ab_diag")?.value ?? "";
+    abDirecto = jar.get("ms_ab_directo")?.value ?? "";
   } catch {}
   // fbc: cookie _fbc del pixel → o construido desde el fbclid de la URL (formato
   // oficial fb.1.{ts}.{fbclid}). CLAVE: el banner AEPD bloquea el pixel en la mayoría
@@ -165,6 +166,7 @@ export async function POST(req: NextRequest) {
         ab_landing: abLanding,
         ab_warming: abWarming,
         ab_diag: abDiag,
+        ab_directo: abDirecto, // A=portada del test · B=pregunta 1 directa (?directo=1)
         variante_precio: precio.variante, // estandar=9,99€ · premium=29,99€
         // Ids del navegador: el webhook los devuelve al escribir la compra en
         // analytics_events, y asi el embudo interno llega hasta el pago en vez

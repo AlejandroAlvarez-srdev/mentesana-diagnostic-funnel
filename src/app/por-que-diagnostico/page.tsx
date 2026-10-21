@@ -63,11 +63,19 @@ export default async function Page() {
   // Variante del A/B test de landing (la fija proxy.ts vía header de request).
   // Bots / sin asignación → "A" (control indexado). El JSON-LD y la metadata son
   // idénticos en ambas variantes → SEO intacto.
-  const variant = (await headers()).get("x-ab-landing") === "B" ? "B" : "A";
+  const h = await headers();
+  const variant = h.get("x-ab-landing") === "B" ? "B" : "A";
+  // A/B #4 "directo" (cookie ms_ab_directo, la fija proxy.ts): en B el botón de la
+  // landing salta la portada de /test-diagnostico y entra en la pregunta 1 con
+  // ?directo=1. Estudio /interno/subir-el-082: la entrada directa paga 4,4 % por
+  // sesión frente al 0,64 % de la portada. En A todo sigue exactamente igual.
+  const directo = h.get("x-ab-directo") === "B";
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
-      {variant === "B" ? <PorQueDiagnosticoB /> : <PorQueDiagnostico />}
+      {variant === "B"
+        ? <PorQueDiagnosticoB ctaBase={directo ? "/test-diagnostico?directo=1" : undefined} flow={directo ? "directo" : undefined} />
+        : <PorQueDiagnostico />}
     </>
   );
 }

@@ -168,6 +168,7 @@ export async function processCheckoutSessionCompleted(
         ab_landing: session.metadata?.ab_landing || null,
         ab_warming: session.metadata?.ab_warming || null,
         ab_diag: session.metadata?.ab_diag || null,
+        ab_directo: session.metadata?.ab_directo || null,
         // Identificadores Meta (click-id) — antes se quedaban en la metadata de
         // Stripe pero NO se persistían aquí → fbclid/fbc salían null en TODAS las
         // compras y no se podían auditar ni reprocesar para el CAPI.
