@@ -5,6 +5,7 @@ import Image from "next/image";
 import { track, getVisitorId as getAnalyticsVisitorId, getSessionId } from "@/lib/tracking";
 import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
 import { PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
+import PagoUnaPantalla from "./PagoUnaPantalla";
 
 // ═══ Questions config ═══
 interface Option {
@@ -194,6 +195,11 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // true si se entró con ?directo=1: quien salta la portada no ha visto qué es esto
   // ni cuánto cuesta → en la pregunta 1 se le muestra precio + prueba social.
   const [directEntry, setDirectEntry] = useState(false);
+  // A/B #5 "una pantalla" (acción 2 de /interno/subir-el-082): en B la psicóloga, el
+  // hueco y el pago van en una sola pantalla (PagoUnaPantalla); en A, el flujo de
+  // siempre (calendario → pago). La variante la fija proxy.ts en la cookie
+  // ms_ab_pago; ?pantalla=A|B la fuerza. Sin cookie (otras rutas) → A.
+  const [abPago, setAbPago] = useState<"A" | "B">("A");
   const [saving, setSaving] = useState(false);
   const [selectedDay, setSelectedDay] = useState<string>("");
   const [selectedSlot, setSelectedSlot] = useState<string>("");
@@ -252,6 +258,15 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
         setDirectEntry(true);
         track("start_matching", { source: "landing_directo" });
       }
+    } catch { /* noop */ }
+  }, []);
+
+  useEffect(() => {
+    try {
+      const q = new URLSearchParams(window.location.search).get("pantalla");
+      if (q === "A" || q === "B") { setAbPago(q); return; }
+      const m = document.cookie.match(/(?:^|;\s*)ms_ab_pago=([AB])/);
+      if (m?.[1] === "B") setAbPago("B");
     } catch { /* noop */ }
   }, []);
 
@@ -448,6 +463,34 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     return pick;
   })();
 
+  // Guarda el hueco elegido (local + BD) para no perderlo si abandona el pago. Lo
+  // usan el control (al pulsar «Confirmar y pagar») y la variante de una pantalla
+  // (en cuanto hay hueco elegido).
+  const persistSchedule = async (day: string, slot: string) => {
+    try {
+      localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day, slot, psychologist: matchedPsych.name }));
+    } catch {}
+    const emailForSave = userEmail || localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email") || "";
+    if (!emailForSave) return;
+    try {
+      await fetch("/api/diagnostico-test", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          source: "test-diagnostico",
+          answers,
+          context: contextText,
+          name: userName || localStorage.getItem("ms_diagnostico_name") || "",
+          email: emailForSave,
+          phone: userPhone || localStorage.getItem("ms_user_phone") || "",
+          matchedPsychologist: matchedPsych.name,
+          scheduledDate: day,
+          scheduledTime: slot,
+        }),
+      });
+    } catch {}
+  };
+
   if (phase === "analyzing") {
     const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
     const TEMA_PSI: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
@@ -471,6 +514,32 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     // Tema del usuario (en su lenguaje) para personalizar el "encaja con tu perfil".
     const TEMA: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
     const temaLabel = TEMA[answers.feeling] || TEMA.otro;
+
+    // Variante B del A/B #5: psicóloga + hueco + pago en una sola pantalla. Usa los
+    // mismos slots, la misma preselección del hueco más cercano y el mismo checkout.
+    if (abPago === "B") {
+      return (
+        <PagoUnaPantalla
+          psych={{ name: matchedPsych.name, video: matchedPsych.video, photo: psychPhoto }}
+          temaLabel={temaLabel}
+          slots={realSlots}
+          slotsLoading={slotsLoading}
+          slotsError={slotsError}
+          selectedDay={selectedDay}
+          selectedSlot={selectedSlot}
+          onSelect={(d, s) => { setSelectedDay(d); setSelectedSlot(s); }}
+          onPersistSchedule={persistSchedule}
+          onReroll={() => {
+            track("reroll_match_requested", { current_psi: matchedPsych.name, ab });
+            try { localStorage.removeItem(`ms_match_amelia_v4_${answers.feeling || "ansiedad"}`); } catch {}
+            window.location.reload();
+          }}
+          precio={precio}
+          ab={ab}
+        />
+      );
+    }
+
     // Agrupar slots reales por día (los slots vienen ya en hora Madrid, en orden).
     const byDay = new Map<string, { hour: number; label: string; period: string }[]>();
     for (const s of realSlots) {
@@ -532,29 +601,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       setSaving(true);
       track("select_slot", { day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name, ab });
 
-      localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day: selectedDay, slot: selectedSlot, psychologist: matchedPsych.name }));
-
-      // Persist schedule in DB now — so we don't lose it if the user abandons payment.
-      const emailForSave = userEmail || localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email") || "";
-      if (emailForSave) {
-        try {
-          await fetch("/api/diagnostico-test", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              source: "test-diagnostico",
-              answers,
-              context: contextText,
-              name: userName || localStorage.getItem("ms_diagnostico_name") || "",
-              email: emailForSave,
-              phone: userPhone || localStorage.getItem("ms_user_phone") || "",
-              matchedPsychologist: matchedPsych.name,
-              scheduledDate: selectedDay,
-              scheduledTime: selectedSlot,
-            }),
-          });
-        } catch {}
-      }
+      await persistSchedule(selectedDay, selectedSlot);
 
       track("initiate_checkout", { amount: precio.decimal, ab });
       setSaving(false);
