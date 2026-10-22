@@ -83,41 +83,11 @@ const QUESTIONS: Question[] = [
   },
 ];
 
-// ═══ Psychologists pool — rotación determinista por email (ver matchedPsych abajo) ═══
-export type PsychologistEntry = {
-  name: string;
-  city: string;
-  exp: string;
-  specialty: string;
-  video: string;
-  profiles: string[];
-};
-
-export const PSYCHOLOGISTS: PsychologistEntry[] = [
-  // Ansiedad
-  { name: "Adriana Salas", city: "Madrid", exp: "10 años", specialty: "Ansiedad, pánico, TCC", video: "/videos/welcome/adriana-salas.mp4", profiles: ["ansiedad", "estres"] },
-  { name: "Carolina Prudencio", city: "Madrid", exp: "9 años", specialty: "Ansiedad generalizada, mindfulness", video: "/videos/welcome/carolina-prudencio.mp4", profiles: ["ansiedad", "otro"] },
-  { name: "María Infante", city: "Valencia", exp: "8 años", specialty: "Ansiedad social, fobias, TCC", video: "/videos/welcome/maria-infante.mp4", profiles: ["ansiedad", "relaciones"] },
-  // Depresión
-  { name: "Diana Salazar", city: "Madrid", exp: "11 años", specialty: "Depresión, insomnio, duelo", video: "/videos/welcome/diana-salazar-alzate.mp4", profiles: ["depresion", "otro"] },
-  { name: "Brenda Castillo", city: "Barcelona", exp: "10 años", specialty: "Depresión, terapia sistémica", video: "/videos/welcome/brenda-castillo.mp4", profiles: ["depresion", "relaciones"] },
-  { name: "Melanie Camejo", city: "Sevilla", exp: "8 años", specialty: "Depresión, duelo, autoestima", video: "/videos/welcome/melanie-camejo.mp4", profiles: ["depresion", "crecimiento"] },
-  { name: "Rosana Juárez", city: "Madrid", exp: "12 años", specialty: "Depresión, terapia integrativa", video: "/videos/welcome/rosana-juarez.mp4", profiles: ["depresion", "otro"] },
-  // Relaciones
-  { name: "Gabriela Delgado", city: "Valencia", exp: "8 años", specialty: "Relaciones, autoestima, fobias", video: "/videos/welcome/gabriela-delgado.mp4", profiles: ["relaciones", "crecimiento"] },
-  { name: "Tatiana Castro", city: "Barcelona", exp: "9 años", specialty: "Terapia de pareja, vínculos", video: "/videos/welcome/tatiana-castro.mp4", profiles: ["relaciones", "otro"] },
-  { name: "Mónica Guiza", city: "Madrid", exp: "10 años", specialty: "Relaciones, apego, familia", video: "/videos/welcome/monica-guiza.mp4", profiles: ["relaciones", "crecimiento"] },
-  { name: "Laura Acosta", city: "Málaga", exp: "7 años", specialty: "Relaciones, dependencia emocional", video: "/videos/welcome/laura-acosta-acosta.mp4", profiles: ["relaciones", "otro"] },
-  // Estrés / burnout
-  { name: "Alexandra Elías", city: "Barcelona", exp: "9 años", specialty: "Burnout, EMDR, estrés laboral", video: "/videos/welcome/alexandra-elias.mp4", profiles: ["estres", "crecimiento"] },
-  { name: "Greslimar Padilla", city: "Madrid", exp: "8 años", specialty: "Estrés laboral, mindfulness", video: "/videos/welcome/greslimar-padilla.mp4", profiles: ["estres", "ansiedad"] },
-  { name: "Antonella Matinella", city: "Bilbao", exp: "10 años", specialty: "Burnout, sueño, regulación emocional", video: "/videos/welcome/antonella-matinella.mp4", profiles: ["estres", "otro"] },
-  // Crecimiento / otros
-  { name: "Selene Oropeza", city: "Madrid", exp: "9 años", specialty: "Crecimiento personal, autoconocimiento", video: "/videos/welcome/selene-oropeza.mp4", profiles: ["crecimiento", "otro"] },
-  { name: "Juliana Urioste", city: "Valencia", exp: "7 años", specialty: "Crecimiento, decisiones vitales", video: "/videos/welcome/juliana-urioste.mp4", profiles: ["crecimiento", "relaciones"] },
-  { name: "Yohaira Espinoza", city: "Zaragoza", exp: "11 años", specialty: "Terapia integrativa, psicoanálisis", video: "/videos/welcome/yohaira-espinoza.mp4", profiles: ["otro", "crecimiento"] },
-  { name: "Mallerly Mesa", city: "Barcelona", exp: "8 años", specialty: "Autoestima, identidad, duelo", video: "/videos/welcome/mallerly-mesa.mp4", profiles: ["crecimiento", "depresion"] },
-];
+// ═══ Psychologists pool — catálogo fijo en ./psychologists (fallback del match) ═══
+// El array y su tipo viven en un módulo sin "use client" para que los route handlers
+// (/api/test-diagnostico/pool) puedan importarlos como datos y no como client reference.
+import { PSYCHOLOGISTS, type PsychologistEntry } from "./psychologists";
+export { PSYCHOLOGISTS, type PsychologistEntry };
 
 // Videos del "equipo" que se ven en el hero del home (src/components/Hero.tsx).
 // Se muestran en la fase intro de /test-diagnostico-app (variant="app") para dar
@@ -208,6 +178,14 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   const [realSlots, setRealSlots] = useState<{ day: string; weekday: string; hour: number; iso: string }[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsError, setSlotsError] = useState<string | null>(null);
+  // El pool de Amelia (/api/diagnostico/match-pool) ya respondió (bien o mal). Hasta
+  // entonces matchedPsych puede ser el pick PROVISIONAL de la lista fija y no se puede
+  // pedir su agenda: en las sesiones que se restauran directamente en la fase de hora
+  // (vuelven desde un email/WA o tras «otra psicóloga») la agenda se pedía para la
+  // provisional y medio segundo después la tarjeta cambiaba a la psicóloga de Amelia →
+  // el paciente elegía hora en el calendario de OTRA psicóloga (ago→oct 2026: ~70
+  // pagos/mes con hueco de otra agenda; el webhook los movía de hora o de psicóloga).
+  const [poolSettled, setPoolSettled] = useState(false);
   // Pool COMPLETO de psicólogas desde Amelia — el match aleatorio sale de aquí.
   // Si la API falla o todavía no cargó, se cae al array hardcoded.
   const [ameliaPool, setAmeliaPool] = useState<{ id: number; name: string; video_url: string | null; has_video: boolean; photo_url: string | null; description: string | null; earliest_iso?: string | null; earliest_day?: string | null; soon?: boolean }[] | null>(null);
@@ -229,7 +207,8 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     fetch("/api/diagnostico/match-pool")
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.pool) && d.pool.length > 0) setAmeliaPool(d.pool); })
-      .catch(() => { /* silencio: fallback al hardcoded */ });
+      .catch(() => { /* silencio: fallback al hardcoded */ })
+      .finally(() => setPoolSettled(true));
   }, []);
 
   // Carga el pool del /test-diagnostico filtrado por visibles en Amelia
@@ -270,9 +249,11 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     } catch { /* noop */ }
   }, []);
 
-  // Carga slots reales cuando entramos a la fase "schedule"
+  // Carga slots reales cuando entramos a la fase "schedule". Espera a que el pool de
+  // Amelia haya respondido (poolSettled) para pedir la agenda de la psicóloga
+  // DEFINITIVA (matchedPsych se declara más abajo: no puede ir en las deps).
   useEffect(() => {
-    if (phase !== "schedule") return;
+    if (phase !== "schedule" || !poolSettled) return;
     // Evento de embudo: el usuario ha llegado a la página de agendar (antes no se
     // registraba nada hasta select_slot → no se podía medir el drop match→agendar).
     // ab_warming va colgado automáticamente desde tracking.ts.
@@ -292,7 +273,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       .finally(() => { if (!cancel) setSlotsLoading(false); });
     return () => { cancel = true; };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase]);
+  }, [phase, poolSettled]);
 
   // FRICCIÓN (fuga match→agenda): al cargar los huecos reales pre-seleccionamos el
   // día y la hora MÁS CERCANOS, de modo que el usuario solo tenga que CONFIRMAR
@@ -509,6 +490,16 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
 
   // ═══ SCHEDULE PHASE — calendario con disponibilidad REAL Amelia ═══
   if (phase === "schedule") {
+    // Hasta que el pool de Amelia responda no sabemos quién es la psicóloga definitiva
+    // (sesiones restauradas en esta fase): un loader evita pintar tarjeta y agenda de la
+    // provisional y que cambien delante del paciente. Tarda lo que tarde match-pool (~0,5 s).
+    if (!poolSettled) {
+      return (
+        <div className="min-h-[60vh] flex items-center justify-center px-6">
+          <p className="text-sm text-foreground/50 animate-pulse">Cargando tu psicóloga…</p>
+        </div>
+      );
+    }
     // matchedPsych puede ser el tipo Amelia (con photo) o el fallback hardcoded (sin photo).
     const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
     // Tema del usuario (en su lenguaje) para personalizar el "encaja con tu perfil".
