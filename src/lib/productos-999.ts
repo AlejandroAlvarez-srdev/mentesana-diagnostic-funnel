@@ -15,8 +15,8 @@ export type LogopediaSegment = "general" | "infantil" | "adultos" | "voz" | "lec
 export type LogopediaQuestionId = "para_quien" | "motivo" | "duracion" | "valoracion_previa" | "horario";
 export type LogopediaAnswers = Partial<Record<LogopediaQuestionId, string>>;
 export const logopediaProfessionals = [
-  { id: "maria-alejandra-quintero", providerId: 26129, name: "María Alejandra Quintero", shortName: "María Alejandra", image: "/images/logopedia/maria-alejandra-quintero.webp", role: "Psicóloga y logopeda" },
-  { id: "giovanna-vago", providerId: 15, name: "Giovanna Vago", shortName: "Giovanna", image: "/images/logopedia/giovanna-vago.webp", role: "Psicóloga y logopeda" },
+  { id: "maria-alejandra-quintero", providerId: 26129, name: "Logopeda 01", shortName: "Logopeda 01", image: "/images/logopedia/logopeda-01.webp", role: "Logopeda de Mente Sana" },
+  { id: "giovanna-vago", providerId: 15, name: "Logopeda 02", shortName: "Logopeda 02", image: "/images/logopedia/logopeda-02.webp", role: "Logopeda de Mente Sana" },
 ] as const;
 
 export const logopediaQuestionIds: LogopediaQuestionId[] = ["para_quien", "motivo", "duracion", "valoracion_previa", "horario"];
