@@ -10,6 +10,7 @@
 // inferProducto({...}) para renderizar el badge (marker exacto o inferencia por señal).
 
 export type ProductoCategoria =
+  | "logopedia"
   | "terapia"
   | "acompanamiento"
   | "diagnostico"
@@ -41,6 +42,7 @@ export interface Producto {
 
 // ─── Colores por categoría ─────────────────────────────────────────────────
 const COLORS: Record<ProductoCategoria, { bg: string; fg: string; border: string }> = {
+  logopedia: { bg: "#F4EBF8", fg: "#6A178C", border: "#D9BFEA" },
   // Morado — Terapia directa por ángulo (dolencia específica)
   terapia:        { bg: "#F5EBFB", fg: "#6A178C", border: "#D9BFEA" },
   // Verde — Acompañamiento familiar / red de apoyo
@@ -363,6 +365,7 @@ const BIENVENIDA_PRODUCTOS: Producto[] = [
 }));
 
 export const CATALOGO: Producto[] = [
+  { slug: "logopedia", categoria: "logopedia", label: "Logopedia", labelCategoria: "Primera valoración · 45 min", emoji: "💬", colors: COLORS.logopedia, landing: "/logopedia", descripcion: "Primera valoración de logopedia. Revisar el cuestionario previo, conocer el motivo y los antecedentes, valorar la adecuación online y orientar los próximos pasos. Si es menor, debe acompañarle su representante legal.", precio: 9.99 },
   ...TERAPIA,
   ...ACOMPANAMIENTO,
   ...DIAGNOSTICO,
@@ -445,6 +448,7 @@ const RECURRENTE_CANONICO: Producto = {
 export function inferProducto(ctx: AppointmentContext): Producto | null {
   const marker = extractProductoFromNotes(ctx.internal_notes ?? null);
   if (marker) return marker;
+  if (ctx.service_id === 400) return getProductoBySlug("logopedia");
 
   // Service específico "Cita de Bienvenida" (Amelia id=18). Fallback si el
   // marker se pierde: devuelve el producto genérico bienvenida-ansiedad

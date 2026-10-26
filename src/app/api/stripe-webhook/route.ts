@@ -5,6 +5,9 @@ import { registrarCompraEnAnalytics, registrarEventoEnAnalytics } from "@/lib/an
 import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
+import { isLogopediaPayment } from "@/lib/logopedia/validation";
+import { fulfillLogopedia } from "@/lib/logopedia/fulfill";
+import { releaseExpiredOrder } from "@/lib/logopedia/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -81,6 +84,19 @@ export async function POST(req: NextRequest) {
   }
 
   console.log("[webhook] received", { type: event.type, id: (event.data.object as { id?: string })?.id });
+
+  // Explicit product routing before all psychology processing/amount inference.
+  if (isLogopediaPayment(event.data.object as { metadata?: Record<string,string> })) {
+    try {
+      const session = event.data.object as Stripe.Checkout.Session;
+      if ((event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") && session.payment_status === "paid") await fulfillLogopedia(session);
+      if (event.type === "checkout.session.expired") await releaseExpiredOrder(session);
+      return NextResponse.json({ received: true });
+    } catch {
+      console.error("[logopedia/webhook] processing incomplete; Stripe must retry");
+      return NextResponse.json({ error: "logopedia_processing_incomplete" }, { status: 500 });
+    }
+  }
 
   let supabase: ReturnType<typeof getSupabase>;
   try {
