@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { createHash } from "crypto";
 import { sendCAPILead, sendCAPISchedule, sendCAPIContact, sendCAPICustom, metaTestCodeFromCookie } from "@/lib/meta-capi-server";
+import { productoDesdeSource } from "@/lib/productos-999";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -35,7 +36,10 @@ export async function POST(req: NextRequest) {
   // consistente con check-access, que consulta en minúsculas.
   const userEmail = (email || `anon-${Date.now()}@pendiente.com`).toLowerCase();
   const isTestMentalHealth = source === "test-mental-health";
-  const isTestDiagnostico = source === "test-diagnostico";
+  // Tests del embudo 9,99: "test-diagnostico" (psicología) y "test-logopedia" (mismo
+  // embudo, otro producto). Comparten tabla, columnas y eventos; se distinguen por source.
+  const producto999 = productoDesdeSource(source);
+  const isTestDiagnostico = producto999 !== null;
 
   // Build the upsert payload — only set fields that are present
   const upsertData: Record<string, unknown> = {
@@ -53,7 +57,7 @@ export async function POST(req: NextRequest) {
     if (matchedPsychologist) upsertData.matched_psychologist = matchedPsychologist;
     if (scheduledDate) upsertData.scheduled_date = scheduledDate;
     if (scheduledTime) upsertData.scheduled_time = scheduledTime;
-    upsertData.source = "test-diagnostico";
+    upsertData.source = producto999!.source;
   }
 
   if (isTestMentalHealth) {
@@ -121,7 +125,8 @@ export async function POST(req: NextRequest) {
     const c = req.cookies;
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
     const ua = req.headers.get("user-agent") || undefined;
-    const srcUrl = req.headers.get("referer") || "https://www.mentesanapsicologia.com/test-diagnostico";
+    const srcUrl = req.headers.get("referer") || `https://www.mentesanapsicologia.com${producto999!.testPath}`;
+    const capiBase = producto999!.slug === "logopedia" ? "Logopedia 9,99" : "Diagnóstico 9,99";
     const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
     // .trim() ANTES de hashear: el navegador usa sha256(email.trim().toLowerCase()); si el
     // usuario mete espacios al final y aquí no trimáramos, Lead/Contact NO deduplicarían.
@@ -146,13 +151,13 @@ export async function POST(req: NextRequest) {
     // OJO custom_data: sin datos de salud (perfil/scores) ni PII, o Meta suprime el evento.
     const capture = (k: string) => (r: unknown) => { capi[k] = r; };
     const jobs: Promise<unknown>[] = [
-      sendCAPILead({ event_id: `lead_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — email gate", value: 0, user_data: ud, test_event_code: testCode }).then(capture("lead")),
-      sendCAPIContact({ event_id: `contact_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — dejó el email", value: 0, user_data: ud, test_event_code: testCode }).then(capture("contact")),
+      sendCAPILead({ event_id: `lead_${emailHash}`, event_source_url: srcUrl, content_name: `${capiBase} — email gate`, value: 0, user_data: ud, test_event_code: testCode }).then(capture("lead")),
+      sendCAPIContact({ event_id: `contact_${emailHash}`, event_source_url: srcUrl, content_name: `${capiBase} — dejó el email`, value: 0, user_data: ud, test_event_code: testCode }).then(capture("contact")),
       sendCAPICustom("email_capturado", { event_id: `email_${emailHash}`, event_source_url: srcUrl, value: 0, user_data: ud, test_event_code: testCode }).then(capture("email_capturado")),
     ];
     // Schedule: eligió hueco (fecha + hora). Mismo event_id que el booking → sin doble conteo.
     if (scheduledDate && scheduledTime) {
-      jobs.push(sendCAPISchedule({ event_id: `schedule_${emailHash}`, event_source_url: srcUrl, content_name: "Diagnóstico 9,99 — slot elegido", value: 9.99, user_data: ud, test_event_code: testCode }).then(capture("schedule")));
+      jobs.push(sendCAPISchedule({ event_id: `schedule_${emailHash}`, event_source_url: srcUrl, content_name: `${capiBase} — slot elegido`, value: 9.99, user_data: ud, test_event_code: testCode }).then(capture("schedule")));
     }
     await Promise.allSettled(jobs);
   }

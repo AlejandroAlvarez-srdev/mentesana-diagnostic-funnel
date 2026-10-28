@@ -18,6 +18,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Image from "next/image";
 import { track, getVisitorId as getAnalyticsVisitorId, getSessionId } from "@/lib/tracking";
 import type { PrecioDiagnostico } from "@/lib/diagnostico-precio";
+import { DIAGNOSTICO, conPrecio, type Producto999 } from "@/lib/productos-999";
+import { Strong } from "./DiagnosticoMatching";
 
 export type SlotLibre = { day: string; weekday: string; hour: number; iso: string };
 
@@ -35,6 +37,10 @@ type Props = {
   precio: PrecioDiagnostico;
   /** Variante del test diagnostico-v2 (va en la metadata de Stripe, como en el control). */
   ab: "A" | "B";
+  /** Producto del embudo (copy, source, testPath). Default: diagnóstico. */
+  producto?: Producto999;
+  /** Derivación honesta (logopedia: deglución / neuro). */
+  avisoPresencial?: string | null;
 };
 
 const hhmm = (hour: number) => `${String(hour).padStart(2, "0")}:00`;
@@ -55,8 +61,8 @@ const dayLong = (key: string) =>
 let liveCheckout: { destroy: () => void } | null = null;
 let queue: Promise<void> = Promise.resolve();
 
-function InlineCheckout({ day, slot, psychName, precio, ab }: {
-  day: string; slot: string; psychName: string; precio: PrecioDiagnostico; ab: "A" | "B";
+function InlineCheckout({ day, slot, psychName, precio, ab, producto }: {
+  day: string; slot: string; psychName: string; precio: PrecioDiagnostico; ab: "A" | "B"; producto: Producto999;
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
@@ -78,7 +84,7 @@ function InlineCheckout({ day, slot, psychName, precio, ab }: {
           if (v) utms[k] = v;
         });
         utms.referrer = utms.referrer || document.referrer || "";
-        utms.landing_page = utms.landing_page || "/test-diagnostico";
+        utms.landing_page = utms.landing_page || producto.testPath;
 
         const res = await fetch("/api/create-checkout", {
           method: "POST",
@@ -90,7 +96,8 @@ function InlineCheckout({ day, slot, psychName, precio, ab }: {
             name: "",
             phone: "",
             psychologistName: psychName,
-            source: "test-diagnostico",
+            source: producto.source,
+            producto: producto.slug,
             utms: { ...utms, scheduled_date: day, scheduled_time: slot },
             ab_diagnostico: ab,
             variante_precio: precio.variante,
@@ -171,9 +178,11 @@ function InlineCheckout({ day, slot, psychName, precio, ab }: {
 
 export default function PagoUnaPantalla({
   psych, temaLabel, slots, slotsLoading, slotsError, selectedDay, selectedSlot,
-  onSelect, onPersistSchedule, onReroll, precio, ab,
+  onSelect, onPersistSchedule, onReroll, precio, ab, producto = DIAGNOSTICO, avisoPresencial = null,
 }: Props) {
   const firstName = psych.name.split(" ")[0];
+  const ui = producto.ui;
+  const P = (s: string) => conPrecio(s, precio.texto);
   const [expanded, setExpanded] = useState(false);
   // "day|slot" del hueco para el que está montado el checkout.
   const [activeKey, setActiveKey] = useState("");
@@ -230,7 +239,7 @@ export default function PagoUnaPantalla({
       <header className="bg-white border-b border-purple/10 px-4 py-4">
         <div className="max-w-2xl mx-auto flex items-center justify-between">
           <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
-          <span className="text-[11px] text-foreground/40 font-medium">Tu sesión y tu pago</span>
+          <span className="text-[11px] text-foreground/40 font-medium">{ui.pago.unaPantallaHeader}</span>
         </div>
       </header>
 
@@ -272,20 +281,23 @@ export default function PagoUnaPantalla({
               <div className="min-w-0 flex-1">
                 <p className="font-serif text-[17px] font-semibold leading-tight truncate">{psych.name}</p>
                 <div className="flex items-center gap-1.5 mt-1">
-                  <span className="bg-green-50 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">✓ Colegiada</span>
-                  <span className="text-[10px] text-foreground/45">Sesiones online</span>
+                  <span className="bg-green-50 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{ui.hora.colegiada}</span>
+                  <span className="text-[10px] text-foreground/45">{ui.hora.online}</span>
                 </div>
                 <p className="text-[12px] text-purple/90 font-medium mt-1.5 leading-snug">
-                  ✦ Elegida para tu perfil de <strong>{temaLabel}</strong> — llega a la sesión con tu test ya leído.
+                  <Strong text={ui.hora.elegidaUna.replace("{tema}", temaLabel)} />
                 </p>
               </div>
             </div>
+            {avisoPresencial && (
+              <p className="mt-3 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-[11.5px] leading-snug text-amber-900">{avisoPresencial}</p>
+            )}
           </section>
 
           {/* 2 · Tu hueco (ya elegido) */}
           <section className="bg-white rounded-2xl border border-purple/10 p-4 mb-3 shadow-sm">
             <div className="flex items-center justify-between gap-2 mb-2">
-              <p className="text-[11px] font-bold text-purple uppercase tracking-wider">Tu sesión · 50 min</p>
+              <p className="text-[11px] font-bold text-purple uppercase tracking-wider">{ui.pago.unaPantallaSesion}</p>
               {haveSlots && (
                 <button onClick={() => setExpanded((e) => !e)} className="text-[12px] text-purple underline underline-offset-2">
                   {expanded ? "Ocultar horas" : "Cambiar hora →"}
@@ -381,7 +393,7 @@ export default function PagoUnaPantalla({
                 <p className="text-[13px] font-semibold mt-1">
                   {activeDay ? `${dayLong(activeDay)} · ${activeSlot}h` : "Elige un hueco arriba"}
                 </p>
-                <p className="text-[12px] text-foreground/55">Informe clínico + sesión de 50 min con {firstName}</p>
+                <p className="text-[12px] text-foreground/55">{P(ui.pago.unaPantallaQue).replace("{first}", firstName)}</p>
               </div>
               <div className="text-right shrink-0">
                 <p className="font-serif text-2xl font-bold text-purple">{precio.texto}</p>
@@ -389,7 +401,7 @@ export default function PagoUnaPantalla({
               </div>
             </div>
             {activeKey ? (
-              <InlineCheckout key={activeKey} day={activeDay} slot={activeSlot} psychName={psych.name} precio={precio} ab={ab} />
+              <InlineCheckout key={activeKey} day={activeDay} slot={activeSlot} psychName={psych.name} precio={precio} ab={ab} producto={producto} />
             ) : (
               <div className="flex flex-col items-center justify-center py-10">
                 <div className="w-9 h-9 border-4 border-purple/20 border-t-purple rounded-full animate-spin mb-3" />
@@ -402,7 +414,7 @@ export default function PagoUnaPantalla({
           </section>
 
           <button onClick={onReroll} className="w-full text-center text-[12px] text-purple hover:text-[#4e0d68] underline underline-offset-2 py-1">
-            ¿Prefieres otra psicóloga? →
+            {ui.hora.reroll}
           </button>
           <p className="mt-2 text-center text-[10px] text-foreground/30">En tu extracto aparece como &ldquo;MS Servicios&rdquo;</p>
         </div>

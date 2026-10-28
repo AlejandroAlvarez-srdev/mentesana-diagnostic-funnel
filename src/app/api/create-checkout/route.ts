@@ -5,6 +5,7 @@ import { getPartnersDb } from "@/lib/partners/supabase";
 import { ATTRIBUTION_COOKIE_NAME } from "@/lib/partners/config";
 import { holdDiagnosticoSlot } from "@/lib/diagnostico-hold";
 import { precioDe } from "@/lib/diagnostico-precio";
+import { productoDesdeSlug } from "@/lib/productos-999";
 
 export const runtime = "nodejs";
 
@@ -13,7 +14,11 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 });
 
 export async function POST(req: NextRequest) {
-  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag, variante_precio: bodyVariantePrecio, ms_visitor_id: bodyVisitorId, ms_session_id: bodySessionId } = await req.json();
+  const { email, name, phone, psychologistName, utms, source, partner_ref: bodyRef, coupon_code: bodyCoupon, fbc: bodyFbc, fbp: bodyFbp, fb_event_id: bodyFbEventId, landing_url: bodyLandingUrl, ab_diagnostico: bodyAbDiag, variante_precio: bodyVariantePrecio, ms_visitor_id: bodyVisitorId, ms_session_id: bodySessionId, producto: bodyProducto } = await req.json();
+  // Producto del embudo 9,99 (28-oct-2026): "diagnostico" (default, todo igual que
+  // siempre) o "logopedia" (mismo embudo; cambia el nombre en Stripe y metadata.producto,
+  // con el que el webhook crea la cita en el servicio 400 y manda el email de logopedia).
+  const producto = productoDesdeSlug(bodyProducto);
   // Prueba de precio 9,99 vs 29,99 (25-ago). Del cliente llega un TOKEN, nunca
   // un importe: el importe sale de la tabla del servidor. Cualquier valor raro
   // cae en 'estandar', que es el precio de siempre.
@@ -133,10 +138,10 @@ export async function POST(req: NextRequest) {
           price_data: {
             currency: "eur",
             product_data: {
-              name: coupon_code ? "Diagnóstico Psicológico — Cupón canjeado" : "Diagnóstico Psicológico — Mente Sana",
+              name: coupon_code ? "Diagnóstico Psicológico — Cupón canjeado" : producto.stripeProductName,
               description: coupon_code
                 ? `Cupón ${coupon_code} aplicado. Cargo simbólico de 0,50€ para validar el método de pago.`
-                : `Diagnóstico clínico con ${psychologistName || "tu psicóloga"}. Incluye: informe personalizado, matching, sesión con tu psicóloga 50 min, plan de acción.`,
+                : producto.stripeDescription(psychologistName || ""),
               images: ["https://mentesanapsicologia.com/images/logo.webp"],
             },
             unit_amount,
@@ -149,6 +154,7 @@ export async function POST(req: NextRequest) {
         patient_phone: phone || "",
         psychologist: psychologistName || "",
         source: src,
+        producto: producto.slug, // "diagnostico" | "logopedia" → webhook (servicio Amelia, email, payments)
         scheduled_date: (u.scheduled_date || "").slice(0, 20),
         scheduled_time: (u.scheduled_time || "").slice(0, 10),
         utm_source: (u.utm_source || "").slice(0, 120),
@@ -193,7 +199,7 @@ export async function POST(req: NextRequest) {
         client_ua: clientUa.slice(0, 300),
       },
       client_reference_id: [u.utm_source, u.utm_medium, u.utm_campaign].filter(Boolean).join("|").slice(0, 200) || undefined,
-      return_url: `https://confrimacionregistro.vercel.app/?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}`,
+      return_url: `https://confrimacionregistro.vercel.app/?session_id={CHECKOUT_SESSION_ID}&name=${encodeURIComponent(name || "")}&psych=${encodeURIComponent(psychologistName || "")}${producto.slug === "logopedia" ? "&producto=logopedia" : ""}`,
     });
 
     return NextResponse.json({ clientSecret: session.client_secret });

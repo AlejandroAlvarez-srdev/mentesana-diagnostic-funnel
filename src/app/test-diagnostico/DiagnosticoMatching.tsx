@@ -1,93 +1,32 @@
 "use client";
 
-import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo, Fragment } from "react";
 import Image from "next/image";
 import { track, getVisitorId as getAnalyticsVisitorId, getSessionId } from "@/lib/tracking";
 import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
 import { PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
+import { PRODUCTOS, conPrecio, type Producto999, type ProductoSlug, type ProductoUI } from "@/lib/productos-999";
+import { LOGOPEDAS } from "@/app/test-logopedia/logopedas";
 import PagoUnaPantalla from "./PagoUnaPantalla";
 
 // ═══ Questions config ═══
-interface Option {
-  id: string;
-  label: string;
-  icon: string;
+// Las preguntas, el copy y el pool viven en src/lib/productos-999.ts (PRODUCTOS):
+// este componente es el embudo de 9,99 € de TODOS los productos (diagnóstico
+// psicológico y logopedia) y solo cambia lo que el producto le dice. El copy del
+// diagnóstico es el de siempre, carácter por carácter.
+//
+// "**texto**" en el copy del producto → <strong>texto</strong>.
+export function Strong({ text }: { text: string }) {
+  const parts = text.split("**");
+  return <>{parts.map((p, i) => (i % 2 ? <strong key={i}>{p}</strong> : <Fragment key={i}>{p}</Fragment>))}</>;
 }
-
-interface Question {
-  id: string;
-  title: string;
-  subtitle: string;
-  options: Option[];
-}
-
-const QUESTIONS: Question[] = [
-  {
-    id: "feeling",
-    title: "¿Qué describe mejor cómo te sientes ahora mismo?",
-    subtitle: "Elige la que más resuene contigo. No hay respuestas correctas.",
-    options: [
-      { id: "ansiedad", label: "Nervios constantes, preocupación excesiva, no puedo parar de pensar", icon: "🌀" },
-      { id: "depresion", label: "Tristeza, vacío, falta de motivación, me cuesta levantarme", icon: "🌧️" },
-      { id: "relaciones", label: "Problemas con mi pareja, familia o relaciones que me afectan", icon: "💔" },
-      { id: "crecimiento", label: "Quiero conocerme mejor, crecer o tomar decisiones importantes", icon: "🌱" },
-      { id: "estres", label: "Agotamiento, burnout, siento que no doy más", icon: "🔥" },
-      { id: "otro", label: "Otra cosa que no encaja aquí", icon: "💭" },
-    ],
-  },
-  {
-    id: "duration",
-    title: "¿Hace cuánto tiempo que sientes esto?",
-    subtitle: "Nos ayuda a calibrar la urgencia y el enfoque de tu diagnóstico.",
-    options: [
-      { id: "dias", label: "Menos de 2 semanas", icon: "📅" },
-      { id: "semanas", label: "Entre 2 semanas y 3 meses", icon: "🗓️" },
-      { id: "meses", label: "Entre 3 y 12 meses", icon: "⏳" },
-      { id: "anios", label: "Más de un año", icon: "🕰️" },
-      { id: "no_se", label: "No sabría decirlo", icon: "🤷" },
-    ],
-  },
-  {
-    id: "experience",
-    title: "¿Has hecho terapia antes?",
-    subtitle: "No pasa nada si es tu primera vez. Solo queremos entender tu punto de partida.",
-    options: [
-      { id: "nunca", label: "Nunca he ido al psicólogo", icon: "🆕" },
-      { id: "hace_tiempo", label: "Sí, pero hace tiempo que no voy", icon: "🔙" },
-      { id: "reciente", label: "Sí, hace poco pero no encajé", icon: "🔄" },
-      { id: "actual", label: "Estoy en terapia pero quiero otra opinión", icon: "🔍" },
-    ],
-  },
-  {
-    id: "preference",
-    title: "¿Qué prefieres en tu psicóloga?",
-    subtitle: "Así elegimos la profesional que mejor encaja contigo.",
-    options: [
-      { id: "cercania", label: "Cercanía emocional — que me entienda y empatice", icon: "🤗" },
-      { id: "practica", label: "Enfoque práctico — herramientas concretas desde el día uno", icon: "🛠️" },
-      { id: "clinica", label: "Experiencia clínica — alguien senior que haya visto muchos casos", icon: "🏛️" },
-      { id: "sin_preferencia", label: "No tengo preferencia, confío en vuestra recomendación", icon: "✨" },
-    ],
-  },
-  {
-    id: "schedule",
-    title: "¿Cuándo prefieres tener tu sesión con tu psicóloga?",
-    subtitle: "Para buscar disponibilidad con tu psicóloga asignada.",
-    options: [
-      { id: "manana", label: "Por la mañana (9:00 – 13:00)", icon: "☀️" },
-      { id: "tarde", label: "Por la tarde (16:00 – 20:00)", icon: "🌅" },
-      { id: "noche", label: "Por la noche (20:00 – 22:00)", icon: "🌙" },
-      { id: "finde", label: "Fines de semana", icon: "📆" },
-      { id: "flexible", label: "Soy flexible, cualquier horario", icon: "🔀" },
-    ],
-  },
-];
 
 // ═══ Psychologists pool — catálogo fijo en ./psychologists (fallback del match) ═══
 // El array y su tipo viven en un módulo sin "use client" para que los route handlers
 // (/api/test-diagnostico/pool) puedan importarlos como datos y no como client reference.
 import { PSYCHOLOGISTS, type PsychologistEntry } from "./psychologists";
 export { PSYCHOLOGISTS, type PsychologistEntry };
+type Question = ReturnType<Producto999["preguntas"]>[number];
 
 // Videos del "equipo" que se ven en el hero del home (src/components/Hero.tsx).
 // Se muestran en la fase intro de /test-diagnostico-app (variant="app") para dar
@@ -124,8 +63,22 @@ function TeamVideosStrip() {
   );
 }
 
-export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_ESTANDAR }: { variant?: "web" | "app"; precio?: PrecioDiagnostico } = {}) {
+export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_ESTANDAR, producto: productoSlug = "diagnostico", segmento }: { variant?: "web" | "app"; precio?: PrecioDiagnostico; producto?: ProductoSlug; segmento?: string } = {}) {
   const isApp = variant === "app";
+  // Producto del embudo ("diagnostico" por defecto → nada cambia para /test-diagnostico).
+  // Llega como slug porque la página es un server component y el objeto lleva funciones.
+  const producto: Producto999 = PRODUCTOS[productoSlug] ?? PRODUCTOS.diagnostico;
+  const ui = producto.ui;
+  const esLogopedia = producto.slug === "logopedia";
+  const P = (s: string) => conPrecio(s, precio.texto);
+  const CATALOGO = esLogopedia ? LOGOPEDAS : PSYCHOLOGISTS;
+  const LS = {
+    answers: `${producto.storagePrefix}_answers`,
+    email: `${producto.storagePrefix}_email`,
+    name: `${producto.storagePrefix}_name`,
+    context: `${producto.storagePrefix}_context`,
+    schedule: `${producto.storagePrefix}_schedule`,
+  };
 
   // A/B test "diagnostico-v2" — 50/50 split determinista por visitor_id.
   // A = control (diseño actual); B = variante con Quick Wins CRO aplicados.
@@ -142,17 +95,17 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   }, [ab, abForced]);
   const COPY = {
     intro: {
-      kicker: isApp ? "Bienvenida desde la app" : "Así funciona tu diagnóstico",
-      titleLine1: isApp ? "Tu premium, tu diagnóstico" : "6 pasos para entender qué te pasa",
-      titleLine2: isApp ? "y tu 1ª cita psicológica." : "y tener un plan real.",
-      step4Title: isApp ? `Pagas ${precio.texto} (incluye todo)` : `Pagas ${precio.texto}`,
-      step4Desc: isApp ? "Pago único que incluye premium de la app + diagnóstico + cita psicológica. Sin suscripción." : "Pago único. Sin suscripción.",
+      kicker: isApp ? ui.intro.kickerApp : ui.intro.kicker,
+      titleLine1: isApp ? ui.intro.titleLine1App : ui.intro.titleLine1,
+      titleLine2: isApp ? ui.intro.titleLine2App : ui.intro.titleLine2,
+      step4Title: isApp ? P(ui.intro.pasosAApp4.title) : P(ui.intro.pasosA[3].title),
+      step4Desc: isApp ? ui.intro.pasosAApp4.desc : ui.intro.pasosA[3].desc,
     },
     contact: {
-      kicker: isApp ? "Un paso más" : "Ya tenemos tu match ✨",
-      title: isApp ? "Usa el mismo email con el que te registraste en la app" : "¿A qué email te enviamos tu psicóloga y tu diagnóstico?",
-      subtitle: isApp ? "Así activamos tu premium en el mismo email + te enviamos tu diagnóstico + confirmamos tu cita." : "Te guardamos tu match y tu hueco para que no lo pierdas.",
-      placeholder: isApp ? "El email con el que te registraste en la app" : "tucorreo@email.com",
+      kicker: isApp ? ui.contacto.kickerApp : ui.contacto.kicker,
+      title: isApp ? ui.contacto.titleApp : ui.contacto.title,
+      subtitle: isApp ? ui.contacto.subtitleApp : ui.contacto.subtitle,
+      placeholder: isApp ? ui.contacto.placeholderApp : ui.contacto.placeholder,
     },
   };
   const [currentQ, setCurrentQ] = useState(0);
@@ -161,6 +114,9 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
   const [userPhone, setUserPhone] = useState("");
+  // Logopedia: cuando el test habla de un MENOR, el gate del email exige el
+  // consentimiento del padre/madre/tutor (datos de salud de un menor, RGPD art. 9).
+  const [consentTutor, setConsentTutor] = useState(false);
   const [phase, setPhase] = useState<"intro" | "questions" | "analyzing" | "contact" | "schedule" | "payment">("intro");
   // true si se entró con ?directo=1: quien salta la portada no ha visto qué es esto
   // ni cuánto cuesta → en la pregunta 1 se le muestra precio + prueba social.
@@ -197,14 +153,19 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // con el hardcoded (mejor mostrar más que menos).
   const [dynamicPool, setDynamicPool] = useState<PsychologistEntry[] | null>(null);
   const effectivePool = useMemo<PsychologistEntry[]>(
-    () => (dynamicPool && dynamicPool.length > 0 ? dynamicPool : PSYCHOLOGISTS),
-    [dynamicPool],
+    () => (dynamicPool && dynamicPool.length > 0 ? dynamicPool : CATALOGO),
+    [dynamicPool, CATALOGO],
   );
   const checkoutRef = useRef<HTMLDivElement>(null);
+  // Preguntas del producto (en logopedia el texto de la 2ª depende de la 1ª).
+  const QUESTIONS: Question[] = producto.preguntas(answers);
+  // Perfil = respuesta de la pregunta que define el match (feeling / motivo).
+  const perfil = answers[producto.perfilKey] || "";
+  const requiereConsentTutor = !!producto.esMenor?.(answers);
 
   // Carga el pool COMPLETO de psicólogas desde Amelia (una vez por sesión)
   useEffect(() => {
-    fetch("/api/diagnostico/match-pool")
+    fetch(`/api/diagnostico/match-pool${esLogopedia ? "?producto=logopedia" : ""}`)
       .then(r => r.json())
       .then(d => { if (Array.isArray(d.pool) && d.pool.length > 0) setAmeliaPool(d.pool); })
       .catch(() => { /* silencio: fallback al hardcoded */ })
@@ -216,7 +177,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // el `effectivePool` sigue siendo el array hardcoded (fallback seguro).
   useEffect(() => {
     let cancelled = false;
-    fetch("/api/test-diagnostico/pool")
+    fetch(producto.poolFallbackPath)
       .then((r) => r.json())
       .then((d: { pool?: PsychologistEntry[] }) => {
         if (cancelled) return;
@@ -235,7 +196,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       if (p.get("directo") === "1" || p.get("paso") === "test") {
         setPhase("questions");
         setDirectEntry(true);
-        track("start_matching", { source: "landing_directo" });
+        track("start_matching", { source: "landing_directo", ...(segmento ? { segmento } : {}) });
       }
     } catch { /* noop */ }
   }, []);
@@ -291,19 +252,20 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   useEffect(() => {
     // Pre-rellena email/nombre/teléfono si ya los dejó en una sesión previa
     // (el gate pre-match solo pide email; nombre/teléfono se conservan si los tiene).
-    const savedEmail = localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email");
+    const savedEmail = localStorage.getItem("ms_user_email") || localStorage.getItem(LS.email);
     if (savedEmail) setUserEmail(savedEmail);
-    const savedName = localStorage.getItem("ms_user_name") || localStorage.getItem("ms_diagnostico_name");
+    const savedName = localStorage.getItem("ms_user_name") || localStorage.getItem(LS.name);
     if (savedName) setUserName(savedName);
     const savedPhone = localStorage.getItem("ms_user_phone");
     if (savedPhone) setUserPhone(savedPhone);
 
-    const saved = localStorage.getItem("ms_diagnostico_answers");
+    const saved = localStorage.getItem(LS.answers);
     if (saved) {
       try {
         const parsed = JSON.parse(saved);
         setAnswers(parsed);
-        const answered = Object.keys(parsed).length;
+        if (parsed.consentimiento_tutor === "si") setConsentTutor(true);
+        const answered = QUESTIONS.filter((q) => parsed[q.id]).length;
         if (answered >= QUESTIONS.length) {
           setPhase("schedule");
         } else if (answered > 0) {
@@ -317,7 +279,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   const selectOption = useCallback((questionId: string, optionId: string) => {
     const newAnswers = { ...answers, [questionId]: optionId };
     setAnswers(newAnswers);
-    localStorage.setItem("ms_diagnostico_answers", JSON.stringify(newAnswers));
+    localStorage.setItem(LS.answers, JSON.stringify(newAnswers));
 
     track(`complete_q${currentQ + 1}` as string, { question: questionId, answer: optionId });
 
@@ -329,11 +291,11 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       // gastar el suspense; las animaciones del match vienen DESPUÉS del email
       // como recompensa por dejarlo.
       setTimeout(() => {
-        track("view_email_gate", { profile: newAnswers.feeling || "", ab });
+        track("view_email_gate", { profile: newAnswers[producto.perfilKey] || "", ab });
         setPhase("contact");
       }, 400);
     }
-  }, [answers, currentQ]);
+  }, [answers, currentQ, QUESTIONS, producto.perfilKey, ab, LS.answers]);
 
   // Save to API (always, whether they pay or not).
   // Teléfono OPCIONAL en el gate pre-match (antes era obligatorio): pedirlo aquí
@@ -344,10 +306,15 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     // teléfono es OPCIONAL en este gate pre-match: pedirlo aquí frenaba el embudo
     // y, con WhatsApp caído, el email es lo que de verdad recupera. Se captura si lo dan.
     if (!userEmail) return;
+    if (requiereConsentTutor && !consentTutor) return;
     setSaving(true);
-    localStorage.setItem("ms_diagnostico_email", userEmail);
-    localStorage.setItem("ms_diagnostico_name", userName);
-    localStorage.setItem("ms_diagnostico_context", contextText);
+    localStorage.setItem(LS.email, userEmail);
+    localStorage.setItem(LS.name, userName);
+    localStorage.setItem(LS.context, contextText);
+    // El consentimiento del tutor viaja con las respuestas (JSON de diagnostico_tests),
+    // nunca como evento de analítica ni a Stripe.
+    const answersToSave = requiereConsentTutor && consentTutor ? { ...answers, consentimiento_tutor: "si" } : answers;
+    try { localStorage.setItem(LS.answers, JSON.stringify(answersToSave)); } catch {}
     localStorage.setItem("ms_user_email", userEmail);
     if (userName) localStorage.setItem("ms_user_name", userName);
     if (userPhone) localStorage.setItem("ms_user_phone", userPhone);
@@ -357,8 +324,8 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: "test-diagnostico",
-          answers,
+          source: producto.source,
+          answers: answersToSave,
           context: contextText,
           name: userName,
           email: userEmail,
@@ -368,7 +335,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       });
     } catch {}
 
-    track("start_matching_analysis", { profile: answers.feeling || "", email: userEmail, ab });
+    track("start_matching_analysis", { profile: perfil, email: userEmail, ab });
     setSaving(false);
     // Tras email → animaciones de match (analyzing) → calendario (schedule).
     // Las animaciones materializan el valor de dejar el email: la persona ve
@@ -381,7 +348,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // array hardcoded para no romper la UI. Se fija en localStorage para
   // que no parpadee en re-renders.
   const matchedPsych = (() => {
-    const feeling = answers.feeling || "ansiedad";
+    const feeling = perfil || producto.perfilDefault;
 
     if (typeof window === "undefined") return effectivePool[0];
 
@@ -389,7 +356,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     //    (preferimos vídeo para mantener el card visual de la sección "TU MATCH").
     if (ameliaPool && ameliaPool.length > 0) {
       // v4: prioriza disponibilidad cercana (ver selección abajo).
-      const storageKey = `ms_match_amelia_v4_${feeling}`;
+      const storageKey = `${producto.matchStorageKey}_${feeling}`;
       const stored = localStorage.getItem(storageKey);
       if (stored) {
         const found = ameliaPool.find(p => p.name === stored);
@@ -398,8 +365,8 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
             name: found.name,
             city: "España",
             exp: "Colegiada",
-            specialty: "Psicóloga colegiada · sesiones online",
-            video: found.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+            specialty: ui.hora.especialidadCard,
+            video: found.video_url ?? producto.videoFallback ?? "",
             photo: found.photo_url ?? null,
             description: found.description ?? null,
           };
@@ -421,8 +388,8 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
         name: pick.name,
         city: "España",
         exp: "Colegiada",
-        specialty: "Psicóloga colegiada · sesiones online",
-        video: pick.video_url ?? "/videos/welcome/diana-salazar-alzate.mp4",
+        specialty: ui.hora.especialidadCard,
+        video: pick.video_url ?? producto.videoFallback ?? "",
         photo: pick.photo_url ?? null,
         description: pick.description ?? null,
       };
@@ -433,7 +400,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     //    PSYCHOLOGISTS a pelo — ahora respeta status='visible' de Amelia.
     const candidates = effectivePool.filter((p) => p.profiles.includes(feeling));
     const pool = candidates.length > 0 ? candidates : effectivePool;
-    const storageKey = `ms_match_pick_v2_${feeling}`;
+    const storageKey = `${producto.matchPickStorageKey}_${feeling}`;
     const stored = localStorage.getItem(storageKey);
     if (stored) {
       const found = pool.find(p => p.name === stored);
@@ -449,19 +416,19 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // (en cuanto hay hueco elegido).
   const persistSchedule = async (day: string, slot: string) => {
     try {
-      localStorage.setItem("ms_diagnostico_schedule", JSON.stringify({ day, slot, psychologist: matchedPsych.name }));
+      localStorage.setItem(LS.schedule, JSON.stringify({ day, slot, psychologist: matchedPsych.name }));
     } catch {}
-    const emailForSave = userEmail || localStorage.getItem("ms_user_email") || localStorage.getItem("ms_diagnostico_email") || "";
+    const emailForSave = userEmail || localStorage.getItem("ms_user_email") || localStorage.getItem(LS.email) || "";
     if (!emailForSave) return;
     try {
       await fetch("/api/diagnostico-test", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          source: "test-diagnostico",
+          source: producto.source,
           answers,
           context: contextText,
-          name: userName || localStorage.getItem("ms_diagnostico_name") || "",
+          name: userName || localStorage.getItem(LS.name) || "",
           email: emailForSave,
           phone: userPhone || localStorage.getItem("ms_user_phone") || "",
           matchedPsychologist: matchedPsych.name,
@@ -474,16 +441,17 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
 
   if (phase === "analyzing") {
     const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
-    const TEMA_PSI: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
+    const TEMA_PSI = producto.tema;
     return (
       <AnalyzingPhase
+        ui={ui.analisis}
         onComplete={() => {
-          track("view_match_result", { profile: answers.feeling || "", email: userEmail, ab });
+          track("view_match_result", { profile: perfil, email: userEmail, ab });
           setPhase("schedule");
         }}
         matchedPsychName={matchedPsych.name}
         matchedPsychPhoto={psychPhoto}
-        feelingLabel={TEMA_PSI[answers.feeling] || TEMA_PSI.otro}
+        feelingLabel={TEMA_PSI[perfil] || TEMA_PSI.otro}
       />
     );
   }
@@ -496,15 +464,17 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     if (!poolSettled) {
       return (
         <div className="min-h-[60vh] flex items-center justify-center px-6">
-          <p className="text-sm text-foreground/50 animate-pulse">Cargando tu psicóloga…</p>
+          <p className="text-sm text-foreground/50 animate-pulse">{ui.hora.cargandoPro}</p>
         </div>
       );
     }
     // matchedPsych puede ser el tipo Amelia (con photo) o el fallback hardcoded (sin photo).
     const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
     // Tema del usuario (en su lenguaje) para personalizar el "encaja con tu perfil".
-    const TEMA: Record<string, string> = { ansiedad: "ansiedad", depresion: "ánimo y motivación", relaciones: "relaciones y vínculos", estres: "estrés y burnout", crecimiento: "autoconocimiento", otro: "lo que te está pasando" };
-    const temaLabel = TEMA[answers.feeling] || TEMA.otro;
+    const TEMA = producto.tema;
+    const temaLabel = TEMA[perfil] || TEMA.otro;
+    // Derivación honesta (logopedia: deglución / neuro pueden necesitar presencial).
+    const avisoPresencial = producto.avisoPresencial && producto.avisoPresencial.perfiles.includes(perfil) ? producto.avisoPresencial.texto : null;
 
     // Variante B del A/B #5: psicóloga + hueco + pago en una sola pantalla. Usa los
     // mismos slots, la misma preselección del hueco más cercano y el mismo checkout.
@@ -522,11 +492,13 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
           onPersistSchedule={persistSchedule}
           onReroll={() => {
             track("reroll_match_requested", { current_psi: matchedPsych.name, ab });
-            try { localStorage.removeItem(`ms_match_amelia_v4_${answers.feeling || "ansiedad"}`); } catch {}
+            try { localStorage.removeItem(`${producto.matchStorageKey}_${perfil || producto.perfilDefault}`); } catch {}
             window.location.reload();
           }}
           precio={precio}
           ab={ab}
+          producto={producto}
+          avisoPresencial={avisoPresencial}
         />
       );
     }
@@ -584,7 +556,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
 
     // Las horas siempre se muestran en orden ascendente. La preferencia
     // (mañana/tarde/noche) solo resalta visualmente — nunca reordena.
-    const pref = answers.schedule || "flexible";
+    const pref = answers[producto.horarioKey] || "flexible";
     const slotsForSelectedDay = (selectedDay ? byDay.get(selectedDay) : []) ?? [];
 
     const handleConfirmSlot = async () => {
@@ -631,15 +603,11 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               </div>
               <p className="text-xs font-bold text-purple uppercase tracking-wider mb-2">{matchedPsych.name}</p>
               <h1 className="font-serif text-2xl md:text-3xl leading-tight mb-2">
-                Preparando tus <em className="text-purple italic font-normal">horas disponibles</em>
+                {ui.hora.loaderH1}<em className="text-purple italic font-normal">{ui.hora.loaderH1Em}</em>
               </h1>
-              <p className="text-sm text-foreground/60 mb-6">Mirando la agenda real de tu psicóloga esta semana…</p>
+              <p className="text-sm text-foreground/60 mb-6">{ui.hora.loaderSub}</p>
               <ul className="space-y-2.5 max-w-xs mx-auto text-left">
-                {[
-                  "Sincronizando su calendario clínico",
-                  "Filtrando huecos libres compatibles contigo",
-                  "Dejándote pre-elegido el más cercano",
-                ].map((b, i) => (
+                {ui.hora.loaderBullets.map((b, i) => (
                   <li
                     key={b}
                     className="flex items-start gap-2.5 bg-white/70 backdrop-blur rounded-xl border border-purple/10 px-3.5 py-2.5 shadow-sm"
@@ -662,7 +630,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
         <header className="bg-white border-b border-purple/10 px-4 py-4">
           <div className="max-w-2xl mx-auto flex items-center justify-between">
             <Image src="/images/logo.webp" alt="Mente Sana" width={120} height={24} priority className="h-6 w-auto" />
-            <span className="text-[11px] text-foreground/40 font-medium">Elige tu sesión psicológica</span>
+            <span className="text-[11px] text-foreground/40 font-medium">{ui.hora.header}</span>
           </div>
         </header>
 
@@ -689,16 +657,16 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                 <div className="min-w-0 flex-1">
                   <p className="font-serif text-[17px] font-semibold leading-tight truncate">{matchedPsych.name}</p>
                   <div className="flex items-center gap-1.5 mt-1">
-                    <span className="bg-green-50 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">✓ Colegiada</span>
-                    <span className="text-[10px] text-foreground/45">Sesiones online</span>
+                    <span className="bg-green-50 text-green-700 text-[10px] font-bold px-1.5 py-0.5 rounded-full">{ui.hora.colegiada}</span>
+                    <span className="text-[10px] text-foreground/45">{ui.hora.online}</span>
                   </div>
                   <p className="text-[12px] text-purple/90 font-medium mt-1.5 leading-snug">
-                    ✦ Elegida para tu perfil de <strong>{temaLabel}</strong> — llegará a la sesión con tu test ya leído.
+                    <Strong text={ui.hora.elegida.replace("{tema}", temaLabel)} />
                   </p>
                   {/* QW3 (variante B): mini-bio de la psi debajo del match badge */}
                   {ab === "B" && (
                     <p className="text-[11px] text-foreground/60 mt-1.5 leading-snug">
-                      Colegiada · <strong>especializada en {temaLabel}</strong> · suele empezar preguntándote por lo que pasó esta semana.
+                      <Strong text={ui.hora.bioB.replace("{tema}", temaLabel)} />
                     </p>
                   )}
                 </div>
@@ -713,19 +681,22 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               )}
 
               {/* QW3 (variante B): micro-testimonial genérico (por si no tenemos por psi específica). */}
-              {ab === "B" && (
+              {ab === "B" && ui.hora.testimonioB && (
                 <div className="mt-3 rounded-xl bg-[#FBF7EE] border-l-2 border-[#D4AF37] px-3 py-2">
                   <p className="text-[12px] italic text-foreground/70 leading-snug">
-                    &ldquo;Con mi psicóloga conecté desde la primera sesión. Me ayudó a entender por qué me pasaba lo que me pasaba.&rdquo;
+                    &ldquo;{ui.hora.testimonioB.q}&rdquo;
                   </p>
-                  <p className="text-[10px] text-foreground/45 mt-1">— Marina, 34 · 4 meses después</p>
+                  <p className="text-[10px] text-foreground/45 mt-1">{ui.hora.testimonioB.a}</p>
                 </div>
+              )}
+              {avisoPresencial && (
+                <p className="mt-3 rounded-xl bg-amber-50 border border-amber-100 px-3 py-2 text-[11.5px] leading-snug text-amber-900">{avisoPresencial}</p>
               )}
             </div>
 
             <div className="text-center mb-4">
-              <h1 className="font-serif text-xl md:text-2xl leading-tight">Reserva tu sesión psicológica con {matchedPsych.name.split(" ")[0]}</h1>
-              <p className="mt-1 text-xs text-foreground/45">50 minutos con tu psicóloga colegiada · te dejamos pre-elegido el hueco más cercano 👇</p>
+              <h1 className="font-serif text-xl md:text-2xl leading-tight">{ui.hora.h1.replace("{first}", matchedPsych.name.split(" ")[0])}</h1>
+              <p className="mt-1 text-xs text-foreground/45">{ui.hora.sub}</p>
             </div>
 
             {/* Loader / empty */}
@@ -828,7 +799,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm font-semibold text-foreground">Tu sesión psicológica</p>
+                    <p className="text-sm font-semibold text-foreground">{ui.hora.sesion}</p>
                     <p className="text-xs text-foreground/50 mt-0.5">
                       {new Date(selectedDay).toLocaleDateString("es-ES", { weekday: "long", day: "numeric", month: "long" })} a las {selectedSlot}h
                     </p>
@@ -871,14 +842,14 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                     track("reroll_match_requested", { current_psi: matchedPsych.name, ab });
                     // Fuerza reroll: borra el match cacheado y recarga (se elige uno nuevo del pool).
                     try {
-                      const feeling = answers.feeling || "ansiedad";
-                      localStorage.removeItem(`ms_match_amelia_v4_${feeling}`);
+                      const feeling = perfil || producto.perfilDefault;
+                      localStorage.removeItem(`${producto.matchStorageKey}_${feeling}`);
                     } catch {}
                     window.location.reload();
                   }}
                   className="mt-2 w-full text-center text-[12px] text-purple hover:text-[#4e0d68] underline underline-offset-2"
                 >
-                  ¿Prefieres otra psicóloga? →
+                  {ui.hora.reroll}
                 </button>
               )}
             </div>
@@ -891,6 +862,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   // ═══ PAYMENT PHASE — Stripe Embedded Checkout ═══
   if (phase === "payment") {
     return <PaymentPhase
+      producto={producto}
       precio={precio}
       email=""
       name=""
@@ -910,13 +882,8 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     // defecto en un <details> "¿Cómo funciona?".
     // Los 3 del hero usan las tomas del home (CDN Supabase, versión curada) — son
     // los mismos videos que se ven en Psychologists.tsx en la home.
-    const HOME_CDN = "https://your-project.supabase.co/storage/v1/object/public/mentesana-videos/welcome";
-    const heroPsis = [
-      { ...PSYCHOLOGISTS[0], video: `${HOME_CDN}/adriana-salas.mp4` },   // Adriana Salas — ansiedad
-      // Giovanna Vago y Leidy Vicuña no están en el pool PSYCHOLOGISTS (solo en el home Psychologists.tsx)
-      { name: "Giovanna Vago", city: "Madrid", exp: "9 años", specialty: "Psicóloga clínica", video: `${HOME_CDN}/giovanna-vago.mp4`, profiles: ["crecimiento", "otro"] },
-      { name: "Leidy Vicuña", city: "Barcelona", exp: "8 años", specialty: "Ansiedad, mindfulness", video: `${HOME_CDN}/leidy-vicuna.mp4`, profiles: ["ansiedad", "crecimiento"] },
-    ];
+    // Caras del hero (vídeos del home vía CDN para el diagnóstico; locales para logopedia).
+    const heroPsis = ui.intro.caras;
 
     return (
       <div className="min-h-screen bg-[#FFFAF2] flex flex-col">
@@ -933,13 +900,13 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                 {/* HERO B v2 — beneficio arriba (no proceso), 3 caras reales, CTA con precio+garantía */}
                 <div className="text-center mb-5">
                   <span className="inline-block bg-purple/8 text-purple text-[10.5px] font-bold uppercase tracking-wider px-2.5 py-1 rounded-full mb-3">
-                    ✦ Diagnóstico con psicóloga colegiada
+                    {ui.intro.badgeB}
                   </span>
                   <h1 className="font-serif text-[26px] md:text-[30px] leading-[1.08] mb-3">
-                    Entiende qué te pasa y sal con un <em className="text-purple italic font-normal not-italic font-bold">plan real</em>
+                    {ui.intro.h1B}<em className="text-purple italic font-normal not-italic font-bold">{ui.intro.h1BEm}</em>
                   </h1>
                   <p className="text-[13.5px] text-foreground/75 leading-snug px-2">
-                    Una sesión de 50 min con tu psicóloga colegiada. Hoy, por {precio.texto}.
+                    {P(ui.intro.subB)}
                   </p>
                 </div>
 
@@ -957,7 +924,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                   ))}
                 </div>
                 <p className="text-center text-[10.5px] text-foreground/50 mb-4">
-                  y otras +150 psicólogas colegiadas · elegimos la tuya según tu perfil
+                  {ui.intro.carasNota}
                 </p>
 
                 {/* CTA principal con precio visible + trust bar */}
@@ -966,26 +933,23 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                     onClick={() => { setPhase("questions"); track("start_matching", { ab }); }}
                     className="w-full bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg shadow-purple/30 transition-colors"
                   >
-                    Reservar mi diagnóstico · {precio.texto} →
+                    {P(ui.intro.ctaB)}
                   </button>
                   <p className="mt-2.5 text-[11.5px] text-foreground/70">🔒 Pago único · Sin suscripción</p>
-                  <p className="mt-1 text-[10.5px] text-foreground/55">★ 4,9 · +8.000 pacientes · +150 psicólogas colegiadas</p>
+                  <p className="mt-1 text-[10.5px] text-foreground/55">{ui.intro.ctaBSocial}</p>
                 </div>
 
                 {/* Videos del equipo (mismo que el home) — solo en la landing de la app */}
                 {isApp && <TeamVideosStrip />}
 
-                {/* Prueba social — 3 testimonios cortos de pacientes reales del funnel */}
+                {/* Prueba social — 3 testimonios cortos de pacientes reales del funnel (ninguno en logopedia: no inventamos) */}
+                {ui.intro.testimonios.length > 0 && (
                 <div className="mt-7 -mx-4 px-4">
-                  <p className="text-center text-[10.5px] font-bold uppercase tracking-wider text-purple/70 mb-3">Lo que cuentan quienes ya lo hicieron</p>
+                  <p className="text-center text-[10.5px] font-bold uppercase tracking-wider text-purple/70 mb-3">{ui.intro.testimoniosTitulo}</p>
                   <div className="grid grid-cols-1 gap-2.5">
-                    {[
-                      { q: `Salí con un plan claro de qué hacer esta semana, no con más dudas. Por ${precio.texto}, vale mucho más.`, a: "Marina, 34", tag: "ansiedad" },
-                      { q: "Pensé que era otra app impersonal. Mi psicóloga había leído mi test antes de la sesión. Se notó.", a: "Carla, 29", tag: "estado de ánimo" },
-                      { q: "Nunca había hablado con una psicóloga. Fue más fácil de lo que pensaba, y no me sentí juzgada ni un segundo.", a: "Laura, 41", tag: "primera vez" },
-                    ].map((t) => (
+                    {ui.intro.testimonios.map((t) => (
                       <div key={t.a} className="bg-white rounded-2xl border border-purple/10 p-3.5 shadow-sm">
-                        <p className="text-[12.5px] text-foreground/85 leading-snug italic">&ldquo;{t.q}&rdquo;</p>
+                        <p className="text-[12.5px] text-foreground/85 leading-snug italic">&ldquo;{P(t.q)}&rdquo;</p>
                         <div className="mt-2 flex items-center justify-between">
                           <p className="text-[10.5px] font-semibold text-purple">— {t.a}</p>
                           <span className="text-[9px] text-foreground/50 bg-purple/5 px-2 py-0.5 rounded-full">{t.tag}</span>
@@ -994,22 +958,16 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                     ))}
                   </div>
                 </div>
+                )}
 
                 {/* Timeline colapsable — proceso DESPUÉS del beneficio */}
                 <details className="mt-6 group">
                   <summary className="list-none cursor-pointer text-center py-2.5 text-[12.5px] text-purple font-semibold hover:underline">
-                    ¿Cómo funciona? Ver los 6 pasos <span className="inline-block transition-transform group-open:rotate-90">→</span>
+                    {ui.intro.verPasos} <span className="inline-block transition-transform group-open:rotate-90">→</span>
                   </summary>
                   <div className="mt-4 space-y-0 relative">
                     <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
-                    {[
-                      { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas.", active: true },
-                      { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga colegiada más idónea para tu caso." },
-                      { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves su disponibilidad real y reservas." },
-                      { n: "4", icon: "💳", title: `Reservas tu diagnóstico — ${precio.texto} únicos`, desc: "Pago único, sin suscripción." },
-                      { n: "5", icon: "📧", title: "Recibes tu test clínico por email", desc: "PHQ-9, GAD-7, DSM-5. Para que tu psicóloga prepare tu sesión." },
-                      { n: "6", icon: "💬", title: "Sesión de 50 min + tu diagnóstico", desc: "Tu psicóloga llega con tu informe leído. Plan de acción concreto." },
-                    ].map((step) => (
+                    {ui.intro.pasosB.map((step) => ({ ...step, title: P(step.title) })).map((step) => (
                       <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
                         <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
                           {step.icon}
@@ -1049,14 +1007,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                 <div className="space-y-0 relative">
                   <div className="absolute left-[22px] top-8 bottom-8 w-0.5 bg-gradient-to-b from-purple/30 via-purple/20 to-purple/10" />
 
-                  {[
-                    { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos. Sobre cómo te sientes y qué buscas. Es lo que harás ahora.", active: true },
-                    { n: "2", icon: "🎯", title: "Elegimos a tu profesional", desc: "La psicóloga más idónea para estudiar tu caso y elaborar tu diagnóstico." },
-                    { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Ves la disponibilidad de tu psicóloga y reservas tu cita." },
-                    { n: "4", icon: "💳", title: COPY.intro.step4Title, desc: COPY.intro.step4Desc },
-                    { n: "5", icon: "📧", title: "Recibes tu test en el correo", desc: "30 preguntas clínicas (PHQ-9, GAD-7, DSM-5) para que tu psicóloga prepare tu sesión y tu informe personalizado. Unos 10-15 minutos, tranquila." },
-                    { n: "6", icon: "💬", title: "Asistes a tu cita y recibes tu diagnóstico", desc: "50 min de videollamada. Tu psicóloga llega con tu informe leído, te explica cada hallazgo y construís un plan juntos." },
-                  ].map((step) => (
+                  {ui.intro.pasosA.map((step, i) => (i === 3 ? { ...step, title: COPY.intro.step4Title, desc: COPY.intro.step4Desc } : { ...step, title: P(step.title) })).map((step) => (
                     <div key={step.n} className={`flex items-start gap-3 py-2 ${step.active ? "" : "opacity-95"}`}>
                       <div className={`relative z-10 w-10 h-10 rounded-full flex items-center justify-center text-base shrink-0 ${step.active ? "bg-purple text-white shadow-lg shadow-purple/30" : "bg-white border-2 border-purple/30"}`}>
                         {step.icon}
@@ -1125,15 +1076,22 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               className="w-full bg-white rounded-xl border border-purple/15 px-4 py-4 text-base text-center focus:outline-none focus:ring-2 focus:ring-purple/30 focus:border-purple/30"
             />
 
+            {requiereConsentTutor && ui.contacto.consentimientoMenor && (
+              <label className="mt-4 flex items-start gap-2.5 rounded-xl border border-purple/15 bg-white px-3.5 py-3 text-left text-[12px] leading-snug text-foreground/75">
+                <input type="checkbox" checked={consentTutor} onChange={(e) => setConsentTutor(e.target.checked)} className="mt-0.5 h-4 w-4 accent-purple" />
+                <span>{ui.contacto.consentimientoMenor} <a href="/legal/privacidad" target="_blank" rel="noreferrer" className="underline text-purple">Privacidad</a></span>
+              </label>
+            )}
+
             <button
               onClick={saveAndProceed}
-              disabled={!userEmail || saving}
+              disabled={!userEmail || saving || (requiereConsentTutor && !consentTutor)}
               className="w-full mt-6 bg-purple hover:bg-[#4e0d68] text-white font-bold rounded-full py-4 text-base shadow-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {saving ? "Guardando..." : "Conocer a mi psicóloga y agendar mi cita →"}
+              {saving ? "Guardando..." : ui.contacto.boton}
             </button>
 
-            <p className="mt-3 text-center text-[10px] text-foreground/30">🔒 No spam. Solo te escribiremos para tu diagnóstico.</p>
+            <p className="mt-3 text-center text-[10px] text-foreground/30">{ui.contacto.nota}</p>
           </div>
         </main>
       </div>
@@ -1168,14 +1126,9 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
           {/* Burbuja de calentamiento contextual — recuerda que el test elige a la
               psicóloga que llevará la cita y va calentando hacia la 1ª sesión. */}
           {(() => {
-            const bubbles = [
-              { icon: "📋", text: <>Estas 5 preguntas son <strong>solo para hacer match con tu psicóloga</strong>. El diagnóstico clínico (30 preguntas) llega después de agendar tu sesión.</> },
-              { icon: "🌱", text: <>Este test va a elegir a <strong>la psicóloga que te atenderá</strong> en tu sesión.</> },
-              { icon: "💜", text: <>Lo que respondas le ayuda a <strong>tu psicóloga a llegar preparada</strong>.</> },
-              { icon: "✨", text: <>Hay <strong>+150 psicólogas colegiadas</strong> esperando — buscamos la tuya.</> },
-              { icon: "🎯", text: <>Última pregunta — en segundos verás <strong>quién será tu psicóloga</strong>.</> },
-            ];
+            const bubbles = ui.preguntas.burbujas.map((bb) => ({ icon: bb.icon, text: <Strong text={bb.text} /> }));
             const b = bubbles[Math.min(currentQ, bubbles.length - 1)];
+            const [directoA, directoB] = ui.preguntas.directoTitulo.split("{precio}");
             // Entrada directa (A/B "directo"): en la pregunta 1 sustituimos la burbuja por
             // qué es, cuánto cuesta y quién lo avala — lo que la portada contaba y aquí se
             // ha saltado. Evita la sorpresa del precio al llegar al pago.
@@ -1183,10 +1136,10 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
               return (
                 <div className="mb-6 rounded-2xl border border-purple/15 bg-white px-4 py-3 text-center shadow-[0_4px_20px_rgba(106,23,140,.05)]">
                   <p className="text-[13px] font-semibold text-foreground/85">
-                    Diagnóstico psicológico online · <span className="text-purple">{precio.texto}</span>, pago único
+                    {directoA}<span className="text-purple">{precio.texto}</span>{directoB}
                   </p>
                   <p className="mt-1 text-[11.5px] leading-snug text-foreground/55">
-                    Informe clínico + sesión de 50 min con tu psicóloga colegiada · ★ 4,9 · +8.000 personas
+                    {ui.preguntas.directoSub}
                   </p>
                 </div>
               );
@@ -1237,12 +1190,15 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
 }
 
 // ═══ PAYMENT COMPONENT — Stripe Embedded Checkout ═══
-function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef, ab, precio }: {
+function PaymentPhase({ producto, email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef, ab, precio }: {
+  producto: Producto999;
   email: string; name: string; phone: string; psychologistName: string;
   selectedDay: string; selectedSlot: string; checkoutRef: React.RefObject<HTMLDivElement | null>;
   ab: "A" | "B";
   precio: PrecioDiagnostico;
 }) {
+  const ui = producto.ui.pago;
+  const P = (s: string) => conPrecio(s, precio.texto);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const mounted = useRef(true);
@@ -1270,7 +1226,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
           if (v) utms[k] = v;
         });
         utms.referrer = utms.referrer || document.referrer || "";
-        utms.landing_page = utms.landing_page || "/test-diagnostico";
+        utms.landing_page = utms.landing_page || producto.testPath;
 
         const res = await fetch("/api/create-checkout", {
           method: "POST",
@@ -1280,7 +1236,8 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
             name,
             phone,
             psychologistName,
-            source: "test-diagnostico",
+            source: producto.source,
+            producto: producto.slug,
             utms: { ...utms, scheduled_date: selectedDay, scheduled_time: selectedSlot },
             ab_diagnostico: ab, // QW5: A=card-only · B=Apple/Google Pay + wallets
             // Token de variante de precio, NO el importe: el servidor lo
@@ -1326,6 +1283,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
       }
     }
     initCheckout();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [email, name, phone, psychologistName, selectedDay, selectedSlot, checkoutRef]);
 
   return (
@@ -1341,7 +1299,7 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
         <div className="max-w-lg mx-auto">
           {/* Resumen de cita */}
           <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-6">
-            <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">Tu cita de diagnóstico</p>
+            <p className="text-xs font-bold text-purple uppercase tracking-wider mb-3">{ui.titulo}</p>
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-semibold">
@@ -1355,20 +1313,18 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
               </div>
             </div>
             <div className="mt-3 pt-3 border-t border-black/5 grid grid-cols-3 gap-2 text-center">
-              <div><p className="text-[10px] text-foreground/40">📄 Informe</p></div>
-              <div><p className="text-[10px] text-foreground/40">🎯 Matching</p></div>
-              <div><p className="text-[10px] text-foreground/40">💬 50 min</p></div>
+              {ui.iconos.map((t) => (<div key={t}><p className="text-[10px] text-foreground/40">{t}</p></div>))}
             </div>
           </div>
 
           {/* Qué recibes justo después del pago */}
           <div className="mb-6">
-            <NextStepsCard />
+            <NextStepsCard items={ui.siguientes} />
           </div>
 
           {/* Reasegurador anti-objeción #1 del RAG */}
           <div className="mb-6">
-            <NoSurprisesBox precio={precio} />
+            <NoSurprisesBox items={ui.sinSorpresas.map(P)} />
           </div>
 
           {/* Stripe Checkout */}
@@ -1398,60 +1354,30 @@ function PaymentPhase({ email, name, phone, psychologistName, selectedDay, selec
 
 // ═══ ANALYZING PHASE — pantalla de carga antes del match ═══
 function AnalyzingPhase({
+  ui,
   onComplete,
   matchedPsychName,
   matchedPsychPhoto,
   feelingLabel,
 }: {
+  ui: ProductoUI["analisis"];
   onComplete: () => void;
   matchedPsychName: string;
   matchedPsychPhoto: string | null;
   feelingLabel: string;
 }) {
   const firstName = matchedPsychName.split(" ")[0];
+  const T = (s: string) => s.replace("{tema}", feelingLabel).replace("{first}", firstName);
 
   // 5 frames narrativos. Total ≈ 14 s. La gente lee, anticipa el match, ve la
   // foto con un reveal, entiende por qué encaja y le da contexto al calendario.
-  const FRAMES = [
-    {
-      ms: 2800,
-      title: "Analizando tus 5 respuestas",
-      sub: "Las cruzamos con criterios clínicos, no con un test cualquiera.",
-      bullets: [
-        "Perfil emocional · qué te trae aquí",
-        "Tono que necesitas · cómo prefieres trabajar",
-        "Especialidad clínica que mejor encaja",
-      ],
-    },
-    {
-      ms: 2800,
-      title: `Buscando tu match en +150 psicólogas`,
-      sub: "Todas colegiadas, con experiencia validada en clínica privada.",
-      bullets: [
-        "Especialidad en " + feelingLabel,
-        "Disponibilidad esta semana",
-        "Estilo terapéutico compatible con tu perfil",
-      ],
-    },
-    {
-      ms: 3800,
-      title: `Encontramos a tu psicóloga`,
-      reveal: true,
-    },
-    {
-      ms: 2700,
-      title: `Por qué ${firstName} encaja contigo`,
-      bullets: [
-        `Experiencia trabajando ${feelingLabel}`,
-        "Tono cercano y directo en sesión",
-        "Lee tu test antes de la cita — no empiezas de cero",
-      ],
-    },
-    {
-      ms: 1900,
-      title: "Preparando tu calendario",
-      sub: "Cruzando los huecos reales que tiene esta semana…",
-    },
+  // El copy viene del producto (productos-999.ts): diagnóstico o logopedia.
+  const FRAMES: { ms: number; title: string; sub?: string; bullets?: string[]; reveal?: boolean }[] = [
+    { ms: 2800, title: ui.f1Title, sub: ui.f1Sub, bullets: ui.f1Bullets.map(T) },
+    { ms: 2800, title: ui.f2Title, sub: ui.f2Sub, bullets: ui.f2Bullets.map(T) },
+    { ms: 3800, title: ui.f3Title, reveal: true },
+    { ms: 2700, title: T(ui.f4Title), bullets: ui.f4Bullets.map(T) },
+    { ms: 1900, title: ui.f5Title, sub: ui.f5Sub },
   ];
 
   const [current, setCurrent] = useState(0);
@@ -1522,7 +1448,7 @@ function AnalyzingPhase({
           {/* Título dinámico */}
           <h1 className="font-serif text-2xl md:text-3xl text-center leading-tight mb-2 animate-[fadeInUp_600ms_ease-out]">
             {frame.reveal ? (
-              <>Tu psicóloga es <em className="text-purple italic font-normal not-italic font-semibold">{matchedPsychName}</em></>
+              <>{ui.f3Reveal}<em className="text-purple italic font-normal not-italic font-semibold">{matchedPsychName}</em></>
             ) : (
               frame.title
             )}
@@ -1532,7 +1458,7 @@ function AnalyzingPhase({
           )}
           {frame.reveal && (
             <p className="text-center text-sm text-foreground/60 mb-6 animate-[fadeInUp_700ms_ease-out]">
-              Colegiada · sesiones online · perfil clínico compatible con el tuyo
+              {ui.f3Sub}
             </p>
           )}
 
@@ -1569,24 +1495,7 @@ function AnalyzingPhase({
 }
 
 // ═══ NEXT STEPS CARD — "justo después del pago recibes…" ═══
-function NextStepsCard() {
-  const items = [
-    {
-      icon: "📧",
-      title: "Tu test clínico en el correo",
-      desc: "30 preguntas (PHQ-9, GAD-7, DSM-5) — 10-15 min. Tu psicóloga las lee antes de la sesión.",
-    },
-    {
-      icon: "📅",
-      title: "Confirmación de tu cita",
-      desc: "Recordatorios por email y WhatsApp. Enlace a la videollamada.",
-    },
-    {
-      icon: "🩺",
-      title: "Tu diagnóstico en la sesión",
-      desc: "50 min con tu psicóloga. Te explica cada hallazgo y construís el plan juntas.",
-    },
-  ];
+function NextStepsCard({ items }: { items: { icon: string; title: string; desc: string }[] }) {
   return (
     <div className="bg-white rounded-2xl border border-purple/10 p-5 mb-4 shadow-sm">
       <p className="text-xs font-bold text-purple uppercase tracking-wider mb-4">
@@ -1620,12 +1529,7 @@ function NextStepsCard() {
 // Reasegurador anti-objeción #1 del cerebro Voyage: 96 menciones de confusión con
 // renovación automática / suscripción. Se muestra ANTES del botón de pago y encima
 // del checkout Stripe para neutralizar la objeción en el momento exacto de la fricción.
-function NoSurprisesBox({ precio }: { precio: PrecioDiagnostico }) {
-  const items = [
-    `Es un pago único de ${precio.texto}. No te cobramos nada más automáticamente.`,
-    "No archivamos tu tarjeta para futuros cargos.",
-    "Si después quieres seguir, tú eliges cuándo y qué bono (desde 28,75€/sesión). Pagas al usarlo.",
-  ];
+function NoSurprisesBox({ items }: { items: string[] }) {
   return (
     <div className="bg-gradient-to-br from-emerald-50 to-white rounded-2xl border border-emerald-200/60 p-5 mb-4 shadow-sm">
       <div className="flex items-center gap-2 mb-3">

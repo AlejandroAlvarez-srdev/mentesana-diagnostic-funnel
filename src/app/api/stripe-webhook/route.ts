@@ -2,12 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { registrarCompraEnAnalytics, registrarEventoEnAnalytics } from "@/lib/analytics-purchase";
-import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail } from "@/lib/emails";
+import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail, logopediaPaidEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
-import { isLogopediaPayment } from "@/lib/logopedia/validation";
-import { fulfillLogopedia } from "@/lib/logopedia/fulfill";
-import { releaseExpiredOrder } from "@/lib/logopedia/orders";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -85,19 +82,6 @@ export async function POST(req: NextRequest) {
 
   console.log("[webhook] received", { type: event.type, id: (event.data.object as { id?: string })?.id });
 
-  // Explicit product routing before all psychology processing/amount inference.
-  if (isLogopediaPayment(event.data.object as { metadata?: Record<string,string> })) {
-    try {
-      const session = event.data.object as Stripe.Checkout.Session;
-      if ((event.type === "checkout.session.completed" || event.type === "checkout.session.async_payment_succeeded") && session.payment_status === "paid") await fulfillLogopedia(session);
-      if (event.type === "checkout.session.expired") await releaseExpiredOrder(session);
-      return NextResponse.json({ received: true });
-    } catch {
-      console.error("[logopedia/webhook] processing incomplete; Stripe must retry");
-      return NextResponse.json({ error: "logopedia_processing_incomplete" }, { status: 500 });
-    }
-  }
-
   let supabase: ReturnType<typeof getSupabase>;
   try {
     supabase = getSupabase();
@@ -121,7 +105,7 @@ export async function POST(req: NextRequest) {
     // event_id: prefiere el guardado en metadata para dedupe con el pixel client-side
     // (si el TYP page disparó Purchase con ese mismo id, Meta los une como 1 solo).
     const eventId = md.fb_event_id || `purchase_${session.id}`;
-    const landing = md.landing_url || "https://mentesanapsicologia.com/test-diagnostico";
+    const landing = md.landing_url || (md.producto === "logopedia" ? "https://mentesanapsicologia.com/test-logopedia" : "https://mentesanapsicologia.com/test-diagnostico");
     // fbc: el de la metadata, o reconstruido desde el fbclid crudo (formato oficial
     // fb.1.{ts}.{fbclid}) si por lo que sea no se guardó el fbc derivado.
     const fbc = md.fbc || (md.fbclid ? `fb.1.${Date.now()}.${md.fbclid}` : undefined);
@@ -133,6 +117,9 @@ export async function POST(req: NextRequest) {
     let prodName = "Diagnóstico psicológico";
     let prodCategory = "diagnostico";
     if (md.product === "ebook") { prodName = "Ebook Sanando desde adentro"; prodCategory = "ebook"; }
+    // Logopedia 9,99 (28-oct-2026): mismo embudo que el diagnóstico, etiqueta propia
+    // para que Meta y el reporting separen los dos productos.
+    else if (md.producto === "logopedia") { prodName = "Valoración logopédica"; prodCategory = "logopedia"; }
     else if (cents >= 4000) {
       prodCategory = "bono";
       if ([14999, 12000].includes(cents)) prodName = "Bono Compañía";
@@ -191,8 +178,14 @@ export async function POST(req: NextRequest) {
         sendEmail,
         fetchPdf: fetchEbookPdfBase64,
         buildEbookEmail: ebookDeliveryEmail,
-        buildSessionEmail: ({ name, psychologistName }: { name: string; amount: string; psychologistName: string }) => diagnosticoPaidEmail({ name, psychologistName, email: session.customer_details?.email || session.customer_email || "" }),
-        buildSlotTakenEmail: ({ name, psychologistName }: { name: string; psychologistName: string }) => diagnosticoSlotTakenEmail({ name, psychologistName }),
+        buildSessionEmail: ({ name, psychologistName, producto, scheduledDate, scheduledTime, meetUrl }) => {
+          const email = session.customer_details?.email || session.customer_email || "";
+          // Logopedia: email de cita (día, hora, videollamada, cómo prepararla). Las familias
+          // no entran en la app (decisión pendiente), así que no lleva descarga ni credenciales.
+          if (producto === "logopedia") return logopediaPaidEmail({ name, psychologistName, email, scheduledDate, scheduledTime, meetUrl });
+          return diagnosticoPaidEmail({ name, psychologistName, email });
+        },
+        buildSlotTakenEmail: ({ name, psychologistName, producto }) => diagnosticoSlotTakenEmail({ name, psychologistName, producto }),
         origin,
       });
       console.log("[webhook] result", JSON.stringify(result));

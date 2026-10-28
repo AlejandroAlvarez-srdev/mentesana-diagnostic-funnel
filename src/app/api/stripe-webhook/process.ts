@@ -8,6 +8,7 @@ import { generateCommissions } from "@/lib/partners/commissions";
 import { attributePatient } from "@/lib/partners/attribution";
 import { detectProductType } from "@/lib/partners/config";
 import { getPartnersDb } from "@/lib/partners/supabase";
+import { productoDesdeMetadata } from "@/lib/productos-999";
 
 export interface UpsertResult { error?: { message: string } | null }
 
@@ -48,11 +49,26 @@ export interface BuildEbookEmailFn {
 }
 
 export interface BuildSessionEmailFn {
-  (args: { name: string; amount: string; psychologistName: string }): { subject: string; html: string };
+  (args: {
+    name: string; amount: string; psychologistName: string;
+    /** "diagnostico" | "logopedia" — decide la plantilla (ver route.ts). */
+    producto?: string;
+    /** Día/hora REALES de la cita (hora Madrid) y enlace de la videollamada, si se creó. */
+    scheduledDate?: string; scheduledTime?: string; meetUrl?: string | null;
+  }): { subject: string; html: string };
 }
 
 export interface BuildSlotTakenEmailFn {
-  (args: { name: string; psychologistName: string }): { subject: string; html: string };
+  (args: { name: string; psychologistName: string; producto?: string }): { subject: string; html: string };
+}
+
+// "YYYY-MM-DD HH:MM:SS" (UTC, formato MySQL de Amelia) → día y hora en Madrid.
+function utcMysqlToMadrid(startMy: string): { date: string; time: string } | null {
+  const d = new Date(startMy.replace(" ", "T") + "Z");
+  if (!Number.isFinite(d.getTime())) return null;
+  const parts = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hour12: false }).formatToParts(d);
+  const get = (t: string) => parts.find((p) => p.type === t)?.value ?? "";
+  return { date: `${get("year")}-${get("month")}-${get("day")}`, time: `${get("hour")}:${get("minute")}` };
 }
 
 export interface ProcessDeps {
@@ -93,6 +109,11 @@ export async function processCheckoutSessionCompleted(
   const patientPhone = session.metadata?.patient_phone || session.customer_details?.phone || null;
   const psychologist = session.metadata?.psychologist || "";
   const product = session.metadata?.product;
+  // Producto del embudo 9,99 (create-checkout estampa metadata.producto; sin él, es el
+  // diagnóstico de siempre). Logopedia comparte toda esta rama: cambia el servicio de
+  // Amelia donde se crea la cita, el email y las etiquetas de payments.
+  const producto999 = productoDesdeMetadata(session.metadata as Record<string, string | undefined> | null);
+  const esLogopedia = producto999.slug === "logopedia";
 
   // Extract UTMs from metadata (embedded checkout) or client_reference_id (Payment Links)
   let utms: Record<string, string> = {};
@@ -159,6 +180,9 @@ export async function processCheckoutSessionCompleted(
       patient_phone: patientPhone,
       psychologist: psychologist || null,
       source: session.metadata?.source || "unknown",
+      // Solo logopedia: el 9,99 de psicología sigue exactamente igual (el panel traficker
+      // atribuye su embudo por first-touch y no lee estas columnas en el tripwire).
+      ...(esLogopedia ? { producto: "logopedia", producto_embudo: producto999.productoEmbudo } : {}),
       metadata: {
         payment_method_types: session.payment_method_types,
         payment_status: session.payment_status,
@@ -434,7 +458,7 @@ export async function processCheckoutSessionCompleted(
       paid: true,
       paid_at: new Date().toISOString(),
       stripe_session_id: session.id,
-      source: session.metadata?.source || "test-diagnostico",
+      source: session.metadata?.source || producto999.source,
       updated_at: new Date().toISOString(),
     };
     if (patientName) diagUpsert.user_name = patientName;
@@ -472,6 +496,12 @@ export async function processCheckoutSessionCompleted(
     // ─── Crear cuenta en WordPress + Amelia + booking de diagnóstico ────────
     // Solo si tenemos psicóloga matched y slot elegido. Best-effort: si falla,
     // el flujo de email sigue, pero apuntamos error para revisión manual.
+    // Día/hora/enlace REALES de la cita para el email (pueden diferir de lo elegido si
+    // el hueco se ocupó y se auto-movió al más cercano).
+    let citaReal: { scheduledDate?: string; scheduledTime?: string; meetUrl?: string | null } = {
+      scheduledDate: utms.scheduled_date ? String(utms.scheduled_date) : undefined,
+      scheduledTime: utms.scheduled_time ? String(utms.scheduled_time) : undefined,
+    };
     if (psychologist && utms.scheduled_date && utms.scheduled_time) {
       let bookingOk = false;
       try {
@@ -490,11 +520,20 @@ export async function processCheckoutSessionCompleted(
             // [PRODUCT:<slug>] en internalNotes del appointment. En este brazo
             // (diagnóstico clásico 9,99€) normalmente es undefined; los flujos
             // con producto explícito (terapia-*, planes-*) lo pasan también
-            // desde sus helpers dedicados.
-            stripeProduct: product ?? null,
+            // desde sus helpers dedicados. Logopedia marca [PRODUCT:logopedia]
+            // para que los paneles (citas-hoy, psi, jefe) enseñen su badge.
+            stripeProduct: product ?? (esLogopedia ? "logopedia" : null),
+            // Servicio de Amelia del producto: 8 (diagnóstico) o 400 (logopedia).
+            serviceId: producto999.ameliaServiceId,
+            producto: producto999.slug,
           });
           if (booking.ok) {
             bookingOk = true;
+            if (booking.scheduled_start_utc) {
+              const real = utcMysqlToMadrid(booking.scheduled_start_utc);
+              if (real) citaReal = { scheduledDate: real.date, scheduledTime: real.time, meetUrl: booking.meet_url ?? null };
+              else citaReal = { ...citaReal, meetUrl: booking.meet_url ?? null };
+            }
             (result as any).amelia = { customer_id: booking.customer_id, appointment_id: booking.appointment_id, cb_id: booking.customer_booking_id, wp_user_id: booking.wp_user_id, reused: booking.reused_existing ?? false, adjusted_slot: booking.adjusted_slot ?? false, adjusted_provider: booking.adjusted_provider ?? false };
             // Marca scheduled_at con la hora REALMENTE agendada (puede diferir de la
             // elegida si el hueco se ocupó y se auto-movió al más cercano).
@@ -541,8 +580,8 @@ export async function processCheckoutSessionCompleted(
 
     const amount = `${((session.amount_total || 999) / 100).toFixed(2).replace(".", ",")} €`;
     const { subject, html } = (result as any).bookingFailed
-      ? deps.buildSlotTakenEmail({ name: patientName, psychologistName: psychologist })
-      : deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist });
+      ? deps.buildSlotTakenEmail({ name: patientName, psychologistName: psychologist, producto: producto999.slug })
+      : deps.buildSessionEmail({ name: patientName, amount, psychologistName: psychologist, producto: producto999.slug, ...citaReal });
     const emailResult = await deps.sendEmail({ to: patientEmail, toName: patientName, subject, html });
     result.emailSent = emailResult.success;
 

@@ -120,6 +120,41 @@ describe("processCheckoutSessionCompleted", () => {
     expect(emailArgs.attachments).toBeUndefined();
   });
 
+  it("logopedia (metadata.producto): etiqueta payments, mantiene source y pide la plantilla de logopedia", async () => {
+    const buildSessionEmail = vi.fn(({ name, producto }: { name: string; producto?: string }) => ({ subject: `Sesión ${name} ${producto}`, html: "<p>logopedia</p>" }));
+    const { deps, sendEmail, supabaseMock } = makeDeps({ buildSessionEmail });
+    const session = makeSession({
+      metadata: { patient_name: "Ana Pérez", psychologist: "Maria Alejandra Quintero", source: "test-logopedia", producto: "logopedia" },
+    });
+
+    const result = await processCheckoutSessionCompleted(session, deps);
+
+    expect(result.branch).toBe("session");
+    expect(result.emailSent).toBe(true);
+    const payments = supabaseMock.upsertCalls.find((c) => c.table === "payments");
+    expect(payments?.payload.producto).toBe("logopedia");
+    expect(payments?.payload.producto_embudo).toBe("logopedia_9_99");
+    expect(payments?.payload.source).toBe("test-logopedia");
+    const diag = supabaseMock.upsertCalls.find((c) => c.table === "diagnostico_tests");
+    expect(diag?.payload.source).toBe("test-logopedia");
+    expect(buildSessionEmail).toHaveBeenCalledWith(expect.objectContaining({ producto: "logopedia", psychologistName: "Maria Alejandra Quintero" }));
+    expect(sendEmail).toHaveBeenCalledOnce();
+    expect(sendEmail.mock.calls[0][0].subject).toContain("logopedia");
+  });
+
+  it("diagnóstico de siempre: payments NO lleva columnas de producto y el email es el del diagnóstico", async () => {
+    const buildSessionEmail = vi.fn(({ name, producto }: { name: string; producto?: string }) => ({ subject: `Sesión ${name} ${producto}`, html: "<p>diag</p>" }));
+    const { deps, supabaseMock } = makeDeps({ buildSessionEmail });
+    const session = makeSession({ metadata: { patient_name: "Leidy Galindo", psychologist: "Monica Guiza", source: "test-diagnostico" } });
+
+    await processCheckoutSessionCompleted(session, deps);
+
+    const payments = supabaseMock.upsertCalls.find((c) => c.table === "payments");
+    expect(payments?.payload).not.toHaveProperty("producto");
+    expect(payments?.payload).not.toHaveProperty("producto_embudo");
+    expect(buildSessionEmail).toHaveBeenCalledWith(expect.objectContaining({ producto: "diagnostico" }));
+  });
+
   it("guarda en ebook_purchases y envía email con PDF cuando product=ebook-sanando", async () => {
     const { deps, sendEmail, fetchPdf, supabaseMock } = makeDeps();
     const session = makeSession({
