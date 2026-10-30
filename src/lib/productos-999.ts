@@ -15,8 +15,8 @@
 // activos ms_ab_directo y ms_ab_pago); no cambiar ni una coma sin leer
 // project_ab_directo_landing / project_ab_pago_una_pantalla.
 
-export type ProductoSlug = "diagnostico" | "logopedia";
-export type Profesion = "psicologia" | "logopedia";
+export type ProductoSlug = "diagnostico" | "logopedia" | "nutricion";
+export type Profesion = "psicologia" | "logopedia" | "nutricion";
 
 export interface Opcion999 { id: string; label: string; icon: string }
 export interface Pregunta999 { id: string; title: string; subtitle: string; options: Opcion999[] }
@@ -46,6 +46,8 @@ export interface Producto999 {
   /** Meta: content_name del Purchase/Schedule/Lead y content_category. */
   metaContentName: string;
   metaCategory: string;
+  metaCampaignTag?: string;
+  utmProducto?: string;
   /** payments.producto / producto_embudo (panel traficker). */
   productoEmbudo: string;
   /** Las 5 preguntas; pueden depender de respuestas previas (logopedia: menor/adulto). */
@@ -534,26 +536,145 @@ export const LOGOPEDIA: Producto999 = {
   },
 };
 
-export const PRODUCTOS: Record<ProductoSlug, Producto999> = { diagnostico: DIAGNOSTICO, logopedia: LOGOPEDIA };
+// Pendiente: crear «Consulta de nutrición 9,99» y asignar sus profesionales en Amelia.
+// Cero significa servicio sin configurar: nunca reutilizar el de psicología.
+const NUTRICION_SERVICE_ID = Number(process.env.NUTRICION_AMELIA_SERVICE_ID ?? 500); // servicio creado en Amelia el 30-oct-2026 (categoría 7) por /api/admin/nutricion/seed-service
+
+export const NUTRICION: Producto999 = {
+  slug: "nutricion", profesion: "nutricion",
+  nombre: "Consulta de nutrición + plan de comidas", pro: "nutricionista",
+  landingPath: "/nutricion", testPath: "/test-nutricion", source: "test-nutricion",
+  ameliaServiceId: NUTRICION_SERVICE_ID, ameliaServiceIds: [NUTRICION_SERVICE_ID], sesionMin: 45,
+  stripeProductName: "Consulta de nutrición + plan de comidas — Mente Sana",
+  stripeDescription: (pro) => `Consulta online de 45 min con ${pro || "tu nutricionista profesional"}, plan de comidas personalizado por escrito en 48 h y seguimiento de 15 días por chat.`,
+  metaContentName: "Nutrición 9,99", metaCategory: "Consulta de nutrición",
+  metaCampaignTag: "[NUTRI]", utmProducto: "nutricion", productoEmbudo: "nutricion",
+  perfilKey: "objetivo", perfilDefault: "bascula", horarioKey: "horario",
+  tema: { bascula: "bajar de peso de forma sostenible", barriga: "la hinchazón y las digestiones", salud: "tu analítica y tu salud", energia: "tu energía y tus horarios de comida", "40": "la alimentación a partir de los 40" },
+  esMenor: () => false,
+  preguntas: () => [
+    { id: "objetivo", title: "¿Qué quieres conseguir primero?", subtitle: "Elige por dónde te gustaría empezar.", options: [
+      { id: "bascula", label: "Bajar de peso de una vez", icon: "🌱" },
+      { id: "barriga", label: "Deshincharme y digerir mejor", icon: "🍵" },
+      { id: "salud", label: "Mejorar mi analítica", icon: "📋" },
+      { id: "energia", label: "Tener energía todo el día", icon: "☀️" },
+      { id: "40", label: "Adaptar mi alimentación a esta etapa (40+)", icon: "🌿" },
+    ] },
+    { id: "desde", title: "¿Desde cuándo?", subtitle: "Una aproximación está bien.", options: [
+      { id: "semanas", label: "Unas semanas", icon: "📅" }, { id: "meses", label: "Unos meses", icon: "🗓️" },
+      { id: "anios", label: "Más de un año", icon: "⏳" }, { id: "siempre", label: "Toda la vida", icon: "🕰️" },
+    ] },
+    { id: "probado", title: "¿Qué has probado ya?", subtitle: "Tu experiencia nos ayuda a preparar la consulta.", options: [
+      { id: "dietas", label: "Dietas por mi cuenta", icon: "📝" }, { id: "apps_ayuno", label: "Apps o ayuno", icon: "📱" },
+      { id: "nutricionista", label: "Nutricionista antes", icon: "🔄" }, { id: "nada", label: "Nada todavía", icon: "🌱" },
+    ] },
+    { id: "comida", title: "¿Cómo son tus comidas entre semana?", subtitle: "El plan tiene que encajar con tu vida.", options: [
+      { id: "casa", label: "Cocino en casa", icon: "🍳" }, { id: "tupper", label: "Tupper y lo que pillo", icon: "🥡" },
+      { id: "fuera", label: "Como fuera casi siempre", icon: "🍽️" }, { id: "salto", label: "Salto comidas", icon: "⏰" },
+    ] },
+    { id: "horario", title: "¿Cuándo te viene bien la consulta?", subtitle: "Después podrás consultar los horarios disponibles.", options: [
+      { id: "manana", label: "Por la mañana", icon: "☀️" }, { id: "mediodia", label: "Al mediodía", icon: "🕛" },
+      { id: "tarde", label: "Por la tarde", icon: "🌅" }, { id: "noche", label: "Por la noche", icon: "🌙" },
+      { id: "finde", label: "Fin de semana", icon: "📆" },
+    ] },
+  ],
+  storagePrefix: "ms_nutricion_", matchStorageKey: "ms_match_nutricion_v1", matchPickStorageKey: "ms_match_nutricion_pick_v1",
+  videoFallback: null, poolFallbackPath: "/api/test-diagnostico/pool?producto=nutricion",
+  ui: {
+    intro: {
+      kicker: "Así funciona tu consulta", kickerApp: "Así funciona tu consulta",
+      titleLine1: "Un plan para tu vida", titleLine1App: "Un plan para tu vida",
+      titleLine2: "y una nutricionista contigo.", titleLine2App: "y una nutricionista contigo.",
+      pasosA: [
+        { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "2 minutos sobre tu objetivo, tus comidas y tu horario.", active: true },
+        { n: "2", icon: "🎯", title: "Conoces a tu nutricionista", desc: "Buscamos una profesional según tu objetivo." },
+        { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Consulta su agenda y elige cuándo empezar." },
+        { n: "4", icon: "💳", title: "Pagas {precio}", desc: "Pago único. Sin suscripción." },
+        { n: "5", icon: "🥗", title: "Consulta y plan de comidas", desc: "45 min online, plan por escrito en 48 h y 15 días de seguimiento por chat." },
+      ],
+      pasosAApp4: { title: "Pagas {precio}", desc: "Pago único. Sin suscripción." },
+      pasosB: [
+        { n: "1", icon: "📝", title: "Respondes 5 preguntas", desc: "Tu objetivo y cómo comes entre semana.", active: true },
+        { n: "2", icon: "🎯", title: "Conoces a tu nutricionista", desc: "Una profesional para acompañarte." },
+        { n: "3", icon: "📅", title: "Eliges día y hora", desc: "Consulta su disponibilidad real." },
+        { n: "4", icon: "💳", title: "Reservas por {precio}", desc: "Pago único, sin suscripción." },
+        { n: "5", icon: "🥗", title: "Consulta + plan de comidas", desc: "45 min online. Plan escrito en 48 h y seguimiento de 15 días por chat." },
+      ],
+      badgeB: "Consulta con nutricionista profesional",
+      h1B: "Deja de pelearte ", h1BEm: "con la comida.",
+      subB: "Consulta de 45 min y plan de comidas personalizado por {precio}. Seguimiento de 15 días por chat incluido.",
+      caras: [], carasNota: "Nutricionistas de Mente Sana · un plan para tu vida",
+      ctaB: "Empezar por {precio}", ctaBSocial: "★ 4,9/5 · +8.000 pacientes en Mente Sana",
+      testimonios: [], testimoniosTitulo: "", verPasos: "Ver cómo funciona",
+    },
+    preguntas: {
+      burbujas: [
+        { icon: "🥗", text: "Estas preguntas sirven para **preparar tu consulta de nutrición**." },
+        { icon: "🌱", text: "Queremos entender **tu punto de partida**." },
+        { icon: "💜", text: "Lo que has probado ayuda a **hacer un plan que puedas seguir**." },
+        { icon: "🍽️", text: "Trabajamos con **lo que ya compras y tus horarios**." },
+        { icon: "📅", text: "Última pregunta. Después conocerás **tu siguiente paso**." },
+      ],
+      directoTitulo: "Consulta de nutrición + plan de comidas · {precio}",
+      directoSub: "45 min online · Plan en 48 h · Seguimiento de 15 días por chat",
+    },
+    contacto: {
+      kicker: "Tu siguiente paso", kickerApp: "Tu siguiente paso",
+      title: "¿A qué email te enviamos tu nutricionista y tu cita?", titleApp: "¿A qué email te enviamos tu nutricionista y tu cita?",
+      subtitle: "Guardamos tus respuestas para preparar tu consulta.", subtitleApp: "Guardamos tus respuestas para preparar tu consulta.",
+      placeholder: "tucorreo@email.com", placeholderApp: "tucorreo@email.com",
+      boton: "Conocer a mi nutricionista y ver horarios →", nota: "Solo te escribiremos sobre tu consulta de nutrición.",
+    },
+    analisis: {
+      f1Title: "Revisando tus 5 respuestas", f1Sub: "Tu objetivo y tus comidas nos dan un punto de partida.",
+      f1Bullets: ["Qué quieres conseguir primero", "Lo que has probado", "Tus comidas y tu horario"],
+      f2Title: "Buscando a tu nutricionista", f2Sub: "Un plan que encaje con tu vida.",
+      f2Bullets: ["Tu objetivo: {tema}", "Tu preferencia de horario", "Acompañamiento profesional"],
+      f3Title: "Tu acompañamiento en nutrición", f3Reveal: "Tu nutricionista: ", f3Sub: "Consulta online de 45 min + plan de comidas",
+      f4Title: "Tu plan con {first}", f4Bullets: ["Trabajar {tema}", "Comidas con lo que ya compras", "Seguimiento de 15 días para dudas y ajustes"],
+      f5Title: "Consultando la agenda", f5Sub: "Buscamos horarios disponibles para tu consulta…",
+    },
+    hora: {
+      cargandoPro: "Cargando tu nutricionista…", loaderH1: "Preparando tus ", loaderH1Em: "horas disponibles",
+      loaderSub: "Consultando la agenda de nutrición…", loaderBullets: ["Comprobando el calendario", "Buscando huecos disponibles", "Preparando tu siguiente paso"],
+      header: "Elige tu consulta de nutrición", colegiada: "Nutricionista profesional", online: "Consulta online",
+      elegida: "Tu objetivo: **{tema}**. La consulta parte de tus respuestas.", elegidaUna: "Tu objetivo: **{tema}**. La consulta parte de tus respuestas.",
+      bioB: "Un plan para trabajar **{tema}**, con tus comidas y tus horarios.", testimonioB: null,
+      h1: "Reserva tu consulta de nutrición con {first}", sub: "45 minutos online · Plan personalizado por escrito en 48 h tras la consulta",
+      sesion: "Tu consulta de nutrición", reroll: "¿Prefieres otra nutricionista? →", especialidadCard: "Nutricionista profesional · consulta online",
+    },
+    pago: {
+      titulo: "Tu consulta y tu plan", iconos: ["🥗 Plan de comidas", "💬 45 min", "📅 15 días"],
+      siguientes: [
+        { icon: "📅", title: "Confirmación de tu cita", desc: "Email con el día, la hora y el enlace a la videollamada." },
+        { icon: "🥗", title: "Consulta de 45 min y plan en 48 h", desc: "Tu nutricionista te envía el plan de comidas por escrito tras la consulta, con lista de la compra y 3 cambios prioritarios." },
+        { icon: "💬", title: "Seguimiento de 15 días por chat", desc: "Para dudas y ajustes. Los resultados dependen de cada persona y de seguir el plan." },
+      ],
+      sinSorpresas: ["Pago único de {precio}. Sin cargos automáticos adicionales.", "No archivamos tu tarjeta para futuros cargos.", "Después decides si quieres un bono de seguimiento. Sin compromiso."],
+      unaPantallaHeader: "Tu consulta y tu pago", unaPantallaSesion: "Tu consulta · 45 min",
+      unaPantallaQue: "Consulta de 45 min con {first} + plan de comidas en 48 h",
+    },
+  },
+};
+
+export const PRODUCTOS: Record<ProductoSlug, Producto999> = { diagnostico: DIAGNOSTICO, logopedia: LOGOPEDIA, nutricion: NUTRICION };
 
 export function productoDesdeSlug(v: unknown): Producto999 {
-  return v === "logopedia" ? LOGOPEDIA : DIAGNOSTICO;
+  return Object.values(PRODUCTOS).find((producto) => producto.slug === v) ?? DIAGNOSTICO;
 }
 
 /** Producto a partir de `source` (diagnostico_tests, payments, metadata de Stripe). Null si no es un test del 9,99. */
 export function productoDesdeSource(source: unknown): Producto999 | null {
-  if (source === DIAGNOSTICO.source) return DIAGNOSTICO;
-  if (source === LOGOPEDIA.source) return LOGOPEDIA;
-  return null;
+  return Object.values(PRODUCTOS).find((producto) => producto.source === source) ?? null;
 }
 
 /** Producto del 9,99 a partir de la metadata de un Checkout Session de Stripe. */
 export function productoDesdeMetadata(md: Record<string, string | undefined> | null | undefined): Producto999 {
-  return productoDesdeSlug(md?.producto ?? (md?.source === LOGOPEDIA.source ? "logopedia" : "diagnostico"));
+  return md?.producto ? productoDesdeSlug(md.producto) : productoDesdeSource(md?.source) ?? DIAGNOSTICO;
 }
 
 export function productoDesdePath(pathname: string): Producto999 {
-  return isLogopediaPath(pathname) ? LOGOPEDIA : DIAGNOSTICO;
+  return Object.values(PRODUCTOS).find((producto) => [producto.landingPath, producto.testPath].some((path) => pathname === path || pathname.startsWith(`${path}/`))) ?? DIAGNOSTICO;
 }
 
 export const isLogopediaPath = (path: string) => /^\/(?:logopedia|test-logopedia)(?:\/|$)/.test(path);

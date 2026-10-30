@@ -126,7 +126,7 @@ export async function POST(req: NextRequest) {
     const ip = req.headers.get("x-forwarded-for")?.split(",")[0]?.trim();
     const ua = req.headers.get("user-agent") || undefined;
     const srcUrl = req.headers.get("referer") || `https://www.mentesanapsicologia.com${producto999!.testPath}`;
-    const capiBase = producto999!.slug === "logopedia" ? "Logopedia 9,99" : "Diagnóstico 9,99";
+    const capiBase = producto999!.metaContentName;
     const [fn, ...lnParts] = String(name || "").trim().split(/\s+/);
     // .trim() ANTES de hashear: el navegador usa sha256(email.trim().toLowerCase()); si el
     // usuario mete espacios al final y aquí no trimáramos, Lead/Contact NO deduplicarían.

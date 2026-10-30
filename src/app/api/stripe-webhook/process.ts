@@ -113,7 +113,7 @@ export async function processCheckoutSessionCompleted(
   // diagnóstico de siempre). Logopedia comparte toda esta rama: cambia el servicio de
   // Amelia donde se crea la cita, el email y las etiquetas de payments.
   const producto999 = productoDesdeMetadata(session.metadata as Record<string, string | undefined> | null);
-  const esLogopedia = producto999.slug === "logopedia";
+  const esOtroProducto999 = producto999.slug !== "diagnostico";
 
   // Extract UTMs from metadata (embedded checkout) or client_reference_id (Payment Links)
   let utms: Record<string, string> = {};
@@ -182,7 +182,7 @@ export async function processCheckoutSessionCompleted(
       source: session.metadata?.source || "unknown",
       // Solo logopedia: el 9,99 de psicología sigue exactamente igual (el panel traficker
       // atribuye su embudo por first-touch y no lee estas columnas en el tripwire).
-      ...(esLogopedia ? { producto: "logopedia", producto_embudo: producto999.productoEmbudo } : {}),
+      ...(esOtroProducto999 ? { producto: producto999.slug, producto_embudo: producto999.productoEmbudo } : {}),
       metadata: {
         payment_method_types: session.payment_method_types,
         payment_status: session.payment_status,
@@ -522,7 +522,7 @@ export async function processCheckoutSessionCompleted(
             // con producto explícito (terapia-*, planes-*) lo pasan también
             // desde sus helpers dedicados. Logopedia marca [PRODUCT:logopedia]
             // para que los paneles (citas-hoy, psi, jefe) enseñen su badge.
-            stripeProduct: product ?? (esLogopedia ? "logopedia" : null),
+            stripeProduct: product ?? (esOtroProducto999 ? producto999.slug : null),
             // Servicio de Amelia del producto: 8 (diagnóstico) o 400 (logopedia).
             serviceId: producto999.ameliaServiceId,
             producto: producto999.slug,

@@ -7,6 +7,7 @@ import { getVariant, getVisitorId, getForcedVariant } from "@/lib/ab-test";
 import { PRECIO_ESTANDAR, type PrecioDiagnostico } from "@/lib/diagnostico-precio";
 import { PRODUCTOS, conPrecio, type Producto999, type ProductoSlug, type ProductoUI } from "@/lib/productos-999";
 import { LOGOPEDAS } from "@/app/test-logopedia/logopedas";
+import { NUTRICIONISTAS } from "@/app/test-nutricion/nutricionistas";
 import PagoUnaPantalla from "./PagoUnaPantalla";
 
 // ═══ Questions config ═══
@@ -71,13 +72,14 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   const ui = producto.ui;
   const esLogopedia = producto.slug === "logopedia";
   const P = (s: string) => conPrecio(s, precio.texto);
-  const CATALOGO = esLogopedia ? LOGOPEDAS : PSYCHOLOGISTS;
+  const CATALOGO = producto.slug === "nutricion" ? NUTRICIONISTAS : esLogopedia ? LOGOPEDAS : PSYCHOLOGISTS;
+  const storagePrefix = producto.storagePrefix.replace(/_$/, "");
   const LS = {
-    answers: `${producto.storagePrefix}_answers`,
-    email: `${producto.storagePrefix}_email`,
-    name: `${producto.storagePrefix}_name`,
-    context: `${producto.storagePrefix}_context`,
-    schedule: `${producto.storagePrefix}_schedule`,
+    answers: `${storagePrefix}_answers`,
+    email: `${storagePrefix}_email`,
+    name: `${storagePrefix}_name`,
+    context: `${storagePrefix}_context`,
+    schedule: `${storagePrefix}_schedule`,
   };
 
   // A/B test "diagnostico-v2" — 50/50 split determinista por visitor_id.
@@ -109,7 +111,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
     },
   };
   const [currentQ, setCurrentQ] = useState(0);
-  const [answers, setAnswers] = useState<Record<string, string>>({});
+  const [answers, setAnswers] = useState<Record<string, string>>(producto.slug === "nutricion" && segmento && producto.tema[segmento] ? { [producto.perfilKey]: segmento } : {});
   const [contextText] = useState(""); // antes lo capturaba la fase 'context' (eliminada); ahora siempre vacío
   const [userName, setUserName] = useState("");
   const [userEmail, setUserEmail] = useState("");
@@ -193,7 +195,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   useEffect(() => {
     try {
       const p = new URLSearchParams(window.location.search);
-      if (p.get("directo") === "1" || p.get("paso") === "test") {
+      if (producto.slug !== "nutricion" && (p.get("directo") === "1" || p.get("paso") === "test")) {
         setPhase("questions");
         setDirectEntry(true);
         track("start_matching", { source: "landing_directo", ...(segmento ? { segmento } : {}) });
@@ -440,7 +442,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
   };
 
   if (phase === "analyzing") {
-    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
+    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : (producto.slug === "nutricion" ? NUTRICIONISTAS.find(p => p.name === matchedPsych.name)?.photo ?? null : null);
     const TEMA_PSI = producto.tema;
     return (
       <AnalyzingPhase
@@ -469,7 +471,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
       );
     }
     // matchedPsych puede ser el tipo Amelia (con photo) o el fallback hardcoded (sin photo).
-    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : null;
+    const psychPhoto: string | null = "photo" in matchedPsych ? (matchedPsych.photo ?? null) : (producto.slug === "nutricion" ? NUTRICIONISTAS.find(p => p.name === matchedPsych.name)?.photo ?? null : null);
     // Tema del usuario (en su lenguaje) para personalizar el "encaja con tu perfil".
     const TEMA = producto.tema;
     const temaLabel = TEMA[perfil] || TEMA.otro;
@@ -773,7 +775,7 @@ export default function DiagnosticoMatching({ variant = "web", precio = PRECIO_E
                 <div className="grid grid-cols-5 gap-2 mb-6">
                   {slotsForSelectedDay.map((slot) => {
                     const isSelected = selectedSlot === slot.label;
-                    const isPreferred = pref !== "flexible" && pref !== "finde" && slot.period === pref;
+                    const isPreferred = pref === "mediodia" ? Number(slot.label.slice(0, 2)) >= 13 && Number(slot.label.slice(0, 2)) < 16 : pref !== "flexible" && pref !== "finde" && slot.period === pref;
                     return (
                       <button
                         key={slot.label}

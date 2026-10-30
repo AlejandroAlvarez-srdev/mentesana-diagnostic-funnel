@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import type Stripe from "stripe";
 import { processCheckoutSessionCompleted, type ProcessDeps, type SupabaseLike } from "./process";
+import { nutricionPaidEmail } from "@/lib/emails/nutricion-paid";
+import { diagnosticoSlotTakenEmail } from "@/lib/emails/diagnostico-slot-taken";
 
 // ---------- helpers ----------
 
@@ -153,6 +155,30 @@ describe("processCheckoutSessionCompleted", () => {
     expect(payments?.payload).not.toHaveProperty("producto");
     expect(payments?.payload).not.toHaveProperty("producto_embudo");
     expect(buildSessionEmail).toHaveBeenCalledWith(expect.objectContaining({ producto: "diagnostico" }));
+  });
+
+  it.each([true, false])("nutrición conserva producto, source y email (metadata explícita: %s)", async (explicit) => {
+    const buildSessionEmail = vi.fn(nutricionPaidEmail);
+    const { deps, sendEmail, supabaseMock } = makeDeps({ buildSessionEmail });
+    const session = makeSession({ metadata: { patient_name: "Ana", psychologist: "Nutricionista 01", source: "test-nutricion", ...(explicit ? { producto: "nutricion" } : {}) } });
+    const result = await processCheckoutSessionCompleted(session, deps);
+    expect(result.emailSent).toBe(true);
+    expect(supabaseMock.upsertCalls.find(c => c.table === "payments")?.payload).toMatchObject({ producto: "nutricion", producto_embudo: "nutricion", source: "test-nutricion", amount_cents: 999 });
+    expect(supabaseMock.upsertCalls.find(c => c.table === "diagnostico_tests")?.payload.source).toBe("test-nutricion");
+    expect(buildSessionEmail).toHaveBeenCalledWith(expect.objectContaining({ producto: "nutricion" }));
+    expect(sendEmail.mock.calls[0][0].html).toContain("48 h tras la consulta");
+    expect(sendEmail.mock.calls[0][0].html).not.toMatch(/logopeda|psicóloga|App Store|Google Play/);
+  });
+
+  it("email de nutrición incluye la cita real, Meet y plan; el de incidencia usa la profesión correcta", () => {
+    const email = nutricionPaidEmail({ name: "Ana", psychologistName: "Nutricionista 01", scheduledDate: "2026-11-04", scheduledTime: "16:00", meetUrl: "https://meet.google.com/test" });
+    expect(email.html).toContain("16:00 h (hora de Madrid)");
+    expect(email.html).toContain("https://meet.google.com/test");
+    expect(email.html).toContain("seguimiento de 15 días por chat");
+    const incident = diagnosticoSlotTakenEmail({ producto: "nutricion", name: "Ana" });
+    expect(incident.html).toContain("tu nutricionista");
+    expect(incident.subject).toContain("nutrición");
+    expect(incident.html).not.toMatch(/tu psicóloga|logopedia/);
   });
 
   it("guarda en ebook_purchases y envía email con PDF cuando product=ebook-sanando", async () => {

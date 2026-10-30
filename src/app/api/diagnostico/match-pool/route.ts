@@ -68,8 +68,11 @@ async function getAvailableVideoSlugs(): Promise<Set<string>> {
 
 export async function GET(req: NextRequest) {
   const producto = productoDesdeSlug(req.nextUrl.searchParams.get("producto"));
+  if (!Number.isInteger(producto.ameliaServiceId) || producto.ameliaServiceId <= 0) {
+    return NextResponse.json({ pool: [], producto: producto.slug, total_active: 0, with_video: 0, soon_count: 0 });
+  }
   const ub = ameliaTable("users");
-  const LOGO_ID = PRODUCTOS.logopedia.ameliaServiceId;
+  const OTHER_IDS = Object.values(PRODUCTOS).filter(p => p.slug !== "diagnostico").flatMap(p => p.ameliaServiceIds).filter(id => Number.isInteger(id) && id > 0);
   const DIAG_IDS = PRODUCTOS.diagnostico.ameliaServiceIds;
   const [rows, services] = await Promise.all([
     ameliaQuery<{ id: number; firstName: string; lastName: string; description: string | null; pictureFullPath: string | null; pictureThumbPath: string | null }>(
@@ -79,8 +82,8 @@ export async function GET(req: NextRequest) {
     // pool de psicología (comportamiento histórico) y el de logopedia sale vacío → el
     // cliente cae al catálogo fijo de /api/test-diagnostico/pool?producto=logopedia.
     ameliaQuery<{ userId: number; serviceId: number }>(
-      `SELECT userId, serviceId FROM ${ameliaTable("providers_to_services")} WHERE serviceId IN (${[...DIAG_IDS, LOGO_ID].map(() => "?").join(",")})`,
-      [...DIAG_IDS, LOGO_ID],
+      `SELECT userId, serviceId FROM ${ameliaTable("providers_to_services")} WHERE serviceId IN (${[...DIAG_IDS, ...OTHER_IDS].map(() => "?").join(",")})`,
+      [...DIAG_IDS, ...OTHER_IDS],
     ).catch((e) => { console.error("match-pool providers_to_services", e); return [] as { userId: number; serviceId: number }[]; }),
   ]);
   const svcByProvider = new Map<number, Set<number>>();
@@ -89,7 +92,8 @@ export async function GET(req: NextRequest) {
     set.add(Number(s.serviceId));
     svcByProvider.set(Number(s.userId), set);
   }
-  const tieneLogopedia = (id: number) => svcByProvider.get(id)?.has(LOGO_ID) ?? false;
+  const tieneProducto = (id: number) => producto.ameliaServiceIds.some(sid => svcByProvider.get(id)?.has(sid));
+  const tieneOtroProducto = (id: number) => OTHER_IDS.some(sid => svcByProvider.get(id)?.has(sid));
   const tieneDiagnostico = (id: number) => DIAG_IDS.some((sid) => svcByProvider.get(id)?.has(sid));
 
   const videoSlugs = await getAvailableVideoSlugs();
@@ -121,13 +125,13 @@ export async function GET(req: NextRequest) {
     };
   });
 
-  const poolBase = producto.slug === "logopedia"
+  const poolBase = producto.slug !== "diagnostico"
     // Logopedia: las que tienen el servicio 400. Son pocas → el vídeo es opcional (la
     // tarjeta enseña la foto de Amelia si no lo hay).
-    ? all.filter(p => tieneLogopedia(p.id))
+    ? all.filter(p => tieneProducto(p.id))
     // Psicología: SOLO con vídeo (el match se hace únicamente entre éstas) y sin las
     // que son solo logopedas.
-    : all.filter(p => p.has_video && !(tieneLogopedia(p.id) && !tieneDiagnostico(p.id)));
+    : all.filter(p => p.has_video && !(tieneOtroProducto(p.id) && !tieneDiagnostico(p.id)));
 
   // Disponibilidad: primer hueco de cada una (incluyendo HOY) para que el match
   // priorice a las que pueden ver al paciente antes. Si falla, se cae a sin-prioridad.

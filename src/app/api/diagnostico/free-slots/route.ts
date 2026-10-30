@@ -5,6 +5,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createClient } from "@supabase/supabase-js";
 import { ameliaQuery, ameliaTable } from "@/lib/amelia-db";
+import { productoDesdeSlug } from "@/lib/productos-999";
 import { HOLD_SENTINEL_EMAIL, holdCutoffIso } from "@/lib/diagnostico-hold";
 
 const sb = createClient(
@@ -112,6 +113,10 @@ async function resolveProviderByName(name: string): Promise<{ id: number; name: 
 
 export async function GET(req: NextRequest) {
   const url = new URL(req.url);
+  const producto = productoDesdeSlug(url.searchParams.get("producto"));
+  if (!Number.isInteger(producto.ameliaServiceId) || producto.ameliaServiceId <= 0) {
+    return NextResponse.json({ slots: [], provider_id: null, error: "service_not_configured" });
+  }
   const psyName = url.searchParams.get("psychologist_name") ?? "";
   const providerIdParam = url.searchParams.get("provider_id");
   const days = Math.min(Math.max(parseInt(url.searchParams.get("days") || "7"), 1), 14);
@@ -125,6 +130,11 @@ export async function GET(req: NextRequest) {
   }
   if (!providerId) {
     return NextResponse.json({ slots: [], provider_id: null, error: "psychologist_not_found" });
+  }
+
+  if (producto.slug !== "diagnostico") {
+    const assigned = await ameliaQuery<{ userId: number }>(`SELECT userId FROM ${ameliaTable("providers_to_services")} WHERE userId = ? AND serviceId = ?`, [providerId, producto.ameliaServiceId]);
+    if (!assigned.length) return NextResponse.json({ slots: [], provider_id: null, error: "provider_service_mismatch" });
   }
 
   const ab = ameliaTable("appointments");
@@ -199,6 +209,10 @@ export async function GET(req: NextRequest) {
     scheduleByDay.set(r.dayIndex, arr);
   }
   const hasSchedule = scheduleByDay.size > 0;
+  // Nutrición aún está en alta: sin agenda real no se ofrecen horas de respaldo.
+  if (producto.slug === "nutricion" && !hasSchedule) {
+    return NextResponse.json({ slots: [], provider_id: providerId });
+  }
 
   // Horas de inicio válidas (Madrid) para un día Amelia según su horario real,
   // recortadas a [MIN_START_HOUR, MAX_START_HOUR]. Una hora h vale si el slot de

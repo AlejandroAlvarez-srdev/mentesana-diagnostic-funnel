@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import Stripe from "stripe";
 import { createClient } from "@supabase/supabase-js";
 import { registrarCompraEnAnalytics, registrarEventoEnAnalytics } from "@/lib/analytics-purchase";
-import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail, logopediaPaidEmail } from "@/lib/emails";
+import { productoDesdeMetadata } from "@/lib/productos-999";
+import { sendEmail, diagnosticoPaidEmail, diagnosticoSlotTakenEmail, ebookDeliveryEmail, logopediaPaidEmail, nutricionPaidEmail } from "@/lib/emails";
 import { processCheckoutSessionCompleted } from "./process";
 import { sendCAPIPurchase } from "@/lib/meta-capi-server";
 
@@ -105,7 +106,8 @@ export async function POST(req: NextRequest) {
     // event_id: prefiere el guardado en metadata para dedupe con el pixel client-side
     // (si el TYP page disparó Purchase con ese mismo id, Meta los une como 1 solo).
     const eventId = md.fb_event_id || `purchase_${session.id}`;
-    const landing = md.landing_url || (md.producto === "logopedia" ? "https://mentesanapsicologia.com/test-logopedia" : "https://mentesanapsicologia.com/test-diagnostico");
+    const producto999 = productoDesdeMetadata(md);
+    const landing = md.landing_url || `https://mentesanapsicologia.com${producto999.testPath}`;
     // fbc: el de la metadata, o reconstruido desde el fbclid crudo (formato oficial
     // fb.1.{ts}.{fbclid}) si por lo que sea no se guardó el fbc derivado.
     const fbc = md.fbc || (md.fbclid ? `fb.1.${Date.now()}.${md.fbclid}` : undefined);
@@ -119,7 +121,7 @@ export async function POST(req: NextRequest) {
     if (md.product === "ebook") { prodName = "Ebook Sanando desde adentro"; prodCategory = "ebook"; }
     // Logopedia 9,99 (28-oct-2026): mismo embudo que el diagnóstico, etiqueta propia
     // para que Meta y el reporting separen los dos productos.
-    else if (md.producto === "logopedia") { prodName = "Valoración logopédica"; prodCategory = "logopedia"; }
+    else if (producto999.slug !== "diagnostico") { prodName = producto999.metaContentName; prodCategory = producto999.metaCategory; }
     else if (cents >= 4000) {
       prodCategory = "bono";
       if ([14999, 12000].includes(cents)) prodName = "Bono Compañía";
@@ -182,6 +184,7 @@ export async function POST(req: NextRequest) {
           const email = session.customer_details?.email || session.customer_email || "";
           // Logopedia: email de cita (día, hora, videollamada, cómo prepararla). Las familias
           // no entran en la app (decisión pendiente), así que no lleva descarga ni credenciales.
+          if (producto === "nutricion") return nutricionPaidEmail({ name, psychologistName, email, scheduledDate, scheduledTime, meetUrl });
           if (producto === "logopedia") return logopediaPaidEmail({ name, psychologistName, email, scheduledDate, scheduledTime, meetUrl });
           return diagnosticoPaidEmail({ name, psychologistName, email });
         },
