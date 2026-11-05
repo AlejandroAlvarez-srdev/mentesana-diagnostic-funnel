@@ -3,7 +3,16 @@
 <p align="center"><img src="https://img.shields.io/badge/Next.js_16-000000?style=for-the-badge&logo=nextdotjs&logoColor=white" alt="Next.js 16"> <img src="https://img.shields.io/badge/TypeScript-3178C6?style=for-the-badge&logo=typescript&logoColor=white" alt="TypeScript"> <img src="https://img.shields.io/badge/Stripe-635BFF?style=for-the-badge&logo=stripe&logoColor=white" alt="Stripe"> <img src="https://img.shields.io/badge/Supabase-3FCF8E?style=for-the-badge&logo=supabase&logoColor=white" alt="Supabase"> <img src="https://img.shields.io/badge/Meta_CAPI-0467DF?style=for-the-badge&logo=meta&logoColor=white" alt="Meta CAPI"> <img src="https://img.shields.io/badge/202_commits-6a178c?style=for-the-badge" alt="202 commits"></p>
 
 <h1 align="center">€9.99 Diagnostic Funnel: from ad click to booked session</h1>
+<p align="center"><sub>Extracted from the private Mente Sana production monorepo with its real commit history: <b>203 commits, Apr 2026 – Nov 2026</b>. Secrets and personal data were removed before publishing.</sub></p>
 <!-- /header -->
+
+## Latest (Nov 2026)
+
+- **Circuit breaker around the booking database** — `src/lib/circuit-breaker.ts`, `amelia-errors.ts` (+ tests): opens only on connection errors (not slow queries), half-opens after 20 s, and the funnel answers a clean 503 instead of hanging the checkout step.
+- **Automatic "paid but no booking" repair** — `src/lib/diag-reconcile.ts` (+ tests): a saga-style cron that books the slot the patient originally requested, capped per run and only after a grace period, so it never races the webhook.
+- **Weighted psychologist matching** — `src/lib/match-weights.ts` (+ tests): capacity × smoothed attendance with a floor and ceiling, behind a flag until validated with real data.
+- **Speech therapy and nutrition** reuse the same funnel through `productos-999.ts`.
+
 
 An end-to-end acquisition funnel for **Mente Sana**, an online psychology clinic in Spain (8,000+ patients, 150+ licensed psychologists). A visitor arrives from a paid ad, answers 5 questions, is matched with a real psychologist, picks a live slot from her calendar, pays €9.99 in an embedded Stripe checkout, and leaves with a confirmed video session, a confirmation email and a server-side conversion sent to the ad platform.
 
